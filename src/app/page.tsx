@@ -4,6 +4,7 @@ import ClientCard from './components/ClientCard';
 import FilterBar from './components/FilterBar';
 import AddClientModal from './components/AddClientModal';
 import { Client, TaskStatus, TaskPriority } from '@/types/types';
+import { api } from '@/services/api';
 
 // Define sample data outside the component
 const sampleData: Client[] = [
@@ -29,9 +30,11 @@ const sampleData: Client[] = [
   }
 ];
 
-export default function Dashboard() {
-  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+export default function Home() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [taskFilter, setTaskFilter] = useState('');
@@ -49,30 +52,19 @@ export default function Dashboard() {
     fileInputRef.current?.click();
   };
 
-  // Load data from localStorage or fallback
   useEffect(() => {
-    const loadData = async () => {
+    const fetchClients = async () => {
       try {
-        const localData = localStorage.getItem('clientsData');
-        if (localData) {
-          setClients(JSON.parse(localData));
-          return;
-        }
-
-        const response = await fetch('/clients.json');
-        if (response.ok) {
-          const jsonData = await response.json();
-          setClients(jsonData);
-          return;
-        }
-      } catch {
-        console.log("Automatic load failed, using sample data");
+        const data = await api.getClients();
+        setClients(data);
+      } catch (err) {
+        setError('Failed to fetch clients');
+      } finally {
+        setLoading(false);
       }
-
-      setClients(sampleData);
     };
 
-    loadData();
+    fetchClients();
   }, []);
 
   // Save to localStorage on any change
@@ -236,6 +228,22 @@ export default function Dashboard() {
   const clearDateFilter = () => {
     setDateRangeFilter({ start: '', end: '' });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl text-red-500">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
