@@ -3,9 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 import ClientCard from './components/ClientCard';
 import FilterBar from './components/FilterBar';
 import AddClientModal from './components/AddClientModal';
-import AnalyticsDashboard from './components/AnalyticsDashboard';
 import { Client, TaskStatus, TaskPriority } from '@/types/types';
 import { api } from '@/services/api';
+import Link from 'next/link';
 
 export default function Home() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -24,12 +24,6 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(false);
-  const [selectedClients, setSelectedClients] = useState<string[]>([]);
-  const [analyticsDateRange, setAnalyticsDateRange] = useState<{
-    start?: Date;
-    end?: Date;
-  }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchClients = async () => {
@@ -49,20 +43,6 @@ export default function Home() {
     fetchClients();
   }, []);
 
-  const handleImportData = async () => {
-    try {
-      setIsImporting(true);
-      await api.importData();
-      await fetchClients();
-      alert('Data imported successfully!');
-    } catch (error) {
-      console.error('Error importing data:', error);
-      alert('Failed to import data. Please try again.');
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -80,17 +60,111 @@ export default function Home() {
             throw new Error('Invalid JSON format. Expected an array of clients.');
           }
 
+          let successCount = 0;
+          let errorCount = 0;
+          const errors: string[] = [];
+          const skippedClients: string[] = [];
+
+          console.log(`Starting import of ${jsonData.length} clients...`);
+
           // Import each client
           for (const clientData of jsonData) {
             try {
-              await api.createClient(clientData);
+              // Validate required client fields
+              if (!clientData.name || !clientData.company || !clientData.origin) {
+                throw new Error(`Missing required fields (name, company, origin) for client: ${clientData.name || clientData.id || 'Unknown'}`);
+              }
+
+              // Generate ID if not provided
+              if (!clientData.id) {
+                clientData.id = `CL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              }
+
+              // Check if client already exists
+              try {
+                await api.getClient(clientData.id);
+                // If we get here, client exists, so skip it
+                skippedClients.push(`${clientData.name} (${clientData.id}) - already exists`);
+                continue;
+              } catch (error) {
+                // Client doesn't exist, continue with creation
+              }
+
+              // Validate tasks array
+              const tasks = Array.isArray(clientData.tasks) ? clientData.tasks : [];
+
+              // Validate and clean each task
+              const validTasks = tasks.filter((task: any, index: number) => {
+                if (!task.description || !task.date || !task.status || !task.priority) {
+                  console.warn(`Skipping invalid task ${index + 1} for client ${clientData.name}:`, task);
+                  return false;
+                }
+                
+                // Validate status and priority values
+                const validStatuses = ['pending', 'in progress', 'completed', 'awaiting client'];
+                const validPriorities = ['low', 'medium', 'high'];
+                
+                if (!validStatuses.includes(task.status)) {
+                  console.warn(`Invalid status "${task.status}" for task, setting to "pending"`);
+                  task.status = 'pending';
+                }
+                
+                if (!validPriorities.includes(task.priority)) {
+                  console.warn(`Invalid priority "${task.priority}" for task, setting to "medium"`);
+                  task.priority = 'medium';
+                }
+                
+                return true;
+              });
+
+              if (validTasks.length === 0) {
+                // Create a default task if no valid tasks exist
+                validTasks.push({
+                  date: new Date().toISOString().split('T')[0],
+                  description: 'Initial task',
+                  status: 'pending',
+                  priority: 'medium'
+                });
+              }
+
+              console.log(`Importing client: ${clientData.name} with ${validTasks.length} tasks`);
+
+              // Use the createClientWithTasks API
+              await api.createClientWithTasks(
+                {
+                  id: clientData.id,
+                  name: clientData.name,
+                  company: clientData.company,
+                  origin: clientData.origin,
+                },
+                validTasks
+              );
+
+              successCount++;
+              console.log(`✓ Successfully imported: ${clientData.name}`);
             } catch (error) {
-              console.error(`Failed to import client ${clientData.id}:`, error);
+              errorCount++;
+              const errorMsg = `${clientData.name || clientData.id}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+              console.error(`✗ Failed to import client ${clientData.name || clientData.id}:`, error);
+              errors.push(errorMsg);
             }
           }
 
           await fetchClients();
-          alert('Clients imported successfully!');
+          
+          // Prepare result message
+          let message = '';
+          if (successCount > 0) {
+            message += `Successfully imported ${successCount} clients!`;
+          }
+          if (skippedClients.length > 0) {
+            message += `\n\nSkipped ${skippedClients.length} existing clients:\n${skippedClients.slice(0, 5).join('\n')}${skippedClients.length > 5 ? `\n... and ${skippedClients.length - 5} more` : ''}`;
+          }
+          if (errorCount > 0) {
+            message += `\n\n${errorCount} failed to import:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n... and ${errors.length - 5} more` : ''}`;
+          }
+
+          alert(message || 'Import completed with no changes.');
         } catch (error) {
           console.error('Error processing JSON:', error);
           alert(error instanceof Error ? error.message : 'Failed to process JSON file');
@@ -183,6 +257,39 @@ export default function Home() {
     setFilteredClients(result);
   }, [clients, searchTerm, statusFilter, priorityFilter, taskFilter, dateRangeFilter]);
 
+  // Calculate statistics
+  const totalTasks = clients.reduce((acc, client) => acc + client.tasks.length, 0);
+  const inProgressTasks = clients.reduce((acc, client) => 
+    acc + client.tasks.filter(task => task.status === 'in progress').length, 0);
+  const pendingTasks = clients.reduce((acc, client) => 
+    acc + client.tasks.filter(task => task.status === 'pending').length, 0);
+  const completedTasks = clients.reduce((acc, client) => 
+    acc + client.tasks.filter(task => task.status === 'completed').length, 0);
+
+  const handleExportJson = async () => {
+    try {
+      // Fetch all clients from database to ensure we get everything
+      const allClients = await api.getAllClients();
+      const json = JSON.stringify(allClients, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `all_clients_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      alert('Failed to export data');
+    }
+  };
+
+  const clearDateFilter = () => {
+    setDateRangeFilter({ start: '', end: '' });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -205,16 +312,16 @@ export default function Home() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Task Dashboard</h1>
           <div className="flex space-x-2">
-            <button
-              onClick={() => setShowAnalytics(!showAnalytics)}
+            <Link
+              href="/analytics"
               className={`px-4 py-2 rounded-lg ${
                 darkMode 
                   ? 'bg-purple-600 hover:bg-purple-700' 
                   : 'bg-purple-500 hover:bg-purple-600'
               } text-white`}
             >
-              {showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
-            </button>
+              📊 Analytics
+            </Link>
             <button
               onClick={() => setDarkMode(!darkMode)}
               className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
@@ -223,20 +330,6 @@ export default function Home() {
             </button>
           </div>
         </div>
-
-        {showAnalytics && (
-          <div className="mb-8">
-            <AnalyticsDashboard
-              clients={clients}
-              startDate={analyticsDateRange.start}
-              endDate={analyticsDateRange.end}
-              selectedClients={selectedClients}
-              onDateRangeChange={(start, end) => setAnalyticsDateRange({ start, end })}
-              onClientSelect={setSelectedClients}
-              darkMode={darkMode}
-            />
-          </div>
-        )}
 
         <div className="mb-6">
           <FilterBar 
@@ -276,7 +369,7 @@ export default function Home() {
             </button>
             {(dateRangeFilter.start || dateRangeFilter.end) && (
               <button
-                onClick={() => setDateRangeFilter({ start: '', end: '' })}
+                onClick={clearDateFilter}
                 className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
               >
                 Clear Date Filter
@@ -303,21 +396,71 @@ export default function Home() {
               {isImporting ? 'Importing...' : 'Import JSON'}
             </button>
             <button
-              onClick={handleImportData}
-              disabled={isImporting}
+              onClick={handleExportJson}
               className={`px-4 py-2 rounded-lg ${
                 darkMode 
                   ? 'bg-purple-600 hover:bg-purple-700' 
                   : 'bg-purple-500 hover:bg-purple-600'
-              } text-white disabled:opacity-50`}
+              } text-white`}
             >
-              {isImporting ? 'Importing...' : 'Import Sample Data'}
+              Export JSON
             </button>
             <button
               onClick={() => setIsModalOpen(true)}
               className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
             >
               Add New Client
+            </button>
+          </div>
+        </div>
+
+        {/* Statistics Section */}
+        <div className={`mb-8 p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white shadow'}`}>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <button 
+              onClick={() => {
+                setStatusFilter('all');
+                setPriorityFilter('all');
+                setTaskFilter('');
+                clearDateFilter();
+              }}
+              className={`p-4 rounded-lg text-left ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-blue-100 hover:bg-blue-200'}`}
+            >
+              <h3 className="font-semibold">Total Tasks</h3>
+              <p className="text-2xl">{totalTasks}</p>
+            </button>
+            <button 
+              onClick={() => {
+                setStatusFilter('active');
+                setPriorityFilter('all');
+                setTaskFilter('');
+              }}
+              className={`p-4 rounded-lg text-left ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-orange-100 hover:bg-orange-200'}`}
+            >
+              <h3 className="font-semibold">Active Tasks</h3>
+              <p className="text-2xl">{inProgressTasks + pendingTasks}</p>
+            </button>
+            <button 
+              onClick={() => {
+                setStatusFilter('in progress');
+                setPriorityFilter('all');
+                setTaskFilter('');
+              }}
+              className={`p-4 rounded-lg text-left ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-yellow-100 hover:bg-yellow-200'}`}
+            >
+              <h3 className="font-semibold">In Progress</h3>
+              <p className="text-2xl">{inProgressTasks}</p>
+            </button>
+            <button 
+              onClick={() => {
+                setStatusFilter('completed');
+                setPriorityFilter('all');
+                setTaskFilter('');
+              }}
+              className={`p-4 rounded-lg text-left ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-green-100 hover:bg-green-200'}`}
+            >
+              <h3 className="font-semibold">Completed</h3>
+              <p className="text-2xl">{completedTasks}</p>
             </button>
           </div>
         </div>
@@ -341,6 +484,22 @@ export default function Home() {
             />
           ))}
         </div>
+
+        {filteredClients.length === 0 && !loading && (
+          <div className={`text-center py-12 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            {clients.length === 0 ? (
+              <div>
+                <p className="text-xl mb-4">No clients found</p>
+                <p>Add a new client to get started!</p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-xl mb-4">No clients match your current filters</p>
+                <p>Try adjusting your search criteria or clearing the filters.</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <AddClientModal

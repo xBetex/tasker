@@ -28,12 +28,25 @@ class ClientBase(BaseModel):
     company: str
     origin: str
 
+class ClientOnly(ClientBase):
+    id: str
+
 class ClientCreate(ClientBase):
     id: str
-    tasks: List[TaskCreate]
+    tasks: Optional[List[TaskCreate]] = []
 
 class Client(ClientBase):
     id: str
     tasks: List[Task]
+    
+    model_config = ConfigDict(from_attributes=True)
+
+class ClientUpdate(BaseModel):
+    name: Optional[str] = None
+    company: Optional[str] = None
+    origin: Optional[str] = None
+
+class ClientOnly(ClientBase):
+    id: str
     
     model_config = ConfigDict(from_attributes=True) 

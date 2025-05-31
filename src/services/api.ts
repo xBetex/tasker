@@ -36,6 +36,11 @@ const formatErrorMessage = (error: unknown): string => {
     if (apiError.detail && Array.isArray(apiError.detail)) {
       return apiError.detail.map(err => err.msg).join(', ');
     }
+    
+    // Handle string detail messages
+    if (typeof (error as any).detail === 'string') {
+      return (error as any).detail;
+    }
   }
   
   return 'An unexpected error occurred';
@@ -44,7 +49,7 @@ const formatErrorMessage = (error: unknown): string => {
 export const api = {
   async getClients(): Promise<Client[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/clients/`);
+      const response = await fetch(`${API_BASE_URL}/clients/?limit=1000`);
       if (!response.ok) {
         const error = await response.json();
         throw error;
@@ -52,6 +57,20 @@ export const api = {
       return response.json();
     } catch (error) {
       console.error('Error fetching clients:', error);
+      throw new Error(formatErrorMessage(error));
+    }
+  },
+
+  async getAllClients(): Promise<Client[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/clients/all`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw error;
+      }
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching all clients:', error);
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -66,6 +85,28 @@ export const api = {
       return response.json();
     } catch (error) {
       console.error('Error fetching client:', error);
+      throw new Error(formatErrorMessage(error));
+    }
+  },
+
+  async createClientOnly(client: CreateClientPayload): Promise<Client> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/clients-only/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(client),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw error;
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('Error creating client:', error);
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -97,8 +138,8 @@ export const api = {
     tasks: Omit<TaskPayload, 'client_id'>[]
   ): Promise<Client> {
     try {
-      // First create the client
-      const client = await this.createClient(clientData);
+      // First create the client only
+      const client = await this.createClientOnly(clientData);
 
       // Then create all tasks for this client
       const taskPromises = tasks.map(task =>
@@ -114,9 +155,7 @@ export const api = {
       } catch (taskError) {
         // If task creation fails, attempt to delete the client for rollback
         try {
-          await fetch(`${API_BASE_URL}/clients/${client.id}`, {
-            method: 'DELETE',
-          });
+          await this.deleteClient(client.id);
         } catch (rollbackError) {
           console.error('Error during rollback:', rollbackError);
         }
@@ -212,6 +251,22 @@ export const api = {
     }
   },
 
+  async deleteClient(clientId: string): Promise<void> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      throw new Error(formatErrorMessage(error));
+    }
+  },
+
   async importData(): Promise<{ message: string }> {
     try {
       const response = await fetch(`${API_BASE_URL}/import-data/`, {
@@ -228,5 +283,27 @@ export const api = {
       console.error('Error importing data:', error);
       throw new Error(formatErrorMessage(error));
     }
-  }
+  },
+
+  async updateClient(clientId: string, updates: Partial<CreateClientPayload>): Promise<Client> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw error;
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('Error updating client:', error);
+      throw new Error(formatErrorMessage(error));
+    }
+  },
 }; 

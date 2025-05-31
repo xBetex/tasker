@@ -130,6 +130,18 @@ export default function AddClientModal({
     }
   };
 
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setErrors({});
+    setApiError(null);
+    setCurrentStep('client');
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -285,11 +297,15 @@ export default function AddClientModal({
                 </label>
                 <div className="relative">
                   <DatePicker
-                    selected={new Date(formData.taskDate)}
-                    onChange={(date: Date) => setFormData(prev => ({
-                      ...prev,
-                      taskDate: date.toISOString().split('T')[0]
-                    }))}
+                    selected={formData.taskDate ? new Date(formData.taskDate) : null}
+                    onChange={(date: Date | null) => {
+                      if (date) {
+                        setFormData(prev => ({
+                          ...prev,
+                          taskDate: date.toISOString().split('T')[0]
+                        }));
+                      }
+                    }}
                     dateFormat="yyyy-MM-dd"
                     className={`w-full p-2 rounded border ${
                       darkMode 
@@ -356,7 +372,7 @@ export default function AddClientModal({
                 if (currentStep === 'task') {
                   setCurrentStep('client');
                 } else {
-                  onClose();
+                  handleClose();
                 }
               }}
               className={`px-4 py-2 rounded ${
@@ -372,8 +388,28 @@ export default function AddClientModal({
               type={currentStep === 'task' ? 'submit' : 'button'}
               onClick={() => {
                 if (currentStep === 'client') {
-                  const clientErrors = validateForm();
-                  if (!clientErrors) {
+                  // Validate only client fields for the first step
+                  const clientErrors: Partial<FormData> = {};
+                  
+                  if (!formData.id.trim()) {
+                    clientErrors.id = 'Client ID is required';
+                  } else if (!/^[a-zA-Z0-9-_]+$/.test(formData.id)) {
+                    clientErrors.id = 'Client ID can only contain letters, numbers, hyphens, and underscores';
+                  }
+                  
+                  if (!formData.name.trim()) {
+                    clientErrors.name = 'Name is required';
+                  }
+                  if (!formData.company.trim()) {
+                    clientErrors.company = 'Company is required';
+                  }
+                  if (!formData.origin.trim()) {
+                    clientErrors.origin = 'Origin is required';
+                  }
+
+                  setErrors(clientErrors);
+                  
+                  if (Object.keys(clientErrors).length === 0) {
                     setCurrentStep('task');
                   }
                 }

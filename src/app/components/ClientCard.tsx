@@ -40,6 +40,8 @@ export default function ClientCard({
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
@@ -131,9 +133,41 @@ export default function ClientCard({
     }
   };
 
-  const handleSave = () => {
-    onUpdate();
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Update client information
+      await api.updateClient(client.id, {
+        name: editData.name,
+        company: editData.company,
+        origin: editData.origin
+      });
+      
+      onUpdate();
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating client:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update client');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteClient = async () => {
+    try {
+      setIsDeleting(true);
+      setError(null);
+      await api.deleteClient(client.id);
+      onUpdate(); // This will refresh the client list and remove the deleted client
+      setShowDeleteConfirm(false);
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      setError(error instanceof Error ? error.message : 'Failed to delete client');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -259,14 +293,40 @@ export default function ClientCard({
           className={`p-4 cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}
           onClick={onToggleExpand}
         >
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="font-bold text-lg">{client.name}</h3>
-              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{client.company}</p>
+          <div className="flex justify-between items-center">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold mb-1">{client.name}</h3>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                {client.company} • {client.origin} • ID: {client.id}
+              </p>
             </div>
-            <span className={`px-2 py-1 text-xs rounded-full ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
-              {client.id}
-            </span>
+            <div className="flex items-center space-x-2">
+              {isEditing && (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className={`px-3 py-1 rounded-md text-sm ${
+                    darkMode 
+                      ? 'bg-red-600 hover:bg-red-700 text-white' 
+                      : 'bg-red-500 hover:bg-red-600 text-white'
+                  } disabled:opacity-50`}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete Client'}
+                </button>
+              )}
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                className={`px-3 py-1 rounded-md text-sm ${darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'}`}
+              >
+                {isEditing ? 'Cancel' : 'Edit'}
+              </button>
+              <button
+                onClick={onToggleExpand}
+                className={`p-1 rounded-md ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+              >
+                {isExpanded ? '▲' : '▼'}
+              </button>
+            </div>
           </div>
 
           <div className="mt-2 w-full">
@@ -289,25 +349,10 @@ export default function ClientCard({
             </div>
           </div>
 
-          <p className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            Origin: {client.origin}
-          </p>
           <div className="mt-2 flex justify-between items-center">
             <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               Tasks: {client.tasks.length} ({progress.percent}% complete)
             </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEditing(!isEditing);
-                if (isEditing) {
-                  setEditData({ ...client });
-                }
-              }}
-              className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
-            >
-              {isEditing ? 'Cancel' : 'Edit'}
-            </button>
           </div>
         </div>
 
@@ -638,12 +683,63 @@ export default function ClientCard({
 
       {editingTask && (
         <EditTaskModal
-          isOpen={true}
-          onClose={() => setEditingTask(null)}
           task={editingTask}
+          isOpen={!!editingTask}
+          onClose={() => setEditingTask(null)}
           onUpdate={onUpdate}
           darkMode={darkMode}
         />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white'} rounded-lg p-6 w-full max-w-md`}>
+            <h3 className="text-lg font-bold mb-4">Confirm Delete</h3>
+            <p className="mb-6">
+              Are you sure you want to delete client <strong>{client.name}</strong> from <strong>{client.company}</strong>? 
+              This will also delete all {client.tasks.length} associated tasks. This action cannot be undone.
+            </p>
+            
+            {error && (
+              <div className={`p-3 mb-4 text-sm rounded-lg ${
+                darkMode 
+                  ? 'bg-red-900/20 text-red-400' 
+                  : 'bg-red-100 text-red-700'
+              }`}>
+                {error}
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setError(null);
+                }}
+                className={`px-4 py-2 rounded ${
+                  darkMode 
+                    ? 'bg-gray-600 hover:bg-gray-500' 
+                    : 'bg-gray-200 hover:bg-gray-300'
+                }`}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteClient}
+                className={`px-4 py-2 rounded text-white ${
+                  darkMode 
+                    ? 'bg-red-600 hover:bg-red-700' 
+                    : 'bg-red-500 hover:bg-red-600'
+                } disabled:opacity-50`}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Client'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

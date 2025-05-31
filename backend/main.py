@@ -30,6 +30,51 @@ app.add_middleware(
 
 @app.post("/clients/", response_model=schemas.Client)
 async def create_client(client: schemas.ClientCreate, db: Session = Depends(get_db)):
+    # Check if this is a client with tasks (legacy) or just client data
+    if hasattr(client, 'tasks') and client.tasks:
+        # Legacy mode: create client with tasks
+        db_client = Client(
+            id=client.id,
+            name=client.name,
+            company=client.company,
+            origin=client.origin
+        )
+        db.add(db_client)
+        
+        for task in client.tasks:
+            db_task = Task(
+                date=task.date,
+                description=task.description,
+                status=task.status,
+                priority=task.priority,
+                client_id=client.id
+            )
+            db.add(db_task)
+    else:
+        # New mode: create client only
+        db_client = Client(
+            id=client.id,
+            name=client.name,
+            company=client.company,
+            origin=client.origin
+        )
+        db.add(db_client)
+    
+    try:
+        db.commit()
+        db.refresh(db_client)
+        return db_client
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/clients-only/", response_model=schemas.ClientOnly)
+async def create_client_only(client: schemas.ClientOnly, db: Session = Depends(get_db)):
+    # Check if client ID already exists
+    existing_client = db.query(Client).filter(Client.id == client.id).first()
+    if existing_client:
+        raise HTTPException(status_code=400, detail="Client with this ID already exists")
+    
     db_client = Client(
         id=client.id,
         name=client.name,
@@ -37,16 +82,6 @@ async def create_client(client: schemas.ClientCreate, db: Session = Depends(get_
         origin=client.origin
     )
     db.add(db_client)
-    
-    for task in client.tasks:
-        db_task = Task(
-            date=task.date,
-            description=task.description,
-            status=task.status,
-            priority=task.priority,
-            client_id=client.id
-        )
-        db.add(db_task)
     
     try:
         db.commit()
@@ -57,8 +92,13 @@ async def create_client(client: schemas.ClientCreate, db: Session = Depends(get_
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/clients/", response_model=List[schemas.Client])
-async def get_clients(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+async def get_clients(skip: int = 0, limit: int = 1000, db: Session = Depends(get_db)):
     clients = db.query(Client).offset(skip).limit(limit).all()
+    return clients
+
+@app.get("/clients/all", response_model=List[schemas.Client])
+async def get_all_clients(db: Session = Depends(get_db)):
+    clients = db.query(Client).all()
     return clients
 
 @app.get("/clients/{client_id}", response_model=schemas.Client)
@@ -67,6 +107,42 @@ async def get_client(client_id: str, db: Session = Depends(get_db)):
     if client is None:
         raise HTTPException(status_code=404, detail="Client not found")
     return client
+
+@app.put("/clients/{client_id}", response_model=schemas.Client)
+async def update_client(client_id: str, client_update: schemas.ClientUpdate, db: Session = Depends(get_db)):
+    db_client = db.query(Client).filter(Client.id == client_id).first()
+    if db_client is None:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Update client fields
+    for field, value in client_update.dict(exclude_unset=True).items():
+        if value is not None:  # Only update fields that are provided
+            setattr(db_client, field, value)
+    
+    try:
+        db.commit()
+        db.refresh(db_client)
+        return db_client
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/clients/{client_id}", response_model=schemas.ClientOnly)
+async def delete_client(client_id: str, db: Session = Depends(get_db)):
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if client is None:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    try:
+        # Delete all associated tasks first
+        db.query(Task).filter(Task.client_id == client_id).delete()
+        # Then delete the client
+        db.delete(client)
+        db.commit()
+        return client
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/tasks/", response_model=schemas.Task)
 async def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):

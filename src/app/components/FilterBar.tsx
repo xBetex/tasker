@@ -10,7 +10,7 @@ interface FilterBarProps {
   setPriorityFilter: (filter: TaskPriority | 'all') => void;
   taskFilter: string;
   setTaskFilter: (filter: string) => void;
-    dateRangeFilter: { start: string; end: string }; // Add this
+  dateRangeFilter: { start: string; end: string }; // Add this
   setDateRangeFilter: (range: { start: string; end: string }) => void; // Add this
   darkMode: boolean;
 }
