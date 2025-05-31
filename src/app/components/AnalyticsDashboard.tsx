@@ -24,6 +24,7 @@ import TasksPerClientChart from './analytics/TasksPerClientChart';
 import TaskTimeline from './analytics/TaskTimeline';
 import TaskStatusChart from './analytics/TaskStatusChart';
 import TaskPriorityChart from './analytics/TaskPriorityChart';
+import CompletionRateChart from './analytics/CompletionRateChart';
 
 ChartJS.register(
   CategoryScale,
@@ -353,9 +354,7 @@ export default function AnalyticsDashboard({
         {/* Completion Rate Chart */}
         <div className={`p-6 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
           <h3 className="text-lg font-semibold mb-4">Completion Rate by Client</h3>
-          <div className="h-80">
-            <Bar options={barChartOptions} data={completionRateData} />
-          </div>
+          <CompletionRateChart clients={filteredClients} darkMode={darkMode} />
         </div>
 
         {/* Tasks by Status Chart */}
