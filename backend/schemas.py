@@ -8,13 +8,20 @@ class TaskBase(BaseModel):
     priority: str
 
 class TaskCreate(TaskBase):
-    pass
+    client_id: str
 
 class Task(TaskBase):
     id: int
     client_id: str
     
     model_config = ConfigDict(from_attributes=True)
+
+class TaskUpdate(BaseModel):
+    date: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    client_id: Optional[str] = None
 
 class ClientBase(BaseModel):
     name: str

@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { Client, Task, TaskStatus, TaskPriority } from '@/types/types';
+import EditTaskModal from './EditTaskModal';
+import { api } from '@/services/api';
 
 interface ClientCardProps {
   client: Client;
-  onUpdate: (updatedClient: Client) => void;
+  onUpdate: () => void;
   onDeleteTask: (clientId: string, taskIndex: number) => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
@@ -25,7 +27,8 @@ export default function ClientCard({
     date: new Date().toISOString().split('T')[0],
     description: '',
     status: 'pending',
-    priority: 'medium'
+    priority: 'medium',
+    client_id: client.id
   });
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
@@ -34,6 +37,9 @@ export default function ClientCard({
     taskIndex: number | null;
     task?: Task;
   }>({ visible: false, x: 0, y: 0, taskIndex: null });
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
@@ -97,43 +103,95 @@ export default function ClientCard({
     setNewTask({ ...newTask, [name]: value });
   };
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (!newTask.description.trim()) return;
 
-    const updatedClient = {
-      ...client,
-      tasks: [...client.tasks, newTask]
-    };
+    try {
+      setIsLoading(true);
+      setError(null);
+      await api.createTask({
+        ...newTask,
+        client_id: client.id
+      });
 
-    onUpdate(updatedClient);
-    setIsAddingTask(false);
-    setNewTask({
-      date: new Date().toISOString().split('T')[0],
-      description: '',
-      status: 'pending',
-      priority: 'medium'
-    });
-  };
-
-  const handleSave = () => {
-    onUpdate(editData);
-    setIsEditing(false);
-  };
-
-  const getStatusColor = (status: TaskStatus) => {
-    switch (status) {
-      case 'completed': return 'bg-green-500';
-      case 'in progress': return 'bg-yellow-500';
-      case 'pending': return 'bg-red-500';
-      case 'awaiting client': return 'bg-blue-500';
-      default: return 'bg-gray-500';
+      onUpdate();
+      setIsAddingTask(false);
+      setNewTask({
+        date: new Date().toISOString().split('T')[0],
+        description: '',
+        status: 'pending',
+        priority: 'medium',
+        client_id: client.id
+      });
+    } catch (error) {
+      console.error('Error adding task:', error);
+      setError(error instanceof Error ? error.message : 'Failed to add task');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleDeleteTask = (index: number) => {
-    const updatedTasks = [...editData.tasks];
-    updatedTasks.splice(index, 1);
-    setEditData({ ...editData, tasks: updatedTasks });
+  const handleSave = () => {
+    onUpdate();
+    setIsEditing(false);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return darkMode ? 'text-green-400' : 'text-green-600';
+      case 'in progress':
+        return darkMode ? 'text-blue-400' : 'text-blue-600';
+      case 'pending':
+        return darkMode ? 'text-yellow-400' : 'text-yellow-600';
+      case 'awaiting client':
+        return darkMode ? 'text-purple-400' : 'text-purple-600';
+      default:
+        return '';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority.toLowerCase()) {
+      case 'high':
+        return darkMode ? 'text-red-400' : 'text-red-600';
+      case 'medium':
+        return darkMode ? 'text-yellow-400' : 'text-yellow-600';
+      case 'low':
+        return darkMode ? 'text-green-400' : 'text-green-600';
+      default:
+        return '';
+    }
+  };
+
+  const getStatusBgColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return darkMode ? 'bg-green-900/20' : 'bg-green-50';
+      case 'in progress':
+        return darkMode ? 'bg-blue-900/20' : 'bg-blue-50';
+      case 'pending':
+        return darkMode ? 'bg-yellow-900/20' : 'bg-yellow-50';
+      case 'awaiting client':
+        return darkMode ? 'bg-purple-900/20' : 'bg-purple-50';
+      default:
+        return darkMode ? 'bg-gray-700' : 'bg-gray-50';
+    }
+  };
+
+  const handleDeleteTask = async (taskId: number) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      await api.deleteTask(taskId);
+      onUpdate();
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      setError(error instanceof Error ? error.message : 'Failed to delete task');
+    } finally {
+      setIsLoading(false);
+      setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
+    }
   };
 
   const handleContextMenu = (e: React.MouseEvent, index: number) => {
@@ -162,240 +220,135 @@ export default function ClientCard({
     });
   };
 
-  const handleStatusChange = (newStatus: TaskStatus) => {
-    if (contextMenu.taskIndex !== null) {
-      if (isEditing) {
-        const updatedTasks = [...editData.tasks];
-        updatedTasks[contextMenu.taskIndex].status = newStatus;
-        setEditData({ ...editData, tasks: updatedTasks });
-      } else {
-        const updatedTasks = [...client.tasks];
-        updatedTasks[contextMenu.taskIndex].status = newStatus;
-        onUpdate({ ...client, tasks: updatedTasks });
+  const handleStatusChange = async (newStatus: TaskStatus) => {
+    if (contextMenu.taskIndex !== null && contextMenu.task) {
+      try {
+        setIsLoading(true);
+        setError(null);
+        await api.updateTaskStatus(contextMenu.task.id, newStatus);
+        onUpdate();
+      } catch (error) {
+        console.error('Error updating task status:', error);
+        setError(error instanceof Error ? error.message : 'Failed to update task status');
+      } finally {
+        setIsLoading(false);
+        setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
       }
-      setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
+    }
+  };
+
+  const getStatusColorText = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return darkMode ? 'text-green-400' : 'text-green-600';
+      case 'in progress':
+        return darkMode ? 'text-blue-400' : 'text-blue-600';
+      case 'pending':
+        return darkMode ? 'text-yellow-400' : 'text-yellow-600';
+      case 'awaiting client':
+        return darkMode ? 'text-purple-400' : 'text-purple-600';
+      default:
+        return '';
     }
   };
 
   return (
-    <div className={`rounded-lg overflow-hidden shadow-lg transition-all duration-300 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-      <div
-        className={`p-4 cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}
-        onClick={onToggleExpand}
-      >
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="font-bold text-lg">{client.name}</h3>
-            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{client.company}</p>
-          </div>
-          <span className={`px-2 py-1 text-xs rounded-full ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
-            {client.id}
-          </span>
-        </div>
-
-        <div className="mt-2 w-full">
-          <div className={`h-2 rounded-full ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} mb-1`}>
-            <div
-              className="h-2 rounded-full bg-green-500 transition-all duration-300"
-              style={{ width: `${progress.percent}%` }}
-            ></div>
-          </div>
-          <div className="flex gap-1 h-2">
-            {[...Array(progress.highPriority)].map((_, i) => (
-              <div key={`high-${i}`} className="flex-1 bg-red-500 rounded"></div>
-            ))}
-            {[...Array(progress.mediumPriority)].map((_, i) => (
-              <div key={`medium-${i}`} className="flex-1 bg-yellow-500 rounded"></div>
-            ))}
-            {[...Array(progress.lowPriority)].map((_, i) => (
-              <div key={`low-${i}`} className="flex-1 bg-blue-500 rounded"></div>
-            ))}
-          </div>
-        </div>
-
-        <p className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          Origin: {client.origin}
-        </p>
-        <div className="mt-2 flex justify-between items-center">
-          <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            Tasks: {client.tasks.length} ({progress.percent}% complete)
-          </span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsEditing(!isEditing);
-              if (isEditing) {
-                setEditData({ ...client });
-              }
-            }}
-            className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
-          >
-            {isEditing ? 'Cancel' : 'Edit'}
-          </button>
-        </div>
-      </div>
-
-      {isExpanded && (
-        <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-4`}>
-          {isEditing ? (
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={editData.name}
-                  onChange={handleInputChange}
-                  className={`mt-1 block w-full rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} shadow-sm`}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Company</label>
-                <input
-                  type="text"
-                  name="company"
-                  value={editData.company}
-                  onChange={handleInputChange}
-                  className={`mt-1 block w-full rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} shadow-sm`}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Origin</label>
-                <input
-                  type="text"
-                  name="origin"
-                  value={editData.origin}
-                  onChange={handleInputChange}
-                  className={`mt-1 block w-full rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} shadow-sm`}
-                />
-              </div>
-
-              <h4 className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Tasks</h4>
-
-              <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
-                  <div>
-                    <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Date</label>
-                    <input
-                      type="date"
-                      name="date"
-                      value={newTask.date}
-                      onChange={handleNewTaskChange}
-                      className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Description</label>
-                    <input
-                      type="text"
-                      name="description"
-                      value={newTask.description}
-                      onChange={handleNewTaskChange}
-                      placeholder="New task description"
-                      className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Priority</label>
-                    <select
-                      name="priority"
-                      value={newTask.priority}
-                      onChange={handleNewTaskChange}
-                      className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                    </select>
-                  </div>
-                </div>
-                <button
-                  onClick={handleAddTask}
-                  disabled={!newTask.description.trim()}
-                  className={`w-full py-1 rounded-md ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white disabled:opacity-50 text-sm`}
-                >
-                  Add New Task
-                </button>
-              </div>
-
-              {editData.tasks.map((task, index) => (
-                <div
-                  key={index}
-                  className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} mb-2`}
-                  onContextMenu={(e) => handleContextMenu(e, index)}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <h5 className="font-medium">{task.description}</h5>
-                    <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteTask(index);
-                        }}
-                        className="text-red-500 hover:text-red-700 text-xs"
-                      >
-                        Delete
-                      </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Date</label>
-                      <input
-                        type="date"
-                        value={task.date}
-                        onChange={(e) => handleTaskChange(index, 'date', e.target.value)}
-                        className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Priority</label>
-                      <select
-                        value={task.priority}
-                        onChange={(e) => handleTaskChange(index, 'priority', e.target.value as TaskPriority)}
-                        className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
-                      >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Status</label>
-                      <select
-                        value={task.status}
-                        onChange={(e) => handleTaskChange(index, 'status', e.target.value as TaskStatus)}
-                        className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="in progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="awaiting client">Awaiting Client</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <button
-                onClick={handleSave}
-                className={`w-full py-2 rounded-md ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
-              >
-                Save Changes
-              </button>
+    <>
+      <div className={`rounded-lg overflow-hidden shadow-lg transition-all duration-300 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+        <div
+          className={`p-4 cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}
+          onClick={onToggleExpand}
+        >
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="font-bold text-lg">{client.name}</h3>
+              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{client.company}</p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <h4 className="font-medium">Tasks</h4>
-                <button
-                  onClick={() => setIsAddingTask(!isAddingTask)}
-                  className={`px-2 py-1 text-xs rounded ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
-                >
-                  {isAddingTask ? 'Cancel' : '+ Add Task'}
-                </button>
-              </div>
+            <span className={`px-2 py-1 text-xs rounded-full ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
+              {client.id}
+            </span>
+          </div>
 
-              {isAddingTask && (
-                <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} mb-3`}>
+          <div className="mt-2 w-full">
+            <div className={`h-2 rounded-full ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} mb-1`}>
+              <div
+                className="h-2 rounded-full bg-green-500 transition-all duration-300"
+                style={{ width: `${progress.percent}%` }}
+              ></div>
+            </div>
+            <div className="flex gap-1 h-2">
+              {[...Array(progress.highPriority)].map((_, i) => (
+                <div key={`high-${i}`} className="flex-1 bg-red-500 rounded"></div>
+              ))}
+              {[...Array(progress.mediumPriority)].map((_, i) => (
+                <div key={`medium-${i}`} className="flex-1 bg-yellow-500 rounded"></div>
+              ))}
+              {[...Array(progress.lowPriority)].map((_, i) => (
+                <div key={`low-${i}`} className="flex-1 bg-blue-500 rounded"></div>
+              ))}
+            </div>
+          </div>
+
+          <p className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            Origin: {client.origin}
+          </p>
+          <div className="mt-2 flex justify-between items-center">
+            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              Tasks: {client.tasks.length} ({progress.percent}% complete)
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(!isEditing);
+                if (isEditing) {
+                  setEditData({ ...client });
+                }
+              }}
+              className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+            >
+              {isEditing ? 'Cancel' : 'Edit'}
+            </button>
+          </div>
+        </div>
+
+        {isExpanded && (
+          <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} p-4`}>
+            {isEditing ? (
+              <div className="space-y-4">
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={editData.name}
+                    onChange={handleInputChange}
+                    className={`mt-1 block w-full rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} shadow-sm`}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Company</label>
+                  <input
+                    type="text"
+                    name="company"
+                    value={editData.company}
+                    onChange={handleInputChange}
+                    className={`mt-1 block w-full rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} shadow-sm`}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Origin</label>
+                  <input
+                    type="text"
+                    name="origin"
+                    value={editData.origin}
+                    onChange={handleInputChange}
+                    className={`mt-1 block w-full rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} shadow-sm`}
+                  />
+                </div>
+
+                <h4 className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Tasks</h4>
+
+                <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
                     <div>
                       <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Date</label>
@@ -432,55 +385,199 @@ export default function ClientCard({
                       </select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 gap-2 mb-2">
-                    <div>
-                      <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Status</label>
-                      <select
-                        name="status"
-                        value={newTask.status}
-                        onChange={handleNewTaskChange}
-                        className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="in progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="awaiting client">Awaiting Client</option>
-                      </select>
-                    </div>
-                  </div>
                   <button
                     onClick={handleAddTask}
                     disabled={!newTask.description.trim()}
                     className={`w-full py-1 rounded-md ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white disabled:opacity-50 text-sm`}
                   >
-                    Add Task
+                    Add New Task
                   </button>
                 </div>
-              )}
 
-              {client.tasks.map((task, index) => (
-                <div
-                  key={index}
-                  className={`p-3 rounded-lg ${getStatusColor(task.status)} bg-opacity-20`}
-                  onContextMenu={(e) => handleContextMenu(e, index)}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{task.description}</p>
-                      <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        {task.date} • {task.priority}
-                      </p>
+                {editData.tasks.map((task, index) => (
+                  <div
+                    key={index}
+                    className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} mb-2`}
+                    onContextMenu={(e) => handleContextMenu(e, index)}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <h5 className="font-medium">{task.description}</h5>
+                      <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTask(task.id);
+                          }}
+                          className="text-red-500 hover:text-red-700 text-xs"
+                        >
+                          Delete
+                        </button>
                     </div>
-                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(task.status)} bg-opacity-100 text-white`}>
-                      {task.status}
-                    </span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Date</label>
+                        <input
+                          type="date"
+                          value={task.date}
+                          onChange={(e) => handleTaskChange(index, 'date', e.target.value)}
+                          className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Priority</label>
+                        <select
+                          value={task.priority}
+                          onChange={(e) => handleTaskChange(index, 'priority', e.target.value as TaskPriority)}
+                          className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                        >
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Status</label>
+                        <select
+                          value={task.status}
+                          onChange={(e) => handleTaskChange(index, 'status', e.target.value as TaskStatus)}
+                          className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="in progress">In Progress</option>
+                          <option value="completed">Completed</option>
+                          <option value="awaiting client">Awaiting Client</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
+                ))}
+
+                <button
+                  onClick={handleSave}
+                  className={`w-full py-2 rounded-md ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+                >
+                  Save Changes
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium">Tasks</h4>
+                  <button
+                    onClick={() => setIsAddingTask(!isAddingTask)}
+                    className={`px-2 py-1 text-xs rounded ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+                  >
+                    {isAddingTask ? 'Cancel' : '+ Add Task'}
+                  </button>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+
+                {isAddingTask && (
+                  <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} mb-3`}>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
+                      <div>
+                        <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Date</label>
+                        <input
+                          type="date"
+                          name="date"
+                          value={newTask.date}
+                          onChange={handleNewTaskChange}
+                          className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Description</label>
+                        <input
+                          type="text"
+                          name="description"
+                          value={newTask.description}
+                          onChange={handleNewTaskChange}
+                          placeholder="New task description"
+                          className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Priority</label>
+                        <select
+                          name="priority"
+                          value={newTask.priority}
+                          onChange={handleNewTaskChange}
+                          className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                        >
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 mb-2">
+                      <div>
+                        <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Status</label>
+                        <select
+                          name="status"
+                          value={newTask.status}
+                          onChange={handleNewTaskChange}
+                          className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="in progress">In Progress</option>
+                          <option value="completed">Completed</option>
+                          <option value="awaiting client">Awaiting Client</option>
+                        </select>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleAddTask}
+                      disabled={!newTask.description.trim()}
+                      className={`w-full py-1 rounded-md ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white disabled:opacity-50 text-sm`}
+                    >
+                      Add Task
+                    </button>
+                  </div>
+                )}
+
+                {client.tasks.map((task, index) => (
+                  <div
+                    key={task.id}
+                    className={`p-3 rounded-lg ${getStatusBgColor(task.status)}`}
+                    onContextMenu={(e) => handleContextMenu(e, index)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium">{task.description}</p>
+                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                          {task.date} • {task.priority}
+                        </p>
+                      </div>
+                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(task.status)} bg-opacity-100 text-white`}>
+                        {task.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {error && (
+          <div className={`p-4 mb-4 text-sm rounded-lg ${
+            darkMode 
+              ? 'bg-red-900/20 text-red-400' 
+              : 'bg-red-100 text-red-700'
+          }`}>
+            {error}
+          </div>
+        )}
+
+        {isLoading && (
+          <div className={`p-4 text-sm ${
+            darkMode 
+              ? 'text-blue-400' 
+              : 'text-blue-600'
+          }`}>
+            Loading...
+          </div>
+        )}
+      </div>
 
       {contextMenu.visible && (
         <div
@@ -498,46 +595,56 @@ export default function ClientCard({
           </div>
           <button
             onClick={() => handleStatusChange('pending')}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'pending' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''}`}
+            disabled={isLoading}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'pending' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50`}
           >
             <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-2"></span>
             Pending
           </button>
           <button
             onClick={() => handleStatusChange('in progress')}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'in progress' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''}`}
+            disabled={isLoading}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'in progress' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50`}
           >
             <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 mr-2"></span>
             In Progress
           </button>
           <button
             onClick={() => handleStatusChange('completed')}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'completed' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''}`}
+            disabled={isLoading}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'completed' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50`}
           >
             <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2"></span>
             Completed
           </button>
           <button
             onClick={() => handleStatusChange('awaiting client')}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'awaiting client' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''}`}
+            disabled={isLoading}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'awaiting client' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50`}
           >
             <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
             Awaiting Client
           </button>
           <div className="border-t my-1"></div>
           <button
-            onClick={() => {
-              if (contextMenu.taskIndex !== null) {
-                onDeleteTask(client.id, contextMenu.taskIndex);
-                setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
-              }
-            }}
-            className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600 text-red-400' : 'hover:bg-gray-100 text-red-600'}`}
+            onClick={() => contextMenu.task && handleDeleteTask(contextMenu.task.id)}
+            disabled={isLoading}
+            className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600 text-red-400' : 'hover:bg-gray-100 text-red-600'} disabled:opacity-50`}
           >
             Delete Task
           </button>
         </div>
       )}
-    </div>
+
+      {editingTask && (
+        <EditTaskModal
+          isOpen={true}
+          onClose={() => setEditingTask(null)}
+          task={editingTask}
+          onUpdate={onUpdate}
+          darkMode={darkMode}
+        />
+      )}
+    </>
   );
 }

@@ -3,32 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 import ClientCard from './components/ClientCard';
 import FilterBar from './components/FilterBar';
 import AddClientModal from './components/AddClientModal';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
 import { Client, TaskStatus, TaskPriority } from '@/types/types';
 import { api } from '@/services/api';
-
-// Define sample data outside the component
-const sampleData: Client[] = [
-  {
-    id: "CL-001",
-    name: "John Smith",
-    company: "Acme Corporation",
-    origin: "Referral",
-    tasks: [
-      {
-        date: "2025-04-19",
-        description: "Review contract terms",
-        status: "completed",
-        priority: "high"
-      },
-      {
-        date: "2025-04-20",
-        description: "Send proposal",
-        status: "in progress",
-        priority: "medium"
-      }
-    ]
-  }
-];
 
 export default function Home() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -46,31 +23,97 @@ export default function Home() {
   });
   const [darkMode, setDarkMode] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [analyticsDateRange, setAnalyticsDateRange] = useState<{
+    start?: Date;
+    end?: Date;
+  }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
+  const fetchClients = async () => {
+    try {
+      const data = await api.getClients();
+      setClients(data);
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch clients');
+      console.error('Error fetching clients:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        const data = await api.getClients();
-        setClients(data);
-      } catch (err) {
-        setError('Failed to fetch clients');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchClients();
   }, []);
 
-  // Save to localStorage on any change
-  useEffect(() => {
-    localStorage.setItem('clientsData', JSON.stringify(clients));
-  }, [clients]);
+  const handleImportData = async () => {
+    try {
+      setIsImporting(true);
+      await api.importData();
+      await fetchClients();
+      alert('Data imported successfully!');
+    } catch (error) {
+      console.error('Error importing data:', error);
+      alert('Failed to import data. Please try again.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsImporting(true);
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        try {
+          const jsonData = JSON.parse(e.target?.result as string);
+          
+          // Validate the JSON structure
+          if (!Array.isArray(jsonData)) {
+            throw new Error('Invalid JSON format. Expected an array of clients.');
+          }
+
+          // Import each client
+          for (const clientData of jsonData) {
+            try {
+              await api.createClient(clientData);
+            } catch (error) {
+              console.error(`Failed to import client ${clientData.id}:`, error);
+            }
+          }
+
+          await fetchClients();
+          alert('Clients imported successfully!');
+        } catch (error) {
+          console.error('Error processing JSON:', error);
+          alert(error instanceof Error ? error.message : 'Failed to process JSON file');
+        } finally {
+          setIsImporting(false);
+          // Reset the file input
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        }
+      };
+
+      reader.onerror = () => {
+        setIsImporting(false);
+        alert('Error reading file');
+      };
+
+      reader.readAsText(file);
+    } catch (error) {
+      setIsImporting(false);
+      alert('Error processing file');
+    }
+  };
 
   // Filter clients based on all filter criteria
   useEffect(() => {
@@ -140,95 +183,6 @@ export default function Home() {
     setFilteredClients(result);
   }, [clients, searchTerm, statusFilter, priorityFilter, taskFilter, dateRangeFilter]);
 
-  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const jsonData = JSON.parse(e.target?.result as string);
-        if (Array.isArray(jsonData)) {
-          setClients(jsonData);
-        } else {
-          alert("Invalid data format. Please import a valid JSON file.");
-        }
-      } catch {
-        alert("Error parsing JSON file. Please check the file format.");
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const handleAddClient = (newClient: Client) => {
-    const nameExists = clients.some(client => 
-      client.name.toLowerCase() === newClient.name.toLowerCase()
-    );
-
-    if (nameExists) {
-      alert('A client with this name already exists!');
-      return;
-    }
-
-    setClients(prevClients => [...prevClients, newClient]);
-    setIsModalOpen(false);
-  };
-
-  const totalTasks = clients.reduce((acc, client) => acc + client.tasks.length, 0);
-  const inProgressTasks = clients.reduce((acc, client) => 
-    acc + client.tasks.filter(task => task.status === 'in progress').length, 0);
-  const pendingTasks = clients.reduce((acc, client) => 
-    acc + client.tasks.filter(task => task.status === 'pending').length, 0);
-  const completedTasks = clients.reduce((acc, client) => 
-    acc + client.tasks.filter(task => task.status === 'completed').length, 0);
-
-  const handleUpdateClient = (updatedClient: Client) => {
-    setClients(clients.map(client => 
-      client.id === updatedClient.id ? updatedClient : client
-    ));
-  };
-
-  const handleDeleteTask = (clientId: string, taskIndex: number) => {
-    setClients(clients.map(client => {
-      if (client.id === clientId) {
-        const updatedTasks = [...client.tasks];
-        updatedTasks.splice(taskIndex, 1);
-        return { ...client, tasks: updatedTasks };
-      }
-      return client;
-    }));
-  };
-
-  const handleSaveAllToJson = () => {
-    const json = JSON.stringify(clients, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `all_clients_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleResetData = () => {
-    const confirmReset = window.confirm('Are you sure you want to reset all data? This action cannot be undone.');
-    if (confirmReset) {
-      localStorage.removeItem('clientsData');
-      setClients(sampleData);
-      setDateRangeFilter({ start: '', end: '' });
-      setSearchTerm('');
-      setTaskFilter('');
-      setStatusFilter('all');
-      setPriorityFilter('all');
-    }
-  };
-
-  const clearDateFilter = () => {
-    setDateRangeFilter({ start: '', end: '' });
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -252,6 +206,16 @@ export default function Home() {
           <h1 className="text-3xl font-bold">Task Dashboard</h1>
           <div className="flex space-x-2">
             <button
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className={`px-4 py-2 rounded-lg ${
+                darkMode 
+                  ? 'bg-purple-600 hover:bg-purple-700' 
+                  : 'bg-purple-500 hover:bg-purple-600'
+              } text-white`}
+            >
+              {showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+            </button>
+            <button
               onClick={() => setDarkMode(!darkMode)}
               className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
             >
@@ -259,6 +223,20 @@ export default function Home() {
             </button>
           </div>
         </div>
+
+        {showAnalytics && (
+          <div className="mb-8">
+            <AnalyticsDashboard
+              clients={clients}
+              startDate={analyticsDateRange.start}
+              endDate={analyticsDateRange.end}
+              selectedClients={selectedClients}
+              onDateRangeChange={(start, end) => setAnalyticsDateRange({ start, end })}
+              onClientSelect={setSelectedClients}
+              darkMode={darkMode}
+            />
+          </div>
+        )}
 
         <div className="mb-6">
           <FilterBar 
@@ -298,7 +276,7 @@ export default function Home() {
             </button>
             {(dateRangeFilter.start || dateRangeFilter.end) && (
               <button
-                onClick={clearDateFilter}
+                onClick={() => setDateRangeFilter({ start: '', end: '' })}
                 className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
               >
                 Clear Date Filter
@@ -309,83 +287,37 @@ export default function Home() {
             <input
               type="file"
               ref={fileInputRef}
-              onChange={handleFileImport}
+              onChange={handleFileUpload}
               accept=".json"
               className="hidden"
             />
             <button
-              onClick={triggerFileInput}
-              className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white`}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImporting}
+              className={`px-4 py-2 rounded-lg ${
+                darkMode 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : 'bg-green-500 hover:bg-green-600'
+              } text-white disabled:opacity-50`}
             >
-              Import JSON
+              {isImporting ? 'Importing...' : 'Import JSON'}
             </button>
             <button
-              onClick={handleSaveAllToJson}
-              className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-purple-500 hover:bg-purple-600'} text-white`}
+              onClick={handleImportData}
+              disabled={isImporting}
+              className={`px-4 py-2 rounded-lg ${
+                darkMode 
+                  ? 'bg-purple-600 hover:bg-purple-700' 
+                  : 'bg-purple-500 hover:bg-purple-600'
+              } text-white disabled:opacity-50`}
             >
-              Export JSON
-            </button>
-            <button
-              onClick={handleResetData}
-              className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white`}
-              >
-              Reset Data
+              {isImporting ? 'Importing...' : 'Import Sample Data'}
             </button>
             <button
               onClick={() => setIsModalOpen(true)}
               className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
             >
               Add New Client
-            </button>
-          </div>
-        </div>
-
-        <div className={`mb-8 p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white shadow'}`}>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <button 
-              onClick={() => {
-                setStatusFilter('all');
-                setPriorityFilter('all');
-                setTaskFilter('');
-                clearDateFilter();
-              }}
-              className={`p-4 rounded-lg text-left ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-blue-100 hover:bg-blue-200'}`}
-            >
-              <h3 className="font-semibold">Total Tasks</h3>
-              <p className="text-2xl">{totalTasks}</p>
-            </button>
-            <button 
-              onClick={() => {
-                setStatusFilter('active');
-                setPriorityFilter('all');
-                setTaskFilter('');
-              }}
-              className={`p-4 rounded-lg text-left ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-orange-100 hover:bg-orange-200'}`}
-            >
-              <h3 className="font-semibold">Active Tasks</h3>
-              <p className="text-2xl">{inProgressTasks + pendingTasks}</p>
-            </button>
-            <button 
-              onClick={() => {
-                setStatusFilter('in progress');
-                setPriorityFilter('all');
-                setTaskFilter('');
-              }}
-              className={`p-4 rounded-lg text-left ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-yellow-100 hover:bg-yellow-200'}`}
-            >
-              <h3 className="font-semibold">In Progress</h3>
-              <p className="text-2xl">{inProgressTasks}</p>
-            </button>
-            <button 
-              onClick={() => {
-                setStatusFilter('completed');
-                setPriorityFilter('all');
-                setTaskFilter('');
-              }}
-              className={`p-4 rounded-lg text-left ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-green-100 hover:bg-green-200'}`}
-            >
-              <h3 className="font-semibold">Completed</h3>
-              <p className="text-2xl">{completedTasks}</p>
             </button>
           </div>
         </div>
@@ -400,8 +332,11 @@ export default function Home() {
                 ...prev,
                 [client.id]: !prev[client.id]
               }))}
-              onUpdate={handleUpdateClient}
-              onDeleteTask={handleDeleteTask}
+              onUpdate={fetchClients}
+              onDeleteTask={async (clientId, taskIndex) => {
+                // Implement task deletion here when backend endpoint is ready
+                await fetchClients();
+              }}
               darkMode={darkMode}
             />
           ))}
@@ -411,7 +346,10 @@ export default function Home() {
       <AddClientModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onAddClient={handleAddClient}
+        onAddClient={async () => {
+          await fetchClients();
+          setIsModalOpen(false);
+        }}
         darkMode={darkMode}
       />
     </div>

@@ -5,8 +5,8 @@ export interface Task {
   id: number;
   date: string;
   description: string;
-  status: string;
-  priority: string;
+  status: TaskStatus;
+  priority: TaskPriority;
   client_id: string;
 }
 

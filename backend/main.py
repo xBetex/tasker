@@ -68,6 +68,63 @@ async def get_client(client_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Client not found")
     return client
 
+@app.post("/tasks/", response_model=schemas.Task)
+async def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
+    # Verify client exists
+    client = db.query(Client).filter(Client.id == task.client_id).first()
+    if client is None:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    db_task = Task(
+        date=task.date,
+        description=task.description,
+        status=task.status,
+        priority=task.priority,
+        client_id=task.client_id
+    )
+    db.add(db_task)
+    
+    try:
+        db.commit()
+        db.refresh(db_task)
+        return db_task
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.put("/tasks/{task_id}", response_model=schemas.Task)
+async def update_task(task_id: int, task_update: schemas.TaskUpdate, db: Session = Depends(get_db)):
+    db_task = db.query(Task).filter(Task.id == task_id).first()
+    if db_task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Update task fields
+    for field, value in task_update.dict(exclude_unset=True).items():
+        if value is not None:  # Only update fields that are provided
+            setattr(db_task, field, value)
+    
+    try:
+        db.commit()
+        db.refresh(db_task)
+        return db_task
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/tasks/{task_id}", response_model=schemas.Task)
+async def delete_task(task_id: int, db: Session = Depends(get_db)):
+    db_task = db.query(Task).filter(Task.id == task_id).first()
+    if db_task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    try:
+        db.delete(db_task)
+        db.commit()
+        return db_task
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
 @app.post("/import-data/")
 async def import_data(db: Session = Depends(get_db)):
     try:

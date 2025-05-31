@@ -1,238 +1,399 @@
-import { useState } from 'react';
-import { Client, Task } from '@/types/types';
+import { useState, useEffect } from 'react';
+import { Client, Task, TaskStatus, TaskPriority } from '@/types/types';
+import { api } from '@/services/api';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 interface AddClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddClient: (client: Client) => void;
+  onAddClient: () => void;
   darkMode: boolean;
 }
 
-export default function AddClientModal({ isOpen, onClose, onAddClient, darkMode }: AddClientModalProps) {
-  const [formData, setFormData] = useState<Omit<Client, 'id'>>({ 
-    name: '',
-    company: '',
-    origin: '',
-    tasks: []
-  });
-  const [newTask, setNewTask] = useState<Omit<Task, 'id'>>({
-    date: new Date().toISOString().split('T')[0],
-    description: '',
-    status: 'pending',
-    priority: 'medium'
-  });
+interface FormData {
+  id: string;
+  name: string;
+  company: string;
+  origin: string;
+  taskDescription: string;
+  taskDate: string;
+  taskStatus: TaskStatus;
+  taskPriority: TaskPriority;
+}
 
-  if (!isOpen) return null;
+const initialFormData: FormData = {
+  id: '',
+  name: '',
+  company: '',
+  origin: '',
+  taskDescription: '',
+  taskDate: new Date().toISOString().split('T')[0],
+  taskStatus: 'pending',
+  taskPriority: 'medium'
+};
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+const isDateValid = (dateString: string): boolean => {
+  const date = new Date(dateString);
+  return !isNaN(date.getTime());
+};
+
+const isPastDate = (dateString: string): boolean => {
+  const date = new Date(dateString);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date < today;
+};
+
+export default function AddClientModal({
+  isOpen,
+  onClose,
+  onAddClient,
+  darkMode
+}: AddClientModalProps) {
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<'client' | 'task'>('client');
+
+  const validateForm = (): boolean => {
+    const newErrors: Partial<FormData> = {};
+
+    // Client validation
+    if (!formData.id.trim()) {
+      newErrors.id = 'Client ID is required';
+    } else if (!/^[a-zA-Z0-9-_]+$/.test(formData.id)) {
+      newErrors.id = 'Client ID can only contain letters, numbers, hyphens, and underscores';
+    }
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+    if (!formData.company.trim()) {
+      newErrors.company = 'Company is required';
+    }
+    if (!formData.origin.trim()) {
+      newErrors.origin = 'Origin is required';
+    }
+
+    // Task validation
+    if (!formData.taskDescription.trim()) {
+      newErrors.taskDescription = 'Task description is required';
+    }
+    if (!formData.taskDate) {
+      newErrors.taskDate = 'Task date is required';
+    } else if (!isDateValid(formData.taskDate)) {
+      newErrors.taskDate = 'Invalid date format';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleTaskChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setNewTask({ ...newTask, [name]: value });
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setApiError(null);
 
-  const handleAddTask = () => {
-    if (newTask.description.trim()) {
-      setFormData({
-        ...formData,
-        tasks: [...formData.tasks, newTask]
-      });
-      setNewTask({
-        date: new Date().toISOString().split('T')[0],
-        description: '',
-        status: 'pending',
-        priority: 'medium'
-      });
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      // Create client with initial task using the new sequential API
+      await api.createClientWithTasks(
+        {
+          id: formData.id,
+          name: formData.name,
+          company: formData.company,
+          origin: formData.origin,
+        },
+        [{
+          date: formData.taskDate,
+          description: formData.taskDescription,
+          status: formData.taskStatus,
+          priority: formData.taskPriority,
+        }]
+      );
+
+      onAddClient();
+      onClose();
+      setFormData(initialFormData);
+      setCurrentStep('client');
+    } catch (error) {
+      console.error('Error creating client with tasks:', error);
+      setApiError(error instanceof Error ? error.message : 'Failed to create client and tasks');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleRemoveTask = (index: number) => {
-    const updatedTasks = [...formData.tasks];
-    updatedTasks.splice(index, 1);
-    setFormData({ ...formData, tasks: updatedTasks });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newClient: Client = {
-      ...formData,
-      id: `CL-${Math.floor(1000 + Math.random() * 9000)}`
-    };
-    onAddClient(newClient);
-    setFormData({ 
-      name: '',
-      company: '',
-      origin: '',
-      tasks: []
-    });
-  };
+  if (!isOpen) return null;
 
   return (
-    <div className={`fixed inset-0 z-50 overflow-y-auto ${darkMode ? 'bg-gray-900 bg-opacity-75' : 'bg-gray-500 bg-opacity-75'}`}>
-      <div className="flex items-center justify-center min-h-screen">
-        <div className={`rounded-lg shadow-xl w-full max-w-2xl ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-          <div className={`p-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Add New Client</h2>
-              <button
-                onClick={onClose}
-                className={`p-1 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Name</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                    className={`mt-1 block w-full rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} shadow-sm`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Company</label>
-                  <input
-                    type="text"
-                    name="company"
-                    value={formData.company}
-                    onChange={handleInputChange}
-                    required
-                    className={`mt-1 block w-full rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} shadow-sm`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Origin</label>
-                  <input
-                    type="text"
-                    name="origin"
-                    value={formData.origin}
-                    onChange={handleInputChange}
-                    required
-                    className={`mt-1 block w-full rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} shadow-sm`}
-                  />
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <h3 className={`text-lg font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Tasks</h3>
-                {formData.tasks.length > 0 && (
-                  <div className="mb-4 space-y-2">
-                    {formData.tasks.map((task, index) => (
-                      <div 
-                        key={index} 
-                        className={`p-2 rounded flex justify-between items-center ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}
-                      >
-                        <div>
-                          <span className="font-medium">{task.description}</span>
-                          <span className={`text-xs ml-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                            {task.date} • {task.priority} • {task.status}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTask(index)}
-                          className="text-red-500 hover:text-red-700 text-xs"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
-                    <div>
-                      <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Date</label>
-                      <input
-                        type="date"
-                        name="date"
-                        value={newTask.date}
-                        onChange={handleTaskChange}
-                        className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Description</label>
-                      <input
-                        type="text"
-                        name="description"
-                        value={newTask.description}
-                        onChange={handleTaskChange}
-                        placeholder="Task description"
-                        className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Priority</label>
-                      <select
-                        name="priority"
-                        value={newTask.priority}
-                        onChange={handleTaskChange}
-                        className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
-                      >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div>
-                      <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Status</label>
-                      <select
-                        name="status"
-                        value={newTask.status}
-                        onChange={handleTaskChange}
-                        className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="in progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="awaiting client">Awaiting Client</option>
-                      </select>
-                    </div>
-                    <div className="flex items-end">
-                      <button
-                        type="button"
-                        onClick={handleAddTask}
-                        disabled={!newTask.description.trim()}
-                        className={`w-full py-1 rounded-md ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white disabled:opacity-50`}
-                      >
-                        Add Task
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className={`px-4 py-2 rounded-md ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className={`px-4 py-2 rounded-md ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
-                >
-                  Save Client
-                </button>
-              </div>
-            </form>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white'} rounded-lg p-6 w-full max-w-2xl`}>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">Add New Client</h2>
+          <div className="flex items-center space-x-2">
+            <div className={`h-2 w-2 rounded-full ${currentStep === 'client' ? 'bg-blue-500' : 'bg-gray-300'}`} />
+            <div className={`h-2 w-2 rounded-full ${currentStep === 'task' ? 'bg-blue-500' : 'bg-gray-300'}`} />
           </div>
         </div>
+
+        {apiError && (
+          <div className={`p-4 mb-4 text-sm rounded-lg ${
+            darkMode 
+              ? 'bg-red-900/20 text-red-400' 
+              : 'bg-red-100 text-red-700'
+          }`}>
+            {apiError}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${currentStep === 'task' ? 'hidden' : ''}`}>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Client ID
+                <span className="text-red-500 ml-1">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.id}
+                onChange={(e) => {
+                  const value = e.target.value.trim();
+                  setFormData(prev => ({ ...prev, id: value }));
+                  if (value && !/^[a-zA-Z0-9-_]+$/.test(value)) {
+                    setErrors(prev => ({
+                      ...prev,
+                      id: 'Client ID can only contain letters, numbers, hyphens, and underscores'
+                    }));
+                  } else {
+                    setErrors(prev => ({ ...prev, id: undefined }));
+                  }
+                }}
+                className={`w-full p-2 rounded border ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600' 
+                    : 'bg-white border-gray-300'
+                } ${errors.id ? 'border-red-500' : ''}`}
+                placeholder="e.g., client-123"
+              />
+              {errors.id && (
+                <p className="mt-1 text-sm text-red-500">{errors.id}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Name
+                <span className="text-red-500 ml-1">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                className={`w-full p-2 rounded border ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600' 
+                    : 'bg-white border-gray-300'
+                } ${errors.name ? 'border-red-500' : ''}`}
+                placeholder="Full name"
+              />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-500">{errors.name}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Company
+                <span className="text-red-500 ml-1">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.company}
+                onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+                className={`w-full p-2 rounded border ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600' 
+                    : 'bg-white border-gray-300'
+                } ${errors.company ? 'border-red-500' : ''}`}
+                placeholder="Company name"
+              />
+              {errors.company && (
+                <p className="mt-1 text-sm text-red-500">{errors.company}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Origin
+                <span className="text-red-500 ml-1">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.origin}
+                onChange={(e) => setFormData(prev => ({ ...prev, origin: e.target.value }))}
+                className={`w-full p-2 rounded border ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600' 
+                    : 'bg-white border-gray-300'
+                } ${errors.origin ? 'border-red-500' : ''}`}
+                placeholder="e.g., Website, Referral"
+              />
+              {errors.origin && (
+                <p className="mt-1 text-sm text-red-500">{errors.origin}</p>
+              )}
+            </div>
+          </div>
+
+          <div className={`space-y-4 ${currentStep === 'client' ? 'hidden' : ''}`}>
+            <h3 className="text-lg font-medium mb-2">Initial Task</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1">
+                  Description
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.taskDescription}
+                  onChange={(e) => setFormData(prev => ({ ...prev, taskDescription: e.target.value }))}
+                  className={`w-full p-2 rounded border ${
+                    darkMode 
+                      ? 'bg-gray-700 border-gray-600' 
+                      : 'bg-white border-gray-300'
+                  } ${errors.taskDescription ? 'border-red-500' : ''}`}
+                  placeholder="Task description"
+                />
+                {errors.taskDescription && (
+                  <p className="mt-1 text-sm text-red-500">{errors.taskDescription}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Date
+                  <span className="text-red-500 ml-1">*</span>
+                  {isPastDate(formData.taskDate) && (
+                    <span className="ml-2 text-xs text-yellow-500">(Past Date)</span>
+                  )}
+                </label>
+                <div className="relative">
+                  <DatePicker
+                    selected={new Date(formData.taskDate)}
+                    onChange={(date: Date) => setFormData(prev => ({
+                      ...prev,
+                      taskDate: date.toISOString().split('T')[0]
+                    }))}
+                    dateFormat="yyyy-MM-dd"
+                    className={`w-full p-2 rounded border ${
+                      darkMode 
+                        ? 'bg-gray-700 border-gray-600 text-white' 
+                        : 'bg-white border-gray-300'
+                    } ${errors.taskDate ? 'border-red-500' : ''} ${
+                      isPastDate(formData.taskDate) ? 'italic text-gray-500' : ''
+                    }`}
+                    showYearDropdown
+                    scrollableYearDropdown
+                    yearDropdownItemNumber={10}
+                    placeholderText="Select date"
+                    title={isPastDate(formData.taskDate) ? 'Past dates are allowed' : ''}
+                  />
+                </div>
+                {errors.taskDate && (
+                  <p className="mt-1 text-sm text-red-500">{errors.taskDate}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Status</label>
+                  <select
+                    value={formData.taskStatus}
+                    onChange={(e) => setFormData(prev => ({ ...prev, taskStatus: e.target.value as TaskStatus }))}
+                    className={`w-full p-2 rounded border ${
+                      darkMode 
+                        ? 'bg-gray-700 border-gray-600' 
+                        : 'bg-white border-gray-300'
+                    }`}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="in progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="awaiting client">Awaiting Client</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Priority</label>
+                  <select
+                    value={formData.taskPriority}
+                    onChange={(e) => setFormData(prev => ({ ...prev, taskPriority: e.target.value as TaskPriority }))}
+                    className={`w-full p-2 rounded border ${
+                      darkMode 
+                        ? 'bg-gray-700 border-gray-600' 
+                        : 'bg-white border-gray-300'
+                    }`}
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-between space-x-2 mt-6">
+            <button
+              type="button"
+              onClick={() => {
+                if (currentStep === 'task') {
+                  setCurrentStep('client');
+                } else {
+                  onClose();
+                }
+              }}
+              className={`px-4 py-2 rounded ${
+                darkMode 
+                  ? 'bg-gray-600 hover:bg-gray-500' 
+                  : 'bg-gray-200 hover:bg-gray-300'
+              }`}
+              disabled={isSubmitting}
+            >
+              {currentStep === 'task' ? 'Back' : 'Cancel'}
+            </button>
+            <button
+              type={currentStep === 'task' ? 'submit' : 'button'}
+              onClick={() => {
+                if (currentStep === 'client') {
+                  const clientErrors = validateForm();
+                  if (!clientErrors) {
+                    setCurrentStep('task');
+                  }
+                }
+              }}
+              className={`px-4 py-2 rounded ${
+                darkMode 
+                  ? 'bg-blue-600 hover:bg-blue-700' 
+                  : 'bg-blue-500 hover:bg-blue-600'
+              } text-white disabled:opacity-50`}
+              disabled={isSubmitting}
+            >
+              {isSubmitting 
+                ? 'Creating...' 
+                : currentStep === 'client' 
+                  ? 'Next' 
+                  : 'Create Client'
+              }
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
