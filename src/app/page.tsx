@@ -5,7 +5,7 @@ import FilterBar from './components/FilterBar';
 import AddClientModal from './components/AddClientModal';
 import { Client, TaskStatus, TaskPriority } from '@/types/types';
 import { api } from '@/services/api';
-import Link from 'next/link';
+import { useDarkMode } from './layout';
 
 export default function Home() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -21,10 +21,12 @@ export default function Home() {
     start: '',
     end: ''
   });
-  const [darkMode, setDarkMode] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Use dark mode from layout context
+  const { darkMode } = useDarkMode();
 
   const fetchClients = async () => {
     try {
@@ -208,77 +210,81 @@ export default function Home() {
           } else if (endDate) {
             return taskDate <= endDate;
           }
-          return false;
+          return true;
         })
       );
     }
 
-    // Search term filter
-    if (searchTerm) {
-      result = result.filter(client => 
-        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.origin.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.id.toLowerCase().includes(searchTerm.toLowerCase())
+    // Search filter
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      result = result.filter(client =>
+        client.name.toLowerCase().includes(searchLower) ||
+        client.company.toLowerCase().includes(searchLower) ||
+        client.origin.toLowerCase().includes(searchLower) ||
+        client.id.toLowerCase().includes(searchLower)
       );
     }
 
     // Task description filter
-    if (taskFilter) {
+    if (taskFilter.trim()) {
+      const taskLower = taskFilter.toLowerCase();
       result = result.filter(client =>
         client.tasks.some(task =>
-          task.description.toLowerCase().includes(taskFilter.toLowerCase())
+          task.description.toLowerCase().includes(taskLower)
         )
       );
     }
 
     // Status filter
     if (statusFilter !== 'all') {
-      if (statusFilter === 'active') {
-        result = result.filter(client => 
-          client.tasks.some(task => 
-            task.status === 'in progress' || task.status === 'pending'
-          )
-        );
-      } else {
-        result = result.filter(client => 
-          client.tasks.some(task => task.status === statusFilter)
-        );
-      }
+      result = result.filter(client =>
+        client.tasks.some(task => {
+          if (statusFilter === 'active') {
+            return task.status === 'in progress' || task.status === 'pending';
+          }
+          return task.status === statusFilter;
+        })
+      );
     }
 
     // Priority filter
     if (priorityFilter !== 'all') {
-      result = result.filter(client => 
+      result = result.filter(client =>
         client.tasks.some(task => task.priority === priorityFilter)
       );
     }
 
     setFilteredClients(result);
-  }, [clients, searchTerm, statusFilter, priorityFilter, taskFilter, dateRangeFilter]);
+  }, [clients, searchTerm, taskFilter, statusFilter, priorityFilter, dateRangeFilter]);
 
   // Calculate statistics
-  const totalTasks = clients.reduce((acc, client) => acc + client.tasks.length, 0);
-  const inProgressTasks = clients.reduce((acc, client) => 
-    acc + client.tasks.filter(task => task.status === 'in progress').length, 0);
-  const pendingTasks = clients.reduce((acc, client) => 
-    acc + client.tasks.filter(task => task.status === 'pending').length, 0);
-  const completedTasks = clients.reduce((acc, client) => 
-    acc + client.tasks.filter(task => task.status === 'completed').length, 0);
+  const totalTasks = clients.reduce((sum, client) => sum + client.tasks.length, 0);
+  const completedTasks = clients.reduce((sum, client) => 
+    sum + client.tasks.filter(task => task.status === 'completed').length, 0
+  );
+  const inProgressTasks = clients.reduce((sum, client) => 
+    sum + client.tasks.filter(task => task.status === 'in progress').length, 0
+  );
+  const pendingTasks = clients.reduce((sum, client) => 
+    sum + client.tasks.filter(task => task.status === 'pending').length, 0
+  );
 
   const handleExportJson = async () => {
     try {
-      // Fetch all clients from database to ensure we get everything
-      const allClients = await api.getAllClients();
-      const json = JSON.stringify(allClients, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
+      const data = await api.getClients();
+      const jsonString = JSON.stringify(data, null, 2);
+      
+      const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
+      
       const a = document.createElement('a');
       a.href = url;
-      a.download = `all_clients_${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `task-dashboard-export-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exporting data:', error);
@@ -309,26 +315,9 @@ export default function Home() {
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
+        {/* Simplified Header - removed Analytics button */}
+        <div className="mb-6">
           <h1 className="text-3xl font-bold">Task Dashboard</h1>
-          <div className="flex space-x-2">
-            <Link
-              href="/analytics"
-              className={`px-4 py-2 rounded-lg ${
-                darkMode 
-                  ? 'bg-purple-600 hover:bg-purple-700' 
-                  : 'bg-purple-500 hover:bg-purple-600'
-              } text-white`}
-            >
-              📊 Analytics
-            </Link>
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
-            >
-              {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
-            </button>
-          </div>
         </div>
 
         <div className="mb-6">
@@ -357,20 +346,20 @@ export default function Home() {
                 });
                 setExpandedCards(allExpanded);
               }}
-              className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+              className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
             >
               Open All Cards
             </button>
             <button
               onClick={() => setExpandedCards({})}
-              className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+              className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
             >
               Collapse All
             </button>
             {(dateRangeFilter.start || dateRangeFilter.end) && (
               <button
                 onClick={clearDateFilter}
-                className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+                className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
               >
                 Clear Date Filter
               </button>
@@ -387,7 +376,7 @@ export default function Home() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
-              className={`px-4 py-2 rounded-lg ${
+              className={`px-4 py-2 rounded-lg transition-colors ${
                 darkMode 
                   ? 'bg-green-600 hover:bg-green-700' 
                   : 'bg-green-500 hover:bg-green-600'
@@ -397,7 +386,7 @@ export default function Home() {
             </button>
             <button
               onClick={handleExportJson}
-              className={`px-4 py-2 rounded-lg ${
+              className={`px-4 py-2 rounded-lg transition-colors ${
                 darkMode 
                   ? 'bg-purple-600 hover:bg-purple-700' 
                   : 'bg-purple-500 hover:bg-purple-600'
@@ -407,7 +396,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setIsModalOpen(true)}
-              className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+              className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
             >
               Add New Client
             </button>
@@ -424,7 +413,7 @@ export default function Home() {
                 setTaskFilter('');
                 clearDateFilter();
               }}
-              className={`p-4 rounded-lg text-left ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-blue-100 hover:bg-blue-200'}`}
+              className={`p-4 rounded-lg text-left transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-blue-100 hover:bg-blue-200'}`}
             >
               <h3 className="font-semibold">Total Tasks</h3>
               <p className="text-2xl">{totalTasks}</p>
@@ -435,7 +424,7 @@ export default function Home() {
                 setPriorityFilter('all');
                 setTaskFilter('');
               }}
-              className={`p-4 rounded-lg text-left ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-orange-100 hover:bg-orange-200'}`}
+              className={`p-4 rounded-lg text-left transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-orange-100 hover:bg-orange-200'}`}
             >
               <h3 className="font-semibold">Active Tasks</h3>
               <p className="text-2xl">{inProgressTasks + pendingTasks}</p>
@@ -446,7 +435,7 @@ export default function Home() {
                 setPriorityFilter('all');
                 setTaskFilter('');
               }}
-              className={`p-4 rounded-lg text-left ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-yellow-100 hover:bg-yellow-200'}`}
+              className={`p-4 rounded-lg text-left transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-yellow-100 hover:bg-yellow-200'}`}
             >
               <h3 className="font-semibold">In Progress</h3>
               <p className="text-2xl">{inProgressTasks}</p>
@@ -457,7 +446,7 @@ export default function Home() {
                 setPriorityFilter('all');
                 setTaskFilter('');
               }}
-              className={`p-4 rounded-lg text-left ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-green-100 hover:bg-green-200'}`}
+              className={`p-4 rounded-lg text-left transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-green-100 hover:bg-green-200'}`}
             >
               <h3 className="font-semibold">Completed</h3>
               <p className="text-2xl">{completedTasks}</p>
