@@ -76,6 +76,16 @@ export default function Navbar({ darkMode, onToggleDarkMode }: NavbarProps) {
             >
               Analytics
             </Link>
+            <Link 
+              href="/filtered-tasks"
+              className={`text-lg font-semibold transition-colors ${
+                isActive('/filtered-tasks') 
+                  ? 'text-blue-400' 
+                  : 'hover:text-blue-300'
+              }`}
+            >
+              Tasks
+            </Link>
             
             {/* Dark Mode Toggle - Desktop */}
             <div className="flex items-center">
@@ -142,6 +152,17 @@ export default function Navbar({ darkMode, onToggleDarkMode }: NavbarProps) {
               onClick={handleLinkClick}
             >
               📊 Analytics
+            </Link>
+            <Link
+              href="/filtered-tasks"
+              className={`block px-4 py-2 rounded-lg transition-colors ${
+                isActive('/filtered-tasks') 
+                  ? 'bg-blue-600 text-white' 
+                  : 'hover:bg-gray-700'
+              }`}
+              onClick={handleLinkClick}
+            >
+              📋 Tasks
             </Link>
             
             {/* Dark Mode Toggle - Mobile */}
