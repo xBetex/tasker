@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Client, Task, TaskStatus, TaskPriority } from '@/types/types';
 import EditTaskModal from './EditTaskModal';
 import { api } from '@/services/api';
+import { MoreVerticalIcon, EditIcon, TrashIcon } from './Icons';
 
 interface ClientCardProps {
   client: Client;
@@ -42,6 +43,10 @@ export default function ClientCard({
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Estados para long press
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [isLongPress, setIsLongPress] = useState(false);
 
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
@@ -88,6 +93,68 @@ export default function ClientCard({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Handlers para long press
+  const handleTouchStart = useCallback((e: React.TouchEvent, task: Task, index: number) => {
+    setIsLongPress(false);
+    const timer = setTimeout(() => {
+      setIsLongPress(true);
+      const touch = e.touches[0];
+      const rect = e.currentTarget.getBoundingClientRect();
+      
+      // Posicionar o menu próximo ao toque, mas ajustar se estiver muito perto das bordas
+      let x = touch.clientX;
+      let y = touch.clientY;
+      
+      // Ajustar para não sair da tela
+      if (x + 200 > window.innerWidth) x = window.innerWidth - 200;
+      if (y + 150 > window.innerHeight) y = y - 150;
+      
+      setContextMenu({
+        visible: true,
+        x,
+        y,
+        taskIndex: index,
+        task
+      });
+    }, 500); // 500ms para long press
+    
+    setLongPressTimer(timer);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  }, [longPressTimer]);
+
+  const handleTouchCancel = useCallback(() => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  }, [longPressTimer]);
+
+  // Função combinada para expansão e edição
+  const handleToggleExpandAndEdit = () => {
+    if (isExpanded) {
+      // Se está expandido, recolher e sair do modo de edição
+      setIsEditing(false);
+      setIsAddingTask(false);
+    } else {
+      // Se está recolhido, expandir e entrar no modo de edição
+      setIsEditing(true);
+    }
+    onToggleExpand();
+  };
+
+  // Função para cancelar edição
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setIsAddingTask(false);
+    setEditData({ ...client }); // Reset dos dados de edição
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -209,7 +276,7 @@ export default function ClientCard({
       case 'awaiting client':
         return darkMode ? 'bg-purple-900/20' : 'bg-purple-50';
       default:
-        return darkMode ? 'bg-gray-700' : 'bg-gray-50';
+        return darkMode ? 'bg-gray-700' : 'bg-gray-100';
     }
   };
 
@@ -219,12 +286,12 @@ export default function ClientCard({
       setError(null);
       await api.deleteTask(taskId);
       onUpdate();
+      setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
     } catch (error) {
       console.error('Error deleting task:', error);
       setError(error instanceof Error ? error.message : 'Failed to delete task');
     } finally {
       setIsLoading(false);
-      setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
     }
   };
 
@@ -271,60 +338,116 @@ export default function ClientCard({
     }
   };
 
+  const handleMoreVerticalClick = (e: React.MouseEvent, task: Task, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    let x = rect.right;
+    let y = rect.top;
+    
+    // Ajustar posição para não sair da tela
+    if (x + 200 > window.innerWidth) x = rect.left - 200;
+    if (y + 150 > window.innerHeight) y = y - 150;
+    
+    setContextMenu({
+      visible: true,
+      x,
+      y,
+      taskIndex: index,
+      task
+    });
+  };
+
+  const handleEditTask = () => {
+    if (contextMenu.task) {
+      setEditingTask(contextMenu.task);
+    }
+    setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
+  };
+
   const getStatusColorText = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed':
-        return darkMode ? 'text-green-400' : 'text-green-600';
+        return 'text-green-600';
       case 'in progress':
-        return darkMode ? 'text-blue-400' : 'text-blue-600';
+        return 'text-blue-600';
       case 'pending':
-        return darkMode ? 'text-yellow-400' : 'text-yellow-600';
+        return 'text-yellow-600';
       case 'awaiting client':
-        return darkMode ? 'text-purple-400' : 'text-purple-600';
+        return 'text-purple-600';
       default:
-        return '';
+        return 'text-gray-600';
     }
   };
 
   return (
     <>
-      <div className={`rounded-lg overflow-hidden shadow-lg transition-all duration-300 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-        <div
-          className={`p-4 cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}
-          onClick={onToggleExpand}
-        >
-          <div className="flex justify-between items-center">
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-1">{client.name}</h3>
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+      <div className={`rounded-lg shadow-sm border transition-all duration-300 ${
+        darkMode 
+          ? 'bg-gray-800 border-gray-700' 
+          : 'bg-white border-gray-200'
+      } ${
+        isExpanded 
+          ? 'transform scale-[1.02] shadow-lg' 
+          : 'hover:shadow-md'
+      }`}>
+        <div className="p-4">
+          <div className="flex justify-between items-start mb-2">
+            <div 
+              className="flex-1 cursor-pointer"
+              onClick={onToggleExpand}
+            >
+              <h3 className={`text-lg font-semibold transition-colors ${
+                darkMode ? 'text-white hover:text-blue-400' : 'text-gray-900 hover:text-blue-600'
+              }`}>
+                {client.name}
+              </h3>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 {client.company} • {client.origin} • ID: {client.id}
               </p>
             </div>
             <div className="flex items-center space-x-2">
-              {isEditing && (
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className={`px-3 py-1 rounded-md text-sm ${
-                    darkMode 
-                      ? 'bg-red-600 hover:bg-red-700 text-white' 
-                      : 'bg-red-500 hover:bg-red-600 text-white'
-                  } disabled:opacity-50`}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? 'Deleting...' : 'Delete Client'}
-                </button>
+              {isExpanded && isEditing && (
+                <>
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                      darkMode 
+                        ? 'bg-red-600 hover:bg-red-700 text-white' 
+                        : 'bg-red-500 hover:bg-red-600 text-white'
+                    } disabled:opacity-50`}
+                    disabled={isDeleting}
+                    title="Delete this client"
+                  >
+                    {isDeleting ? 'Deleting...' : 'Delete Client'}
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                      darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
+                    title="Cancel editing"
+                  >
+                    Cancel
+                  </button>
+                </>
               )}
               <button
-                onClick={() => setIsEditing(!isEditing)}
-                className={`px-3 py-1 rounded-md text-sm ${darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'}`}
+                onClick={handleToggleExpandAndEdit}
+                className={`p-1 rounded-md transition-all duration-300 ${
+                  darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                } ${
+                  isEditing ? 'bg-blue-500 text-white' : ''
+                }`}
+                title={
+                  isExpanded 
+                    ? (isEditing ? 'Save and collapse' : 'Collapse') 
+                    : 'Expand and edit'
+                }
+                aria-expanded={isExpanded}
               >
-                {isEditing ? 'Cancel' : 'Edit'}
-              </button>
-              <button
-                onClick={onToggleExpand}
-                className={`p-1 rounded-md ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
-              >
-                {isExpanded ? '▲' : '▼'}
+                {isExpanded ? (isEditing ? '💾' : '▲') : '✏️'}
               </button>
             </div>
           </div>
@@ -433,7 +556,7 @@ export default function ClientCard({
                   <button
                     onClick={handleAddTask}
                     disabled={!newTask.description.trim()}
-                    className={`w-full py-1 rounded-md ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white disabled:opacity-50 text-sm`}
+                    className={`w-full py-1 rounded-md ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white disabled:opacity-50 text-sm transition-colors`}
                   >
                     Add New Task
                   </button>
@@ -447,15 +570,17 @@ export default function ClientCard({
                   >
                     <div className="flex justify-between items-center mb-2">
                       <h5 className="font-medium">{task.description}</h5>
+                      {/* Botão delete só aparece no modo de edição */}
                       <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteTask(task.id);
-                          }}
-                          className="text-red-500 hover:text-red-700 text-xs"
-                        >
-                          Delete
-                        </button>
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTask(task.id);
+                        }}
+                        className="text-red-500 hover:text-red-700 text-xs transition-colors"
+                        title="Delete this task"
+                      >
+                        Delete
+                      </button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
@@ -498,103 +623,128 @@ export default function ClientCard({
 
                 <button
                   onClick={handleSave}
-                  className={`w-full py-2 rounded-md ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+                  disabled={isLoading}
+                  className={`w-full py-2 rounded-md ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white disabled:opacity-50 transition-colors`}
                 >
-                  Save Changes
+                  {isLoading ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-medium">Tasks</h4>
+              <div className="space-y-2">
+                {!isAddingTask && (
                   <button
-                    onClick={() => setIsAddingTask(!isAddingTask)}
-                    className={`px-2 py-1 text-xs rounded ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+                    onClick={() => setIsAddingTask(true)}
+                    className={`w-full py-2 rounded-md ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white transition-colors`}
                   >
-                    {isAddingTask ? 'Cancel' : '+ Add Task'}
+                    Add Task
                   </button>
-                </div>
+                )}
 
                 {isAddingTask && (
-                  <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} mb-3`}>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
+                  <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} mb-4`}>
+                    <div className="grid grid-cols-1 gap-2 mb-2">
                       <div>
-                        <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Date</label>
-                        <input
-                          type="date"
-                          name="date"
-                          value={newTask.date}
-                          onChange={handleNewTaskChange}
-                          className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
                         <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Description</label>
                         <input
                           type="text"
                           name="description"
                           value={newTask.description}
                           onChange={handleNewTaskChange}
-                          placeholder="New task description"
+                          placeholder="Task description"
                           className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
                         />
                       </div>
-                      <div>
-                        <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Priority</label>
-                        <select
-                          name="priority"
-                          value={newTask.priority}
-                          onChange={handleNewTaskChange}
-                          className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Date</label>
+                          <input
+                            type="date"
+                            name="date"
+                            value={newTask.date}
+                            onChange={handleNewTaskChange}
+                            className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Priority</label>
+                          <select
+                            name="priority"
+                            value={newTask.priority}
+                            onChange={handleNewTaskChange}
+                            className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                          >
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2 mb-2">
+                        <div>
+                          <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Status</label>
+                          <select
+                            name="status"
+                            value={newTask.status}
+                            onChange={handleNewTaskChange}
+                            className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="in progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="awaiting client">Awaiting Client</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleAddTask}
+                          disabled={!newTask.description.trim()}
+                          className={`flex-1 py-1 rounded-md ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white disabled:opacity-50 text-sm transition-colors`}
                         >
-                          <option value="low">Low</option>
-                          <option value="medium">Medium</option>
-                          <option value="high">High</option>
-                        </select>
+                          Add Task
+                        </button>
+                        <button
+                          onClick={() => setIsAddingTask(false)}
+                          className={`px-3 py-1 rounded-md ${darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'} text-sm transition-colors`}
+                        >
+                          Cancel
+                        </button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 gap-2 mb-2">
-                      <div>
-                        <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Status</label>
-                        <select
-                          name="status"
-                          value={newTask.status}
-                          onChange={handleNewTaskChange}
-                          className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="in progress">In Progress</option>
-                          <option value="completed">Completed</option>
-                          <option value="awaiting client">Awaiting Client</option>
-                        </select>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleAddTask}
-                      disabled={!newTask.description.trim()}
-                      className={`w-full py-1 rounded-md ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white disabled:opacity-50 text-sm`}
-                    >
-                      Add Task
-                    </button>
                   </div>
                 )}
 
                 {client.tasks.map((task, index) => (
                   <div
                     key={task.id}
-                    className={`p-3 rounded-lg ${getStatusBgColor(task.status)}`}
+                    className={`p-3 rounded-lg ${getStatusBgColor(task.status)} transition-all duration-200 hover:shadow-sm`}
                     onContextMenu={(e) => handleContextMenu(e, index)}
+                    onTouchStart={(e) => handleTouchStart(e, task, index)}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchCancel={handleTouchCancel}
                   >
                     <div className="flex justify-between items-start">
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium">{task.description}</p>
                         <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                          {task.date} • {task.priority}
+                          {task.date} • <span className={getPriorityColor(task.priority)}>{task.priority}</span>
                         </p>
                       </div>
-                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(task.status)} bg-opacity-100 text-white`}>
-                        {task.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(task.status)} bg-opacity-100 text-white`}>
+                          {task.status}
+                        </span>
+                        <button
+                          onClick={(e) => handleMoreVerticalClick(e, task, index)}
+                          className={`p-1 rounded transition-colors ${
+                            darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                          }`}
+                          title="Task options"
+                          aria-label="Task options"
+                        >
+                          <MoreVerticalIcon size={16} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -624,6 +774,7 @@ export default function ClientCard({
         )}
       </div>
 
+      {/* Context Menu para botão direito - mantém funcionalidade de alterar status */}
       {contextMenu.visible && (
         <div
           ref={contextMenuRef}
@@ -670,14 +821,19 @@ export default function ClientCard({
             <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
             Awaiting Client
           </button>
-          <div className="border-t my-1"></div>
-          <button
-            onClick={() => contextMenu.task && handleDeleteTask(contextMenu.task.id)}
-            disabled={isLoading}
-            className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600 text-red-400' : 'hover:bg-gray-100 text-red-600'} disabled:opacity-50`}
-          >
-            Delete Task
-          </button>
+          {/* Só mostra opção de delete no modo de edição */}
+          {isEditing && (
+            <>
+              <div className="border-t my-1"></div>
+              <button
+                onClick={() => contextMenu.task && handleDeleteTask(contextMenu.task.id)}
+                disabled={isLoading}
+                className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600 text-red-400' : 'hover:bg-gray-100 text-red-600'} disabled:opacity-50`}
+              >
+                Delete Task
+              </button>
+            </>
+          )}
         </div>
       )}
 
@@ -691,7 +847,7 @@ export default function ClientCard({
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog - mantém confirmação para exclusão de cliente */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white'} rounded-lg p-6 w-full max-w-md`}>
@@ -717,7 +873,7 @@ export default function ClientCard({
                   setShowDeleteConfirm(false);
                   setError(null);
                 }}
-                className={`px-4 py-2 rounded ${
+                className={`px-4 py-2 rounded transition-colors ${
                   darkMode 
                     ? 'bg-gray-600 hover:bg-gray-500' 
                     : 'bg-gray-200 hover:bg-gray-300'
@@ -728,7 +884,7 @@ export default function ClientCard({
               </button>
               <button
                 onClick={handleDeleteClient}
-                className={`px-4 py-2 rounded text-white ${
+                className={`px-4 py-2 rounded text-white transition-colors ${
                   darkMode 
                     ? 'bg-red-600 hover:bg-red-700' 
                     : 'bg-red-500 hover:bg-red-600'

@@ -30,10 +30,10 @@ export default function FilterBar({
 }: FilterBarProps) {
   return (
     <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white shadow'}`}>
-      {/* Update grid-cols to accommodate the new date range filter */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        {/* Existing search input (reduce col-span) */}
-        <div>
+      {/* Updated responsive layout - stack vertically on mobile, horizontal on sm+ */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        {/* Search input */}
+        <div className="flex-1">
           <label htmlFor="search" className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             Search Clients
           </label>
@@ -47,8 +47,8 @@ export default function FilterBar({
           />
         </div>
 
-        {/* Existing task filter */}
-        <div>
+        {/* Task filter */}
+        <div className="flex-1">
           <label htmlFor="task" className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             Filter by Task
           </label>
@@ -62,36 +62,8 @@ export default function FilterBar({
           />
         </div>
 
-        {/* Date Range Filter */}
-        <div className="md:col-span-2">
-          <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            Task Date Range
-          </label>
-          <div className="flex gap-2 mt-1">
-            <input
-              type="date"
-              value={dateRangeFilter.start}
-              onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, start: e.target.value })}
-              className={`block w-full rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500`}
-            />
-            <span className="flex items-center">to</span>
-            <input
-              type="date"
-              value={dateRangeFilter.end}
-              onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, end: e.target.value })}
-              className={`block w-full rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500`}
-            />
-            <button
-              onClick={() => setDateRangeFilter({ start: '', end: '' })}
-              className={`px-2 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-
-        {/* Existing status filter */}
-        <div>
+        {/* Status filter */}
+        <div className="flex-1">
           <label htmlFor="status" className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             Filter by Status
           </label>
@@ -110,8 +82,8 @@ export default function FilterBar({
           </select>
         </div>
 
-        {/* Existing priority filter */}
-        <div>
+        {/* Priority filter */}
+        <div className="flex-1">
           <label htmlFor="priority" className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             Filter by Priority
           </label>
@@ -126,6 +98,35 @@ export default function FilterBar({
             <option value="medium">Medium</option>
             <option value="high">High</option>
           </select>
+        </div>
+      </div>
+
+      {/* Date Range Filter - Separate row for better mobile experience */}
+      <div className="mt-4">
+        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          Task Date Range
+        </label>
+        <div className="flex flex-col sm:flex-row gap-2 mt-1">
+          <input
+            type="date"
+            value={dateRangeFilter.start}
+            onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, start: e.target.value })}
+            className={`block w-full rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+          />
+          <span className="flex items-center justify-center text-sm">to</span>
+          <input
+            type="date"
+            value={dateRangeFilter.end}
+            onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, end: e.target.value })}
+            className={`block w-full rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+          />
+          <button
+            onClick={() => setDateRangeFilter({ start: '', end: '' })}
+            className={`px-3 py-2 rounded whitespace-nowrap ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} transition-colors`}
+            title="Clear date range filter"
+          >
+            Clear
+          </button>
         </div>
       </div>
     </div>
