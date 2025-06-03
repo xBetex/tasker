@@ -8,6 +8,8 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   client_id: string;
+  sla_date?: string;
+  completion_date?: string;
 }
 
 export interface Client {

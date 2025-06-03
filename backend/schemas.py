@@ -6,6 +6,8 @@ class TaskBase(BaseModel):
     description: str
     status: str
     priority: str
+    sla_date: Optional[str] = None
+    completion_date: Optional[str] = None
 
 class TaskCreate(TaskBase):
     client_id: str
@@ -22,6 +24,8 @@ class TaskUpdate(BaseModel):
     status: Optional[str] = None
     priority: Optional[str] = None
     client_id: Optional[str] = None
+    sla_date: Optional[str] = None
+    completion_date: Optional[str] = None
 
 class ClientBase(BaseModel):
     name: str

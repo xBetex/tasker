@@ -33,5 +33,7 @@ class Task(Base):
     description = Column(String, nullable=False)
     status = Column(String, nullable=False)
     priority = Column(String, nullable=False)
+    sla_date = Column(String, nullable=True)  # Data limite do SLA
+    completion_date = Column(String, nullable=True)  # Data de conclusão real
     
     client = relationship("Client", back_populates="tasks") 

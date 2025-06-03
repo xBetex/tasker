@@ -8,6 +8,7 @@ interface ToggleFilterButtonProps<T extends string> {
   onChange: (value: T | 'all') => void;
   darkMode: boolean;
   label?: string;
+  optionLabels?: Record<T, string>;
 }
 
 export default function ToggleFilterButton<T extends string>({
@@ -15,7 +16,8 @@ export default function ToggleFilterButton<T extends string>({
   value,
   onChange,
   darkMode,
-  label
+  label,
+  optionLabels
 }: ToggleFilterButtonProps<T>) {
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -66,7 +68,7 @@ export default function ToggleFilterButton<T extends string>({
               getStatusColor(option, value === option)
             }`}
           >
-            {getDisplayText(option)}
+            {optionLabels && option !== 'all' ? optionLabels[option] || getDisplayText(option) : getDisplayText(option)}
           </button>
         ))}
       </div>
@@ -92,7 +94,7 @@ export default function ToggleFilterButton<T extends string>({
             <option value="all">All {label || 'Options'}</option>
             {options.map((option) => (
               <option key={option} value={option}>
-                {getDisplayText(option)}
+                {optionLabels && option !== 'all' ? optionLabels[option] || getDisplayText(option) : getDisplayText(option)}
               </option>
             ))}
           </select>

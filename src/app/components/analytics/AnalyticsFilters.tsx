@@ -1,6 +1,7 @@
 'use client'
 
 import { Client, TaskStatus, TaskPriority } from '@/types/types';
+import { SLAFilter } from '@/app/components/FilterBar';
 import ToggleFilterButton from './ToggleFilterButton';
 import ClientSearchInput from './ClientSearchInput';
 
@@ -15,6 +16,8 @@ interface AnalyticsFiltersProps {
   setClientSearch: (search: string) => void;
   selectedClientId: string | null;
   setSelectedClientId: (clientId: string | null) => void;
+  slaFilter?: SLAFilter;
+  setSlaFilter?: (slaFilter: SLAFilter) => void;
   clients: Client[];
   darkMode: boolean;
 }
@@ -30,6 +33,8 @@ export default function AnalyticsFilters({
   setClientSearch,
   selectedClientId,
   setSelectedClientId,
+  slaFilter,
+  setSlaFilter,
   clients,
   darkMode,
 }: AnalyticsFiltersProps) {
@@ -40,6 +45,9 @@ export default function AnalyticsFilters({
     setPriorityFilter('all');
     setClientSearch('');
     setSelectedClientId(null);
+    if (setSlaFilter) {
+      setSlaFilter('all');
+    }
   };
 
   const hasActiveFilters = 
@@ -48,7 +56,8 @@ export default function AnalyticsFilters({
     statusFilter !== 'all' || 
     priorityFilter !== 'all' || 
     clientSearch ||
-    selectedClientId;
+    selectedClientId ||
+    (slaFilter && slaFilter !== 'all');
 
   // Obter nome do cliente selecionado para exibição
   const selectedClient = selectedClientId ? clients.find(c => c.id === selectedClientId) : null;
@@ -65,7 +74,7 @@ export default function AnalyticsFilters({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {/* Date Range Filter */}
         <div className="space-y-3">
           <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -117,6 +126,26 @@ export default function AnalyticsFilters({
             label="⚡ Priority Level"
           />
         </div>
+
+        {/* SLA Filter */}
+        {setSlaFilter && (
+          <div>
+            <ToggleFilterButton
+              options={['overdue', 'due_today', 'due_this_week', 'on_track', 'no_sla']}
+              value={slaFilter || 'all'}
+              onChange={setSlaFilter}
+              darkMode={darkMode}
+              label="⏰ SLA Status"
+              optionLabels={{
+                'overdue': '🚨 Overdue',
+                'due_today': '⚠️ Due Today',
+                'due_this_week': '⏰ Due This Week',
+                'on_track': '✅ On Track',
+                'no_sla': '📝 No SLA'
+              }}
+            />
+          </div>
+        )}
 
         {/* Client Search */}
         <div className="space-y-3">

@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { Client, Task, TaskStatus, TaskPriority } from '@/types/types';
+import { SLAFilter } from '@/app/components/FilterBar';
+import { getSLAStatus } from '@/utils/slaUtils';
 
 interface FilterOptions {
   statusFilter: TaskStatus | 'all';
@@ -8,6 +10,7 @@ interface FilterOptions {
   selectedClientId: string | null; // Cliente específico selecionado
   dateRange: { start: string; end: string };
   selectedClients?: string[];
+  slaFilter: SLAFilter;
 }
 
 interface TaskStats {
@@ -33,7 +36,7 @@ export function useTaskFilters(
   clients: Client[],
   filters: FilterOptions
 ): UseTaskFiltersReturn {
-  const { statusFilter, priorityFilter, clientSearch, selectedClientId, dateRange, selectedClients } = filters;
+  const { statusFilter, priorityFilter, clientSearch, selectedClientId, dateRange, selectedClients, slaFilter } = filters;
 
   const filteredData = useMemo(() => {
     // First filter clients based on search and selection
@@ -95,6 +98,28 @@ export function useTaskFilters(
       allTasks = allTasks.filter(task => task.priority === priorityFilter);
     }
 
+    // Filter by SLA status
+    if (slaFilter !== 'all') {
+      allTasks = allTasks.filter(task => {
+        const slaStatus = getSLAStatus(task);
+        
+        switch (slaFilter) {
+          case 'overdue':
+            return slaStatus === 'overdue';
+          case 'due_today':
+            return slaStatus === 'due_today';
+          case 'due_this_week':
+            return slaStatus === 'due_this_week';
+          case 'on_track':
+            return slaStatus === 'on_track';
+          case 'no_sla':
+            return slaStatus === 'no_sla';
+          default:
+            return true;
+        }
+      });
+    }
+
     // Calculate overdue tasks (tasks older than 30 days that are not completed)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -137,7 +162,7 @@ export function useTaskFilters(
       filteredClients: workingClients,
       stats
     };
-  }, [clients, statusFilter, priorityFilter, clientSearch, selectedClientId, dateRange, selectedClients]);
+  }, [clients, statusFilter, priorityFilter, clientSearch, selectedClientId, dateRange, selectedClients, slaFilter]);
 
   return filteredData;
 } 

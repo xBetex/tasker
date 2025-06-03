@@ -34,8 +34,8 @@ export default function AnalyticsPage() {
     setSelectedClientId,
     setDateRange,
     setSelectedClients,
-    clearFilters,
-    getShareableUrl
+    setSlaFilter,
+    clearFilters
   } = usePersistedFilters('analytics-filters');
 
   // Use task filtering logic
@@ -94,18 +94,6 @@ export default function AnalyticsPage() {
     fetchClients();
   }, []);
 
-  const handleShareFilters = async () => {
-    const shareableUrl = getShareableUrl();
-    try {
-      await navigator.clipboard.writeText(shareableUrl);
-      // You could add a toast notification here
-      alert('Shareable URL copied to clipboard!');
-    } catch (err) {
-      console.error('Failed to copy URL:', err);
-      alert('Failed to copy URL to clipboard');
-    }
-  };
-
   if (loading || !filtersLoaded) {
     return (
       <div className={`flex items-center justify-center min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
@@ -148,18 +136,6 @@ export default function AnalyticsPage() {
             
             <div className="flex gap-3">
               <button
-                onClick={handleShareFilters}
-                className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 ${
-                  darkMode ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
-                }`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                </svg>
-                Share View
-              </button>
-              
-              <button
                 onClick={clearFilters}
                 className={`px-4 py-2 rounded-lg transition-all duration-200 ${
                   darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
@@ -183,6 +159,8 @@ export default function AnalyticsPage() {
           setClientSearch={setClientSearch}
           selectedClientId={filters.selectedClientId}
           setSelectedClientId={setSelectedClientId}
+          slaFilter={filters.slaFilter}
+          setSlaFilter={setSlaFilter}
           clients={clients}
           darkMode={darkMode}
         />

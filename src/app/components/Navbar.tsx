@@ -3,15 +3,22 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { Client } from '@/types/types';
+import { useSLANotifications } from '@/app/hooks/useSLANotifications';
+import SLANotifications from './SLANotifications';
 
 interface NavbarProps {
   darkMode: boolean;
   onToggleDarkMode: () => void;
+  clients?: Client[];
 }
 
-export default function Navbar({ darkMode, onToggleDarkMode }: NavbarProps) {
+export default function Navbar({ darkMode, onToggleDarkMode, clients = [] }: NavbarProps) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // SLA Notifications
+  const slaNotifications = useSLANotifications(clients);
   
   const isActive = (path: string) => pathname === path;
 
@@ -87,6 +94,12 @@ export default function Navbar({ darkMode, onToggleDarkMode }: NavbarProps) {
               Tasks
             </Link>
             
+            {/* SLA Notifications */}
+            <SLANotifications
+              {...slaNotifications}
+              darkMode={darkMode}
+            />
+            
             {/* Dark Mode Toggle - Desktop */}
             <div className="flex items-center">
               <span className="mr-2 text-sm">
@@ -108,22 +121,31 @@ export default function Navbar({ darkMode, onToggleDarkMode }: NavbarProps) {
             </div>
           </div>
 
-          {/* Hamburger Button */}
-          <button
-            className="hamburger-button md:hidden flex flex-col items-center justify-center w-8 h-8 space-y-1"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            <span className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
-              isMenuOpen ? 'rotate-45 translate-y-1.5' : ''
-            }`}></span>
-            <span className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
-              isMenuOpen ? 'opacity-0' : ''
-            }`}></span>
-            <span className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
-              isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''
-            }`}></span>
-          </button>
+          {/* Mobile: SLA Notifications and Hamburger */}
+          <div className="md:hidden flex items-center space-x-2">
+            {/* SLA Notifications - Mobile */}
+            <SLANotifications
+              {...slaNotifications}
+              darkMode={darkMode}
+            />
+            
+            {/* Hamburger Button */}
+            <button
+              className="hamburger-button flex flex-col items-center justify-center w-8 h-8 space-y-1"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              <span className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
+                isMenuOpen ? 'rotate-45 translate-y-1.5' : ''
+              }`}></span>
+              <span className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
+                isMenuOpen ? 'opacity-0' : ''
+              }`}></span>
+              <span className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
+                isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''
+              }`}></span>
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu */}

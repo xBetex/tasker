@@ -1,8 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Client, Task, TaskStatus, TaskPriority } from '@/types/types';
+import { useState } from 'react';
+import { TaskStatus, TaskPriority } from '@/types/types';
 import { api } from '@/services/api';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { 
+  getCurrentDateForInput, 
+  dateToInputFormat, 
+  isValidStorageDate,
+  getDefaultSLADate
+} from '@/utils/dateUtils';
 
 interface AddClientModalProps {
   isOpen: boolean;
@@ -20,6 +26,7 @@ interface FormData {
   taskDate: string;
   taskStatus: TaskStatus;
   taskPriority: TaskPriority;
+  taskSlaDate: string;
 }
 
 const initialFormData: FormData = {
@@ -28,21 +35,14 @@ const initialFormData: FormData = {
   company: '',
   origin: '',
   taskDescription: '',
-  taskDate: new Date().toISOString().split('T')[0],
+  taskDate: getCurrentDateForInput(),
   taskStatus: 'pending',
-  taskPriority: 'medium'
+  taskPriority: 'medium',
+  taskSlaDate: getDefaultSLADate()
 };
 
 const isDateValid = (dateString: string): boolean => {
-  const date = new Date(dateString);
-  return !isNaN(date.getTime());
-};
-
-const isPastDate = (dateString: string): boolean => {
-  const date = new Date(dateString);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date < today;
+  return isValidStorageDate(dateString);
 };
 
 export default function AddClientModal({
@@ -115,6 +115,7 @@ export default function AddClientModal({
           description: formData.taskDescription,
           status: formData.taskStatus,
           priority: formData.taskPriority,
+          sla_date: formData.taskSlaDate,
         }]
       );
 
@@ -291,39 +292,52 @@ export default function AddClientModal({
                 <label className="block text-sm font-medium mb-1">
                   Date
                   <span className="text-red-500 ml-1">*</span>
-                  {isPastDate(formData.taskDate) && (
-                    <span className="ml-2 text-xs text-yellow-500">(Past Date)</span>
-                  )}
                 </label>
                 <div className="relative">
                   <DatePicker
-                    selected={formData.taskDate ? new Date(formData.taskDate) : null}
+                    selected={formData.taskDate ? new Date(formData.taskDate + 'T00:00:00') : null}
                     onChange={(date: Date | null) => {
                       if (date) {
                         setFormData(prev => ({
                           ...prev,
-                          taskDate: date.toISOString().split('T')[0]
+                          taskDate: dateToInputFormat(date)
                         }));
                       }
                     }}
-                    dateFormat="yyyy-MM-dd"
+                    dateFormat="dd/MM/yyyy"
                     className={`w-full p-2 rounded border ${
                       darkMode 
                         ? 'bg-gray-700 border-gray-600 text-white' 
                         : 'bg-white border-gray-300'
-                    } ${errors.taskDate ? 'border-red-500' : ''} ${
-                      isPastDate(formData.taskDate) ? 'italic text-gray-500' : ''
-                    }`}
+                    } ${errors.taskDate ? 'border-red-500' : ''}`}
                     showYearDropdown
                     scrollableYearDropdown
                     yearDropdownItemNumber={10}
-                    placeholderText="Select date"
-                    title={isPastDate(formData.taskDate) ? 'Past dates are allowed' : ''}
+                    placeholderText="Selecione a data"
                   />
                 </div>
                 {errors.taskDate && (
                   <p className="mt-1 text-sm text-red-500">{errors.taskDate}</p>
                 )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  SLA Date (Due Date)
+                </label>
+                <input
+                  type="date"
+                  value={formData.taskSlaDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, taskSlaDate: e.target.value }))}
+                  className={`w-full p-2 rounded border ${
+                    darkMode 
+                      ? 'bg-gray-700 border-gray-600' 
+                      : 'bg-white border-gray-300'
+                  }`}
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Default: 24 hours from now (can be modified)
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

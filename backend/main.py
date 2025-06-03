@@ -151,12 +151,20 @@ async def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
     if client is None:
         raise HTTPException(status_code=404, detail="Client not found")
     
+    # Set completion_date if status is 'completed'
+    completion_date = None
+    if task.status == 'completed':
+        from datetime import datetime
+        completion_date = datetime.now().strftime('%Y-%m-%d')
+    
     db_task = Task(
         date=task.date,
         description=task.description,
         status=task.status,
         priority=task.priority,
-        client_id=task.client_id
+        client_id=task.client_id,
+        sla_date=task.sla_date,
+        completion_date=completion_date if task.completion_date is None else task.completion_date
     )
     db.add(db_task)
     
@@ -174,10 +182,21 @@ async def update_task(task_id: int, task_update: schemas.TaskUpdate, db: Session
     if db_task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     
+    # Store original status to check if it changed
+    original_status = db_task.status
+    
     # Update task fields
     for field, value in task_update.dict(exclude_unset=True).items():
         if value is not None:  # Only update fields that are provided
             setattr(db_task, field, value)
+    
+    # Auto-set completion_date when status changes to 'completed'
+    if task_update.status == 'completed' and original_status != 'completed':
+        from datetime import datetime
+        db_task.completion_date = datetime.now().strftime('%Y-%m-%d')
+    # Clear completion_date if status changes from 'completed' to something else
+    elif original_status == 'completed' and task_update.status != 'completed' and task_update.completion_date is None:
+        db_task.completion_date = None
     
     try:
         db.commit()

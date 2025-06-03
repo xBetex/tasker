@@ -1,15 +1,19 @@
 'use client'
 import { useState, useEffect, useRef } from 'react';
 import ClientCard from './components/ClientCard';
-import FilterBar from './components/FilterBar';
+import FilterBar, { SLAFilter } from './components/FilterBar';
 import AddClientModal from './components/AddClientModal';
 import { Client, TaskStatus, TaskPriority } from '@/types/types';
 import { api } from '@/services/api';
-import { useDarkMode } from './layout';
+import { useDarkMode, useClients } from './layout';
+import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
+import { getSLAStatus } from '@/utils/slaUtils';
 
 export default function Home() {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Use contexts
+  const { darkMode } = useDarkMode();
+  const { clients, refreshClients, isLoading } = useClients();
+  
   const [error, setError] = useState<string | null>(null);
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
@@ -17,6 +21,7 @@ export default function Home() {
   const [taskFilter, setTaskFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all' | 'active'>('all');
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'all'>('all');
+  const [slaFilter, setSlaFilter] = useState<SLAFilter>('all');
   const [dateRangeFilter, setDateRangeFilter] = useState({
     start: '',
     end: ''
@@ -24,26 +29,6 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Use dark mode from layout context
-  const { darkMode } = useDarkMode();
-
-  const fetchClients = async () => {
-    try {
-      const data = await api.getClients();
-      setClients(data);
-      setError(null);
-    } catch (err) {
-      setError('Failed to fetch clients');
-      console.error('Error fetching clients:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchClients();
-  }, []);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -122,10 +107,11 @@ export default function Home() {
               if (validTasks.length === 0) {
                 // Create a default task if no valid tasks exist
                 validTasks.push({
-                  date: new Date().toISOString().split('T')[0],
+                  date: getCurrentDateForInput(),
                   description: 'Initial task',
                   status: 'pending',
-                  priority: 'medium'
+                  priority: 'medium',
+                  sla_date: getDefaultSLADate()
                 });
               }
 
@@ -152,7 +138,7 @@ export default function Home() {
             }
           }
 
-          await fetchClients();
+          await refreshClients();
           
           // Prepare result message
           let message = '';
@@ -255,8 +241,32 @@ export default function Home() {
       );
     }
 
+    // SLA filter
+    if (slaFilter !== 'all') {
+      result = result.filter(client =>
+        client.tasks.some(task => {
+          const slaStatus = getSLAStatus(task);
+          
+          switch (slaFilter) {
+            case 'overdue':
+              return slaStatus === 'overdue';
+            case 'due_today':
+              return slaStatus === 'due_today';
+            case 'due_this_week':
+              return slaStatus === 'due_this_week';
+            case 'on_track':
+              return slaStatus === 'on_track';
+            case 'no_sla':
+              return slaStatus === 'no_sla';
+            default:
+              return true;
+          }
+        })
+      );
+    }
+
     setFilteredClients(result);
-  }, [clients, searchTerm, taskFilter, statusFilter, priorityFilter, dateRangeFilter]);
+  }, [clients, searchTerm, taskFilter, statusFilter, priorityFilter, slaFilter, dateRangeFilter]);
 
   // Calculate statistics
   const totalTasks = clients.reduce((sum, client) => sum + client.tasks.length, 0);
@@ -296,7 +306,7 @@ export default function Home() {
     setDateRangeFilter({ start: '', end: '' });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-xl">Loading...</div>
@@ -333,6 +343,8 @@ export default function Home() {
             dateRangeFilter={dateRangeFilter}
             setDateRangeFilter={setDateRangeFilter}
             darkMode={darkMode}
+            slaFilter={slaFilter}
+            setSlaFilter={setSlaFilter}
           />
         </div>
 
@@ -464,17 +476,17 @@ export default function Home() {
                 ...prev,
                 [client.id]: !prev[client.id]
               }))}
-              onUpdate={fetchClients}
+              onUpdate={refreshClients}
               onDeleteTask={async (clientId, taskIndex) => {
                 // Implement task deletion here when backend endpoint is ready
-                await fetchClients();
+                await refreshClients();
               }}
               darkMode={darkMode}
             />
           ))}
         </div>
 
-        {filteredClients.length === 0 && !loading && (
+        {filteredClients.length === 0 && !isLoading && (
           <div className={`text-center py-12 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             {clients.length === 0 ? (
               <div>
@@ -495,7 +507,7 @@ export default function Home() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onAddClient={async () => {
-          await fetchClients();
+          await refreshClients();
           setIsModalOpen(false);
         }}
         darkMode={darkMode}

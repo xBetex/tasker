@@ -7,6 +7,7 @@ import { useDarkMode } from '../layout';
 import { usePersistedFilters } from '../hooks/usePersistedFilters';
 import { useTaskFilters } from '../hooks/useTaskFilters';
 import AnalyticsFilters from '../components/analytics/AnalyticsFilters';
+import DateDisplay from '../components/DateDisplay';
 
 interface TaskListViewProps {
   tasks: Task[];
@@ -136,7 +137,7 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange }: 
               {sortedTasks.map((task) => (
                 <tr key={task.id} className={`hover:${darkMode ? 'bg-gray-700' : 'bg-gray-50'} transition-colors`}>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                    {new Date(task.date).toLocaleDateString()}
+                    <DateDisplay date={task.date} />
                   </td>
                   <td className={`px-6 py-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                     <div className="max-w-xs truncate">{task.description}</div>
@@ -168,7 +169,7 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange }: 
         <div key={task.id} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border shadow hover:shadow-lg transition-shadow`}>
           <div className="flex items-start justify-between mb-2">
             <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              {new Date(task.date).toLocaleDateString()}
+              <DateDisplay date={task.date} />
             </div>
             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-white ${getStatusColor(task.status)}`}>
               {task.status}
@@ -210,6 +211,7 @@ export default function FilteredTasksPage() {
     setClientSearch,
     setSelectedClientId,
     setDateRange,
+    setSlaFilter,
     clearFilters
   } = usePersistedFilters('analytics-filters');
 
@@ -321,6 +323,8 @@ export default function FilteredTasksPage() {
           setClientSearch={setClientSearch}
           selectedClientId={filters.selectedClientId}
           setSelectedClientId={setSelectedClientId}
+          slaFilter={filters.slaFilter}
+          setSlaFilter={setSlaFilter}
           clients={clients}
           darkMode={darkMode}
         />

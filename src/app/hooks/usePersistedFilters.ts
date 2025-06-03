@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TaskStatus, TaskPriority } from '@/types/types';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { SLAFilter } from '@/app/components/FilterBar';
 
 interface FilterState {
   statusFilter: TaskStatus | 'all';
@@ -9,6 +10,7 @@ interface FilterState {
   selectedClientId: string | null;
   dateRange: { start: string; end: string };
   selectedClients: string[];
+  slaFilter: SLAFilter;
 }
 
 const defaultFilters: FilterState = {
@@ -17,7 +19,8 @@ const defaultFilters: FilterState = {
   clientSearch: '',
   selectedClientId: null,
   dateRange: { start: '', end: '' },
-  selectedClients: []
+  selectedClients: [],
+  slaFilter: 'all'
 };
 
 export function usePersistedFilters(storageKey: string) {
@@ -53,6 +56,9 @@ export function usePersistedFilters(storageKey: string) {
       if (searchParams.get('clients')) {
         const clients = searchParams.get('clients');
         urlFilters.selectedClients = clients ? clients.split(',') : [];
+      }
+      if (searchParams.get('sla')) {
+        urlFilters.slaFilter = searchParams.get('sla') as SLAFilter;
       }
 
       // If no URL params, try localStorage
@@ -116,6 +122,9 @@ export function usePersistedFilters(storageKey: string) {
       if (updatedFilters.selectedClients.length > 0) {
         params.set('clients', updatedFilters.selectedClients.join(','));
       }
+      if (updatedFilters.slaFilter !== 'all') {
+        params.set('sla', updatedFilters.slaFilter);
+      }
 
       const queryString = params.toString();
       const newUrl = queryString ? `?${queryString}` : window.location.pathname;
@@ -170,6 +179,10 @@ export function usePersistedFilters(storageKey: string) {
     updateFilters({ selectedClients: clients });
   }, [updateFilters]);
 
+  const setSlaFilter = useCallback((slaFilter: SLAFilter) => {
+    updateFilters({ slaFilter });
+  }, [updateFilters]);
+
   // Get shareable URL
   const getShareableUrl = useCallback(() => {
     const params = new URLSearchParams();
@@ -195,6 +208,9 @@ export function usePersistedFilters(storageKey: string) {
     if (filters.selectedClients.length > 0) {
       params.set('clients', filters.selectedClients.join(','));
     }
+    if (filters.slaFilter !== 'all') {
+      params.set('sla', filters.slaFilter);
+    }
 
     const queryString = params.toString();
     return queryString ? `${window.location.origin}${window.location.pathname}?${queryString}` : window.location.href;
@@ -211,6 +227,7 @@ export function usePersistedFilters(storageKey: string) {
     setSelectedClientId,
     setDateRange,
     setSelectedClients,
+    setSlaFilter,
     getShareableUrl
   };
 } 

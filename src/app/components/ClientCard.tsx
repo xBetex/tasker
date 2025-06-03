@@ -3,6 +3,9 @@ import { Client, Task, TaskStatus, TaskPriority } from '@/types/types';
 import EditTaskModal from './EditTaskModal';
 import { api } from '@/services/api';
 import { MoreVerticalIcon, EditIcon, TrashIcon } from './Icons';
+import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
+import DateDisplay from './DateDisplay';
+import { getSLAStatus, getSLAStatusColor, getSLAStatusBadge, getSLAStatusText, getDaysUntilSLA } from '@/utils/slaUtils';
 
 interface ClientCardProps {
   client: Client;
@@ -25,11 +28,13 @@ export default function ClientCard({
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [editData, setEditData] = useState<Client>({ ...client });
   const [newTask, setNewTask] = useState<Omit<Task, 'id'>>({
-    date: new Date().toISOString().split('T')[0],
+    date: getCurrentDateForInput(),
     description: '',
     status: 'pending',
     priority: 'medium',
-    client_id: client.id
+    client_id: client.id,
+    sla_date: getDefaultSLADate(),
+    completion_date: ''
   });
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
@@ -186,11 +191,13 @@ export default function ClientCard({
       onUpdate();
       setIsAddingTask(false);
       setNewTask({
-        date: new Date().toISOString().split('T')[0],
+        date: getCurrentDateForInput(),
         description: '',
         status: 'pending',
         priority: 'medium',
-        client_id: client.id
+        client_id: client.id,
+        sla_date: getDefaultSLADate(),
+        completion_date: ''
       });
     } catch (error) {
       console.error('Error adding task:', error);
@@ -212,11 +219,41 @@ export default function ClientCard({
         origin: editData.origin
       });
       
+      // Update all modified tasks
+      const updatePromises = editData.tasks.map(async (task, index) => {
+        const originalTask = client.tasks[index];
+        
+        // Check if this task has been modified
+        if (originalTask && (
+          originalTask.date !== task.date ||
+          originalTask.description !== task.description ||
+          originalTask.status !== task.status ||
+          originalTask.priority !== task.priority ||
+          originalTask.sla_date !== task.sla_date ||
+          originalTask.completion_date !== task.completion_date
+        )) {
+          // Task was modified, update it
+          return api.updateTask(task.id, {
+            date: task.date, // Date is already in correct format (yyyy-mm-dd)
+            description: task.description,
+            status: task.status,
+            priority: task.priority,
+            sla_date: task.sla_date,
+            completion_date: task.completion_date
+          });
+        }
+        
+        return Promise.resolve(); // No update needed
+      });
+      
+      // Wait for all task updates to complete
+      await Promise.all(updatePromises);
+      
       onUpdate();
       setIsEditing(false);
     } catch (error) {
-      console.error('Error updating client:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update client');
+      console.error('Error updating client and tasks:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update client and tasks');
     } finally {
       setIsLoading(false);
     }
@@ -553,6 +590,28 @@ export default function ClientCard({
                       </select>
                     </div>
                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+                    <div>
+                      <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>SLA Date (Due Date)</label>
+                      <input
+                        type="date"
+                        name="sla_date"
+                        value={newTask.sla_date || ''}
+                        onChange={handleNewTaskChange}
+                        className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Completion Date</label>
+                      <input
+                        type="date"
+                        name="completion_date"
+                        value={newTask.completion_date || ''}
+                        onChange={handleNewTaskChange}
+                        className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                      />
+                    </div>
+                  </div>
                   <button
                     onClick={handleAddTask}
                     disabled={!newTask.description.trim()}
@@ -568,19 +627,71 @@ export default function ClientCard({
                     className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} mb-2`}
                     onContextMenu={(e) => handleContextMenu(e, index)}
                   >
-                    <div className="flex justify-between items-center mb-2">
-                      <h5 className="font-medium">{task.description}</h5>
-                      {/* Botão delete só aparece no modo de edição */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteTask(task.id);
-                        }}
-                        className="text-red-500 hover:text-red-700 text-xs transition-colors"
-                        title="Delete this task"
-                      >
-                        Delete
-                      </button>
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-medium">{task.description}</p>
+                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                          <DateDisplay date={task.date} /> • <span className={getPriorityColor(task.priority)}>{task.priority}</span>
+                          {task.sla_date && (
+                            <>
+                              {' • '}
+                              <span className={`${getSLAStatusColor(getSLAStatus(task), darkMode)} font-medium`}>
+                                {getSLAStatusBadge(getSLAStatus(task))} SLA: <DateDisplay date={task.sla_date} />
+                                {getSLAStatus(task) === 'overdue' && (
+                                  <span className="font-semibold">
+                                    {' '}({Math.abs(getDaysUntilSLA(task) || 0)} days overdue)
+                                  </span>
+                                )}
+                                {getSLAStatus(task) === 'due_today' && (
+                                  <span className="font-semibold"> (DUE TODAY)</span>
+                                )}
+                                {getSLAStatus(task) === 'due_this_week' && getDaysUntilSLA(task) && (
+                                  <span className="font-semibold">
+                                    {' '}({getDaysUntilSLA(task)} days left)
+                                  </span>
+                                )}
+                              </span>
+                            </>
+                          )}
+                          {task.completion_date && (
+                            <>
+                              {' • '}
+                              <span className="text-green-600 font-medium">
+                                ✅ Completed: <DateDisplay date={task.completion_date} />
+                              </span>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {/* SLA Status Badge */}
+                        {task.sla_date && task.status !== 'completed' && (
+                          <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                            getSLAStatus(task) === 'overdue' 
+                              ? 'bg-red-100 text-red-700 border border-red-200' 
+                              : getSLAStatus(task) === 'due_today'
+                              ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                              : getSLAStatus(task) === 'due_this_week'
+                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                              : 'bg-green-100 text-green-700 border border-green-200'
+                          }`}>
+                            {getSLAStatusBadge(getSLAStatus(task))} {getSLAStatusText(getSLAStatus(task))}
+                          </span>
+                        )}
+                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(task.status)} bg-opacity-100 text-white`}>
+                          {task.status}
+                        </span>
+                        <button
+                          onClick={(e) => handleMoreVerticalClick(e, task, index)}
+                          className={`p-1 rounded transition-colors ${
+                            darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                          }`}
+                          title="Task options"
+                          aria-label="Task options"
+                        >
+                          <MoreVerticalIcon size={16} />
+                        </button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
@@ -616,6 +727,24 @@ export default function ClientCard({
                           <option value="completed">Completed</option>
                           <option value="awaiting client">Awaiting Client</option>
                         </select>
+                      </div>
+                      <div>
+                        <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>SLA Date (Due Date)</label>
+                        <input
+                          type="date"
+                          value={task.sla_date || ''}
+                          onChange={(e) => handleTaskChange(index, 'sla_date', e.target.value)}
+                          className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Completion Date</label>
+                        <input
+                          type="date"
+                          value={task.completion_date || ''}
+                          onChange={(e) => handleTaskChange(index, 'completion_date', e.target.value)}
+                          className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                        />
                       </div>
                     </div>
                   </div>
@@ -695,6 +824,28 @@ export default function ClientCard({
                           </select>
                         </div>
                       </div>
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        <div>
+                          <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>SLA Date (Due Date)</label>
+                          <input
+                            type="date"
+                            name="sla_date"
+                            value={newTask.sla_date || ''}
+                            onChange={handleNewTaskChange}
+                            className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Completion Date</label>
+                          <input
+                            type="date"
+                            name="completion_date"
+                            value={newTask.completion_date || ''}
+                            onChange={handleNewTaskChange}
+                            className={`mt-1 block w-full rounded-md text-xs ${darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'} shadow-sm`}
+                          />
+                        </div>
+                      </div>
                       <div className="flex gap-2">
                         <button
                           onClick={handleAddTask}
@@ -727,10 +878,53 @@ export default function ClientCard({
                       <div className="flex-1">
                         <p className="font-medium">{task.description}</p>
                         <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                          {task.date} • <span className={getPriorityColor(task.priority)}>{task.priority}</span>
+                          <DateDisplay date={task.date} /> • <span className={getPriorityColor(task.priority)}>{task.priority}</span>
+                          {task.sla_date && (
+                            <>
+                              {' • '}
+                              <span className={`${getSLAStatusColor(getSLAStatus(task), darkMode)} font-medium`}>
+                                {getSLAStatusBadge(getSLAStatus(task))} SLA: <DateDisplay date={task.sla_date} />
+                                {getSLAStatus(task) === 'overdue' && (
+                                  <span className="font-semibold">
+                                    {' '}({Math.abs(getDaysUntilSLA(task) || 0)} days overdue)
+                                  </span>
+                                )}
+                                {getSLAStatus(task) === 'due_today' && (
+                                  <span className="font-semibold"> (DUE TODAY)</span>
+                                )}
+                                {getSLAStatus(task) === 'due_this_week' && getDaysUntilSLA(task) && (
+                                  <span className="font-semibold">
+                                    {' '}({getDaysUntilSLA(task)} days left)
+                                  </span>
+                                )}
+                              </span>
+                            </>
+                          )}
+                          {task.completion_date && (
+                            <>
+                              {' • '}
+                              <span className="text-green-600 font-medium">
+                                ✅ Completed: <DateDisplay date={task.completion_date} />
+                              </span>
+                            </>
+                          )}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
+                        {/* SLA Status Badge */}
+                        {task.sla_date && task.status !== 'completed' && (
+                          <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                            getSLAStatus(task) === 'overdue' 
+                              ? 'bg-red-100 text-red-700 border border-red-200' 
+                              : getSLAStatus(task) === 'due_today'
+                              ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                              : getSLAStatus(task) === 'due_this_week'
+                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                              : 'bg-green-100 text-green-700 border border-green-200'
+                          }`}>
+                            {getSLAStatusBadge(getSLAStatus(task))} {getSLAStatusText(getSLAStatus(task))}
+                          </span>
+                        )}
                         <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(task.status)} bg-opacity-100 text-white`}>
                           {task.status}
                         </span>
