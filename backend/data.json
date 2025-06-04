@@ -1,0 +1,36 @@
+[
+  {
+    "id": "CL-001",
+    "name": "John Smith",
+    "company": "Acme Corporation",
+    "origin": "Referral",
+    "tasks": [
+      {
+        "date": "2025-04-19",
+        "description": "Review contract terms",
+        "status": "completed",
+        "priority": "high"
+      },
+      {
+        "date": "2025-04-20",
+        "description": "Send proposal",
+        "status": "completed",
+        "priority": "medium"
+      }
+    ]
+  },
+  {
+    "name": "Tatiane",
+    "company": "Estábulo Store",
+    "origin": "82550 - Meli",
+    "tasks": [
+      {
+        "date": "2025-04-22",
+        "description": "Verificar alteração de contrato",
+        "status": "completed",
+        "priority": "high"
+      }
+    ],
+    "id": "CL-7735"
+  }
+] 
