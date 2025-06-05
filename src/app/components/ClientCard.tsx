@@ -107,13 +107,30 @@ export default function ClientCard({
       const touch = e.touches[0];
       const rect = e.currentTarget.getBoundingClientRect();
       
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      const menuWidth = 208; // w-52 = 208px
+      const menuHeight = 320;
+      
       // Posicionar o menu próximo ao toque, mas ajustar se estiver muito perto das bordas
       let x = touch.clientX;
       let y = touch.clientY;
       
-      // Ajustar para não sair da tela
-      if (x + 200 > window.innerWidth) x = window.innerWidth - 200;
-      if (y + 150 > window.innerHeight) y = y - 150;
+      // Ajustar posição horizontal
+      if (x + menuWidth > windowWidth) {
+        x = windowWidth - menuWidth - 10; // 10px de margem
+      }
+      if (x < 10) {
+        x = 10; // Margem mínima da esquerda
+      }
+      
+      // Ajustar posição vertical
+      if (y + menuHeight > windowHeight) {
+        y = windowHeight - menuHeight - 10; // 10px de margem
+      }
+      if (y < 10) {
+        y = 10; // Margem mínima do topo
+      }
       
       setContextMenu({
         visible: true,
@@ -152,6 +169,17 @@ export default function ClientCard({
       setIsEditing(true);
     }
     onToggleExpand();
+  };
+
+  // Função para ativar apenas o modo de edição (sem mexer na expansão)
+  const handleStartEdit = () => {
+    setIsEditing(true);
+  };
+
+  // Função para salvar e sair do modo de edição (sem mexer na expansão)
+  const handleSaveAndExitEdit = async () => {
+    await handleSave();
+    setIsEditing(false);
   };
 
   // Função para cancelar edição
@@ -342,12 +370,28 @@ export default function ClientCard({
     // Verificar os limites da janela
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
-    const menuWidth = 192; // Largura aproximada do menu (48 * 4)
-    const menuHeight = 240; // Altura aproximada do menu
+    const menuWidth = 208; // Largura do menu (w-52 = 208px)
+    const menuHeight = 320; // Altura aumentada para incluir Edit/Delete
 
     // Ajustar posição se o menu ultrapassar os limites
-    const x = clientX + menuWidth > windowWidth ? windowWidth - menuWidth : clientX;
-    const y = clientY + menuHeight > windowHeight ? windowHeight - menuHeight : clientY;
+    let x = clientX;
+    let y = clientY;
+
+    // Ajustar posição horizontal
+    if (x + menuWidth > windowWidth) {
+      x = windowWidth - menuWidth - 10; // 10px de margem
+    }
+    if (x < 10) {
+      x = 10; // 10px de margem mínima da esquerda
+    }
+
+    // Ajustar posição vertical
+    if (y + menuHeight > windowHeight) {
+      y = windowHeight - menuHeight - 10; // 10px de margem
+    }
+    if (y < 10) {
+      y = 10; // 10px de margem mínima do topo
+    }
 
     setContextMenu({
       visible: true,
@@ -380,12 +424,29 @@ export default function ClientCard({
     e.stopPropagation();
     
     const rect = e.currentTarget.getBoundingClientRect();
-    let x = rect.right;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const menuWidth = 208; // w-52 = 208px
+    const menuHeight = 320;
+    
+    let x = rect.right + 5; // 5px de margem do botão
     let y = rect.top;
     
-    // Ajustar posição para não sair da tela
-    if (x + 200 > window.innerWidth) x = rect.left - 200;
-    if (y + 150 > window.innerHeight) y = y - 150;
+    // Ajustar posição horizontal
+    if (x + menuWidth > windowWidth) {
+      x = rect.left - menuWidth - 5; // Posicionar à esquerda do botão
+    }
+    if (x < 10) {
+      x = 10; // Margem mínima da esquerda
+    }
+    
+    // Ajustar posição vertical
+    if (y + menuHeight > windowHeight) {
+      y = windowHeight - menuHeight - 10; // 10px de margem do bottom
+    }
+    if (y < 10) {
+      y = 10; // Margem mínima do topo
+    }
     
     setContextMenu({
       visible: true,
@@ -470,21 +531,43 @@ export default function ClientCard({
                   </button>
                 </>
               )}
+              
+              {/* Edit button - only when expanded and not editing */}
+              {isExpanded && !isEditing && (
+                <button
+                  onClick={handleStartEdit}
+                  className={`p-1 rounded-md transition-all duration-300 ${
+                    darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                  }`}
+                  title="Edit client"
+                >
+                  ✏️
+                </button>
+              )}
+              
+              {/* Save button - only when editing */}
+              {isEditing && (
+                <button
+                  onClick={handleSaveAndExitEdit}
+                  className={`p-1 rounded-md transition-all duration-300 ${
+                    darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                  } bg-blue-500 text-white`}
+                  title="Save changes"
+                >
+                  💾
+                </button>
+              )}
+              
+              {/* Arrow button - always visible */}
               <button
-                onClick={handleToggleExpandAndEdit}
+                onClick={onToggleExpand}
                 className={`p-1 rounded-md transition-all duration-300 ${
                   darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
-                } ${
-                  isEditing ? 'bg-blue-500 text-white' : ''
                 }`}
-                title={
-                  isExpanded 
-                    ? (isEditing ? 'Save and collapse' : 'Collapse') 
-                    : 'Expand and edit'
-                }
+                title={isExpanded ? 'Collapse' : 'Expand'}
                 aria-expanded={isExpanded}
               >
-                {isExpanded ? (isEditing ? '💾' : '▲') : '✏️'}
+                {isExpanded ? '▲' : '▼'}
               </button>
             </div>
           </div>
@@ -968,11 +1051,11 @@ export default function ClientCard({
         )}
       </div>
 
-      {/* Context Menu para botão direito - mantém funcionalidade de alterar status */}
+      {/* Context Menu para botão direito - com opções de Edit e Delete */}
       {contextMenu.visible && (
         <div
           ref={contextMenuRef}
-          className={`fixed z-50 py-1 rounded-md shadow-lg w-48 ${darkMode ? 'bg-gray-700' : 'bg-white'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}
+          className={`fixed z-50 py-1 rounded-md shadow-lg w-52 ${darkMode ? 'bg-gray-700' : 'bg-white'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}
           style={{
             top: `${contextMenu.y}px`,
             left: `${contextMenu.x}px`,
@@ -980,54 +1063,72 @@ export default function ClientCard({
             overflowY: 'auto',
           }}
         >
-          <div className={`px-3 py-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          {/* Seção de Ações Principais */}
+          <div className={`px-3 py-2 text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            Task Actions
+          </div>
+          
+          <button
+            onClick={handleEditTask}
+            disabled={isLoading}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600 text-white' : 'hover:bg-gray-100 text-gray-900'} disabled:opacity-50 transition-colors`}
+          >
+            <EditIcon size={16} className="mr-3" />
+            Edit Task
+          </button>
+          
+          <button
+            onClick={() => contextMenu.task && handleDeleteTask(contextMenu.task.id)}
+            disabled={isLoading}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600 text-red-400' : 'hover:bg-gray-100 text-red-600'} disabled:opacity-50 transition-colors`}
+          >
+            <TrashIcon size={16} className="mr-3" />
+            Delete Task
+          </button>
+
+          {/* Separador */}
+          <div className={`border-t my-1 ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}></div>
+
+          {/* Seção de Status */}
+          <div className={`px-3 py-2 text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             Change Status
           </div>
+          
           <button
             onClick={() => handleStatusChange('pending')}
             disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'pending' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50`}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'pending' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
           >
-            <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-2"></span>
+            <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-3"></span>
             Pending
           </button>
+          
           <button
             onClick={() => handleStatusChange('in progress')}
             disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'in progress' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50`}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'in progress' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
           >
-            <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 mr-2"></span>
+            <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 mr-3"></span>
             In Progress
           </button>
+          
           <button
             onClick={() => handleStatusChange('completed')}
             disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'completed' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50`}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'completed' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
           >
-            <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+            <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-3"></span>
             Completed
           </button>
+          
           <button
             onClick={() => handleStatusChange('awaiting client')}
             disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'awaiting client' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50`}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'awaiting client' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
           >
-            <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+            <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-3"></span>
             Awaiting Client
           </button>
-          {/* Só mostra opção de delete no modo de edição */}
-          {isEditing && (
-            <>
-              <div className="border-t my-1"></div>
-              <button
-                onClick={() => contextMenu.task && handleDeleteTask(contextMenu.task.id)}
-                disabled={isLoading}
-                className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600 text-red-400' : 'hover:bg-gray-100 text-red-600'} disabled:opacity-50`}
-              >
-                Delete Task
-              </button>
-            </>
-          )}
         </div>
       )}
 

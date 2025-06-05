@@ -89,6 +89,7 @@ function ClientLayout({ children }: { children: ReactNode }) {
             darkMode={darkMode} 
             onToggleDarkMode={toggleDarkMode}
             clients={clients}
+            onUpdate={refreshClients}
           />
           <main className="pt-16">
             {children}

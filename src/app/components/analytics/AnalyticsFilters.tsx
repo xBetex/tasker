@@ -18,6 +18,8 @@ interface AnalyticsFiltersProps {
   setSelectedClientId: (clientId: string | null) => void;
   slaFilter?: SLAFilter;
   setSlaFilter?: (slaFilter: SLAFilter) => void;
+  descriptionFilter: string;
+  setDescriptionFilter: (description: string) => void;
   clients: Client[];
   darkMode: boolean;
 }
@@ -35,6 +37,8 @@ export default function AnalyticsFilters({
   setSelectedClientId,
   slaFilter,
   setSlaFilter,
+  descriptionFilter,
+  setDescriptionFilter,
   clients,
   darkMode,
 }: AnalyticsFiltersProps) {
@@ -45,6 +49,7 @@ export default function AnalyticsFilters({
     setPriorityFilter('all');
     setClientSearch('');
     setSelectedClientId(null);
+    setDescriptionFilter('');
     if (setSlaFilter) {
       setSlaFilter('all');
     }
@@ -57,6 +62,7 @@ export default function AnalyticsFilters({
     priorityFilter !== 'all' || 
     clientSearch ||
     selectedClientId ||
+    descriptionFilter ||
     (slaFilter && slaFilter !== 'all');
 
   // Obter nome do cliente selecionado para exibição
@@ -74,7 +80,7 @@ export default function AnalyticsFilters({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
         {/* Date Range Filter */}
         <div className="space-y-3">
           <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -185,6 +191,35 @@ export default function AnalyticsFilters({
               darkMode={darkMode}
             />
           )}
+        </div>
+
+        {/* Description Filter */}
+        <div className="space-y-3">
+          <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            📝 Task Description
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={descriptionFilter}
+              onChange={(e) => setDescriptionFilter(e.target.value)}
+              placeholder="Search by task description..."
+              className={`block w-full rounded-lg text-sm transition-all duration-200 ${
+                darkMode ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500'
+              } shadow-sm border px-3 py-2 pr-8`}
+            />
+            {descriptionFilter && (
+              <button
+                onClick={() => setDescriptionFilter('')}
+                className={`absolute right-2 top-1/2 transform -translate-y-1/2 text-xs ${
+                  darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
+                } transition-colors`}
+                title="Clear description filter"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

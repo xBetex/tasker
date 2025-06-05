@@ -35,6 +35,7 @@ export default function AnalyticsPage() {
     setDateRange,
     setSelectedClients,
     setSlaFilter,
+    setDescriptionFilter,
     clearFilters
   } = usePersistedFilters('analytics-filters');
 
@@ -161,6 +162,8 @@ export default function AnalyticsPage() {
           setSelectedClientId={setSelectedClientId}
           slaFilter={filters.slaFilter}
           setSlaFilter={setSlaFilter}
+          descriptionFilter={filters.descriptionFilter}
+          setDescriptionFilter={setDescriptionFilter}
           clients={clients}
           darkMode={darkMode}
         />
