@@ -5,8 +5,10 @@ import json
 from typing import List
 import os
 from pathlib import Path
+from datetime import datetime
+import uuid
 
-from models import Base, Client, Task
+from models import Base, Client, Task, Comment
 from database import engine, get_db
 import schemas
 
@@ -154,7 +156,6 @@ async def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
     # Set completion_date if status is 'completed'
     completion_date = None
     if task.status == 'completed':
-        from datetime import datetime
         completion_date = datetime.now().strftime('%Y-%m-%d')
     
     db_task = Task(
@@ -192,7 +193,6 @@ async def update_task(task_id: int, task_update: schemas.TaskUpdate, db: Session
     
     # Auto-set completion_date when status changes to 'completed'
     if task_update.status == 'completed' and original_status != 'completed':
-        from datetime import datetime
         db_task.completion_date = datetime.now().strftime('%Y-%m-%d')
     # Clear completion_date if status changes from 'completed' to something else
     elif original_status == 'completed' and task_update.status != 'completed' and task_update.completion_date is None:
@@ -216,6 +216,57 @@ async def delete_task(task_id: int, db: Session = Depends(get_db)):
         db.delete(db_task)
         db.commit()
         return db_task
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/tasks/{task_id}/comments/", response_model=schemas.Comment)
+async def create_comment(task_id: int, comment: schemas.CommentCreate, db: Session = Depends(get_db)):
+    # Verify task exists
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Generate a unique comment ID
+    comment_id = str(uuid.uuid4())[:8]
+    
+    db_comment = Comment(
+        id=comment_id,
+        task_id=task_id,
+        text=comment.text,
+        timestamp=datetime.now().isoformat(),
+        author=comment.author or "User"
+    )
+    db.add(db_comment)
+    
+    try:
+        db.commit()
+        db.refresh(db_comment)
+        return db_comment
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/tasks/{task_id}/comments/", response_model=List[schemas.Comment])
+async def get_task_comments(task_id: int, db: Session = Depends(get_db)):
+    # Verify task exists
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    comments = db.query(Comment).filter(Comment.task_id == task_id).all()
+    return comments
+
+@app.delete("/comments/{comment_id}", response_model=schemas.Comment)
+async def delete_comment(comment_id: str, db: Session = Depends(get_db)):
+    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+    if comment is None:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    try:
+        db.delete(comment)
+        db.commit()
+        return comment
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
@@ -264,4 +315,4 @@ async def import_data(db: Session = Depends(get_db)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host="0.0.0.0", port=8001) 

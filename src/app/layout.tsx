@@ -6,6 +6,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Navbar from './components/Navbar';
 import { Client } from '@/types/types';
 import { api } from '@/services/api';
+import { NotificationProvider } from './contexts/NotificationContext';
+import NotificationToast from './components/NotificationToast';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -84,16 +86,20 @@ function ClientLayout({ children }: { children: ReactNode }) {
   return (
     <DarkModeContext.Provider value={{ darkMode, toggleDarkMode }}>
       <ClientsContext.Provider value={{ clients, refreshClients, isLoading }}>
-        <div className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-          <Navbar 
-            darkMode={darkMode} 
-            onToggleDarkMode={toggleDarkMode}
-            clients={clients}
-          />
-          <main className="pt-16">
-            {children}
-          </main>
-        </div>
+        <NotificationProvider>
+          <div className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+            <Navbar 
+              darkMode={darkMode} 
+              onToggleDarkMode={toggleDarkMode}
+              clients={clients}
+              onUpdate={refreshClients}
+            />
+            <main className="pt-16">
+              {children}
+            </main>
+            <NotificationToast />
+          </div>
+        </NotificationProvider>
       </ClientsContext.Provider>
     </DarkModeContext.Provider>
   );

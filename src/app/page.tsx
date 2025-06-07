@@ -8,6 +8,7 @@ import { api } from '@/services/api';
 import { useDarkMode, useClients } from './layout';
 import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
 import { getSLAStatus } from '@/utils/slaUtils';
+import { useToast } from './hooks/useToast';
 
 export default function Home() {
   // Use contexts
@@ -29,6 +30,7 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -152,10 +154,18 @@ export default function Home() {
             message += `\n\n${errorCount} failed to import:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n... and ${errors.length - 5} more` : ''}`;
           }
 
-          alert(message || 'Import completed with no changes.');
+          if (successCount > 0) {
+            toast.success('Import Successful', `Successfully imported ${successCount} clients!`);
+          } else {
+            toast.info('Import Complete', 'Import completed with no changes.');
+          }
+          
+          if (errorCount > 0) {
+            toast.warning('Import Warnings', `${errorCount} clients failed to import. Check console for details.`);
+          }
         } catch (error) {
           console.error('Error processing JSON:', error);
-          alert(error instanceof Error ? error.message : 'Failed to process JSON file');
+          toast.error('Import Failed', error instanceof Error ? error.message : 'Failed to process JSON file');
         } finally {
           setIsImporting(false);
           // Reset the file input
@@ -167,13 +177,13 @@ export default function Home() {
 
       reader.onerror = () => {
         setIsImporting(false);
-        alert('Error reading file');
+        toast.error('File Error', 'Error reading file');
       };
 
       reader.readAsText(file);
     } catch (error) {
       setIsImporting(false);
-      alert('Error processing file');
+      toast.error('Processing Error', 'Error processing file');
     }
   };
 

@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Client, Task, TaskStatus, TaskPriority } from '@/types/types';
+import { Client, Task, TaskStatus, TaskPriority, Comment } from '@/types/types';
 import EditTaskModal from './EditTaskModal';
 import { api } from '@/services/api';
 import { MoreVerticalIcon, EditIcon, TrashIcon } from './Icons';
 import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
 import DateDisplay from './DateDisplay';
 import { getSLAStatus, getSLAStatusColor, getSLAStatusBadge, getSLAStatusText, getDaysUntilSLA } from '@/utils/slaUtils';
+import CommentsSection from './CommentsSection';
+import { useToast } from '../hooks/useToast';
 
 interface ClientCardProps {
   client: Client;
@@ -48,12 +50,14 @@ export default function ClientCard({
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAddingComment, setIsAddingComment] = useState(false);
   
   // Estados para long press
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [isLongPress, setIsLongPress] = useState(false);
 
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
 
   const calculateCompletionProgress = (tasks: Task[]) => {
     const totalTasks = tasks.length;
@@ -107,13 +111,30 @@ export default function ClientCard({
       const touch = e.touches[0];
       const rect = e.currentTarget.getBoundingClientRect();
       
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      const menuWidth = 208; // w-52 = 208px
+      const menuHeight = 320;
+      
       // Posicionar o menu próximo ao toque, mas ajustar se estiver muito perto das bordas
       let x = touch.clientX;
       let y = touch.clientY;
       
-      // Ajustar para não sair da tela
-      if (x + 200 > window.innerWidth) x = window.innerWidth - 200;
-      if (y + 150 > window.innerHeight) y = y - 150;
+      // Ajustar posição horizontal
+      if (x + menuWidth > windowWidth) {
+        x = windowWidth - menuWidth - 10; // 10px de margem
+      }
+      if (x < 10) {
+        x = 10; // Margem mínima da esquerda
+      }
+      
+      // Ajustar posição vertical
+      if (y + menuHeight > windowHeight) {
+        y = windowHeight - menuHeight - 10; // 10px de margem
+      }
+      if (y < 10) {
+        y = 10; // Margem mínima do topo
+      }
       
       setContextMenu({
         visible: true,
@@ -154,6 +175,17 @@ export default function ClientCard({
     onToggleExpand();
   };
 
+  // Função para ativar apenas o modo de edição (sem mexer na expansão)
+  const handleStartEdit = () => {
+    setIsEditing(true);
+  };
+
+  // Função para salvar e sair do modo de edição (sem mexer na expansão)
+  const handleSaveAndExitEdit = async () => {
+    await handleSave();
+    setIsEditing(false);
+  };
+
   // Função para cancelar edição
   const handleCancelEdit = () => {
     setIsEditing(false);
@@ -189,6 +221,7 @@ export default function ClientCard({
       });
 
       onUpdate();
+      toast.success('Task Added', `"${newTask.description}" has been added successfully!`);
       setIsAddingTask(false);
       setNewTask({
         date: getCurrentDateForInput(),
@@ -201,7 +234,9 @@ export default function ClientCard({
       });
     } catch (error) {
       console.error('Error adding task:', error);
-      setError(error instanceof Error ? error.message : 'Failed to add task');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add task';
+      setError(errorMessage);
+      toast.error('Failed to Add Task', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -250,10 +285,13 @@ export default function ClientCard({
       await Promise.all(updatePromises);
       
       onUpdate();
+      toast.success('Changes Saved', 'Client and tasks have been updated successfully!');
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating client and tasks:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update client and tasks');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update client and tasks';
+      setError(errorMessage);
+      toast.error('Failed to Save Changes', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -323,10 +361,13 @@ export default function ClientCard({
       setError(null);
       await api.deleteTask(taskId);
       onUpdate();
+      toast.success('Task Deleted', 'Task has been deleted successfully!');
       setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
     } catch (error) {
       console.error('Error deleting task:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete task');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete task';
+      setError(errorMessage);
+      toast.error('Failed to Delete Task', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -342,12 +383,28 @@ export default function ClientCard({
     // Verificar os limites da janela
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
-    const menuWidth = 192; // Largura aproximada do menu (48 * 4)
-    const menuHeight = 240; // Altura aproximada do menu
+    const menuWidth = 208; // Largura do menu (w-52 = 208px)
+    const menuHeight = 320; // Altura aumentada para incluir Edit/Delete
 
     // Ajustar posição se o menu ultrapassar os limites
-    const x = clientX + menuWidth > windowWidth ? windowWidth - menuWidth : clientX;
-    const y = clientY + menuHeight > windowHeight ? windowHeight - menuHeight : clientY;
+    let x = clientX;
+    let y = clientY;
+
+    // Ajustar posição horizontal
+    if (x + menuWidth > windowWidth) {
+      x = windowWidth - menuWidth - 10; // 10px de margem
+    }
+    if (x < 10) {
+      x = 10; // 10px de margem mínima da esquerda
+    }
+
+    // Ajustar posição vertical
+    if (y + menuHeight > windowHeight) {
+      y = windowHeight - menuHeight - 10; // 10px de margem
+    }
+    if (y < 10) {
+      y = 10; // 10px de margem mínima do topo
+    }
 
     setContextMenu({
       visible: true,
@@ -365,9 +422,12 @@ export default function ClientCard({
         setError(null);
         await api.updateTaskStatus(contextMenu.task.id, newStatus);
         onUpdate();
+        toast.success('Status Updated', `Task status changed to "${newStatus}"!`);
       } catch (error) {
         console.error('Error updating task status:', error);
-        setError(error instanceof Error ? error.message : 'Failed to update task status');
+        const errorMessage = error instanceof Error ? error.message : 'Failed to update task status';
+        setError(errorMessage);
+        toast.error('Failed to Update Status', errorMessage);
       } finally {
         setIsLoading(false);
         setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
@@ -380,12 +440,29 @@ export default function ClientCard({
     e.stopPropagation();
     
     const rect = e.currentTarget.getBoundingClientRect();
-    let x = rect.right;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const menuWidth = 208; // w-52 = 208px
+    const menuHeight = 320;
+    
+    let x = rect.right + 5; // 5px de margem do botão
     let y = rect.top;
     
-    // Ajustar posição para não sair da tela
-    if (x + 200 > window.innerWidth) x = rect.left - 200;
-    if (y + 150 > window.innerHeight) y = y - 150;
+    // Ajustar posição horizontal
+    if (x + menuWidth > windowWidth) {
+      x = rect.left - menuWidth - 5; // Posicionar à esquerda do botão
+    }
+    if (x < 10) {
+      x = 10; // Margem mínima da esquerda
+    }
+    
+    // Ajustar posição vertical
+    if (y + menuHeight > windowHeight) {
+      y = windowHeight - menuHeight - 10; // 10px de margem do bottom
+    }
+    if (y < 10) {
+      y = 10; // Margem mínima do topo
+    }
     
     setContextMenu({
       visible: true,
@@ -401,6 +478,29 @@ export default function ClientCard({
       setEditingTask(contextMenu.task);
     }
     setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
+  };
+
+  const handleAddComment = async (taskId: number, commentText: string) => {
+    try {
+      setIsAddingComment(true);
+      
+      // Create comment via API
+      await api.createComment(taskId, {
+        text: commentText,
+        author: 'User'
+      });
+      
+      toast.success('Comment Added', 'Your comment has been added successfully!');
+      
+      // Reload client data to show new comment
+      onUpdate();
+      
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast.error('Failed to Add Comment', 'Please try again later.');
+    } finally {
+      setIsAddingComment(false);
+    }
   };
 
   const getStatusColorText = (status: string) => {
@@ -470,21 +570,43 @@ export default function ClientCard({
                   </button>
                 </>
               )}
+              
+              {/* Edit button - only when expanded and not editing */}
+              {isExpanded && !isEditing && (
+                <button
+                  onClick={handleStartEdit}
+                  className={`p-1 rounded-md transition-all duration-300 ${
+                    darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                  }`}
+                  title="Edit client"
+                >
+                  ✏️
+                </button>
+              )}
+              
+              {/* Save button - only when editing */}
+              {isEditing && (
+                <button
+                  onClick={handleSaveAndExitEdit}
+                  className={`p-1 rounded-md transition-all duration-300 ${
+                    darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                  } bg-blue-500 text-white`}
+                  title="Save changes"
+                >
+                  💾
+                </button>
+              )}
+              
+              {/* Arrow button - always visible */}
               <button
-                onClick={handleToggleExpandAndEdit}
+                onClick={onToggleExpand}
                 className={`p-1 rounded-md transition-all duration-300 ${
                   darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
-                } ${
-                  isEditing ? 'bg-blue-500 text-white' : ''
                 }`}
-                title={
-                  isExpanded 
-                    ? (isEditing ? 'Save and collapse' : 'Collapse') 
-                    : 'Expand and edit'
-                }
+                title={isExpanded ? 'Collapse' : 'Expand'}
                 aria-expanded={isExpanded}
               >
-                {isExpanded ? (isEditing ? '💾' : '▲') : '✏️'}
+                {isExpanded ? '▲' : '▼'}
               </button>
             </div>
           </div>
@@ -865,73 +987,50 @@ export default function ClientCard({
                   </div>
                 )}
 
-                {client.tasks.map((task, index) => (
-                  <div
-                    key={task.id}
-                    className={`p-3 rounded-lg ${getStatusBgColor(task.status)} transition-all duration-200 hover:shadow-sm`}
-                    onContextMenu={(e) => handleContextMenu(e, index)}
-                    onTouchStart={(e) => handleTouchStart(e, task, index)}
-                    onTouchEnd={handleTouchEnd}
-                    onTouchCancel={handleTouchCancel}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="font-medium">{task.description}</p>
-                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                          <DateDisplay date={task.date} /> • <span className={getPriorityColor(task.priority)}>{task.priority}</span>
-                          {task.sla_date && (
-                            <>
-                              {' • '}
-                              <span className={`${getSLAStatusColor(getSLAStatus(task), darkMode)} font-medium`}>
-                                {getSLAStatusBadge(getSLAStatus(task))} SLA: <DateDisplay date={task.sla_date} />
-                                {getSLAStatus(task) === 'overdue' && (
-                                  <span className="font-semibold">
-                                    {' '}({Math.abs(getDaysUntilSLA(task) || 0)} days overdue)
-                                  </span>
-                                )}
-                                {getSLAStatus(task) === 'due_today' && (
-                                  <span className="font-semibold"> (DUE TODAY)</span>
-                                )}
-                                {getSLAStatus(task) === 'due_this_week' && getDaysUntilSLA(task) && (
-                                  <span className="font-semibold">
-                                    {' '}({getDaysUntilSLA(task)} days left)
-                                  </span>
-                                )}
-                              </span>
-                            </>
-                          )}
-                          {task.completion_date && (
-                            <>
-                              {' • '}
-                              <span className="text-green-600 font-medium">
-                                ✅ Completed: <DateDisplay date={task.completion_date} />
-                              </span>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {/* SLA Status Badge */}
-                        {task.sla_date && task.status !== 'completed' && (
-                          <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                            getSLAStatus(task) === 'overdue' 
-                              ? 'bg-red-100 text-red-700 border border-red-200' 
-                              : getSLAStatus(task) === 'due_today'
-                              ? 'bg-orange-100 text-orange-700 border border-orange-200'
-                              : getSLAStatus(task) === 'due_this_week'
-                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
-                              : 'bg-green-100 text-green-700 border border-green-200'
-                          }`}>
-                            {getSLAStatusBadge(getSLAStatus(task))} {getSLAStatusText(getSLAStatus(task))}
+                <div 
+                  className="max-h-72 overflow-y-auto scrollbar-thin"
+                  style={{ 
+                    maxHeight: `${3 * 6}rem`, // Aproximadamente 3 tasks (6rem cada uma)
+                  }}
+                >
+                  {client.tasks.map((task, index) => (
+                    <div
+                      key={task.id}
+                      className={`rounded-lg border-l-4 transition-all duration-200 hover:shadow-lg mb-3 last:mb-0 ${
+                        darkMode ? 'bg-gray-800 hover:bg-gray-750' : 'bg-white hover:bg-gray-50'
+                      } ${
+                        getSLAStatus(task) === 'overdue' 
+                          ? 'border-l-red-500 shadow-red-500/20' 
+                          : getSLAStatus(task) === 'due_today'
+                          ? 'border-l-orange-500 shadow-orange-500/20'
+                          : getSLAStatus(task) === 'due_this_week'
+                          ? 'border-l-yellow-500 shadow-yellow-500/20'
+                          : task.status === 'completed'
+                          ? 'border-l-green-500 shadow-green-500/20'
+                          : 'border-l-blue-500 shadow-blue-500/20'
+                      } shadow-sm`}
+                      onContextMenu={(e) => handleContextMenu(e, index)}
+                      onTouchStart={(e) => handleTouchStart(e, task, index)}
+                      onTouchEnd={handleTouchEnd}
+                      onTouchCancel={handleTouchCancel}
+                    >
+                      {/* Header com status e botão de ações */}
+                      <div className="flex justify-between items-start p-3 pb-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`px-2 py-1 text-xs rounded-full font-medium ${getStatusColor(task.status)} text-white`}>
+                            {task.status}
                           </span>
-                        )}
-                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(task.status)} bg-opacity-100 text-white`}>
-                          {task.status}
-                        </span>
+                          <span className={`text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                            {task.priority.toUpperCase()}
+                          </span>
+                          <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <DateDisplay date={task.date} />
+                          </span>
+                        </div>
                         <button
                           onClick={(e) => handleMoreVerticalClick(e, task, index)}
-                          className={`p-1 rounded transition-colors ${
-                            darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                          className={`p-1.5 rounded-md transition-colors ${
+                            darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
                           }`}
                           title="Task options"
                           aria-label="Task options"
@@ -939,9 +1038,70 @@ export default function ClientCard({
                           <MoreVerticalIcon size={16} />
                         </button>
                       </div>
+
+                      {/* Conteúdo principal */}
+                      <div className="px-3 pb-2">
+                        <h4 className={`font-medium leading-tight break-words-enhanced ${
+                          darkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {task.description}
+                        </h4>
+                        
+                        {task.completion_date && (
+                          <div className="mt-2 flex items-center gap-1 text-green-600">
+                            <span className="text-sm">✅</span>
+                            <span className="text-xs font-medium">
+                              Completed: <DateDisplay date={task.completion_date} />
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Rodapé com SLA */}
+                      {task.sla_date && task.status !== 'completed' && (
+                        <div className={`px-3 py-2 border-t ${
+                          darkMode ? 'border-gray-700 bg-gray-900/50' : 'border-gray-100 bg-gray-50/50'
+                        }`}>
+                          <div className={`flex items-center justify-between text-xs`}>
+                            <span className={`font-medium ${
+                              getSLAStatus(task) === 'overdue' 
+                                ? 'text-red-600' 
+                                : getSLAStatus(task) === 'due_today'
+                                ? 'text-orange-600'
+                                : getSLAStatus(task) === 'due_this_week'
+                                ? 'text-yellow-600'
+                                : 'text-green-600'
+                            }`}>
+                              {getSLAStatusBadge(getSLAStatus(task))} SLA Due: <DateDisplay date={task.sla_date} />
+                            </span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                              getSLAStatus(task) === 'overdue' 
+                                ? 'bg-red-100 text-red-800 border border-red-200' 
+                                : getSLAStatus(task) === 'due_today'
+                                ? 'bg-orange-100 text-orange-800 border border-orange-200'
+                                : getSLAStatus(task) === 'due_this_week'
+                                ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                                : 'bg-green-100 text-green-800 border border-green-200'
+                            }`}>
+                                                             {getSLAStatus(task) === 'overdue' && `${Math.abs(getDaysUntilSLA(task) || 0)}d overdue`}
+                               {getSLAStatus(task) === 'due_today' && 'DUE TODAY'}
+                               {getSLAStatus(task) === 'due_this_week' && getDaysUntilSLA(task) && `${getDaysUntilSLA(task)}d left`}
+                               {getSLAStatus(task) === 'on_track' && 'On Track'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Comments Section */}
+                      <CommentsSection
+                        comments={task.comments || []}
+                        onAddComment={(text) => handleAddComment(task.id, text)}
+                        darkMode={darkMode}
+                        isLoading={isAddingComment}
+                      />
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -968,11 +1128,11 @@ export default function ClientCard({
         )}
       </div>
 
-      {/* Context Menu para botão direito - mantém funcionalidade de alterar status */}
+      {/* Context Menu para botão direito - com opções de Edit e Delete */}
       {contextMenu.visible && (
         <div
           ref={contextMenuRef}
-          className={`fixed z-50 py-1 rounded-md shadow-lg w-48 ${darkMode ? 'bg-gray-700' : 'bg-white'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}
+          className={`fixed z-50 py-1 rounded-md shadow-lg w-52 ${darkMode ? 'bg-gray-700' : 'bg-white'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}
           style={{
             top: `${contextMenu.y}px`,
             left: `${contextMenu.x}px`,
@@ -980,54 +1140,72 @@ export default function ClientCard({
             overflowY: 'auto',
           }}
         >
-          <div className={`px-3 py-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          {/* Seção de Ações Principais */}
+          <div className={`px-3 py-2 text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            Task Actions
+          </div>
+          
+          <button
+            onClick={handleEditTask}
+            disabled={isLoading}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600 text-white' : 'hover:bg-gray-100 text-gray-900'} disabled:opacity-50 transition-colors`}
+          >
+            <EditIcon size={16} className="mr-3" />
+            Edit Task
+          </button>
+          
+          <button
+            onClick={() => contextMenu.task && handleDeleteTask(contextMenu.task.id)}
+            disabled={isLoading}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600 text-red-400' : 'hover:bg-gray-100 text-red-600'} disabled:opacity-50 transition-colors`}
+          >
+            <TrashIcon size={16} className="mr-3" />
+            Delete Task
+          </button>
+
+          {/* Separador */}
+          <div className={`border-t my-1 ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}></div>
+
+          {/* Seção de Status */}
+          <div className={`px-3 py-2 text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             Change Status
           </div>
+          
           <button
             onClick={() => handleStatusChange('pending')}
             disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'pending' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50`}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'pending' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
           >
-            <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-2"></span>
+            <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-3"></span>
             Pending
           </button>
+          
           <button
             onClick={() => handleStatusChange('in progress')}
             disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'in progress' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50`}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'in progress' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
           >
-            <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 mr-2"></span>
+            <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 mr-3"></span>
             In Progress
           </button>
+          
           <button
             onClick={() => handleStatusChange('completed')}
             disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'completed' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50`}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'completed' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
           >
-            <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+            <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-3"></span>
             Completed
           </button>
+          
           <button
             onClick={() => handleStatusChange('awaiting client')}
             disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'awaiting client' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50`}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'awaiting client' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
           >
-            <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+            <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-3"></span>
             Awaiting Client
           </button>
-          {/* Só mostra opção de delete no modo de edição */}
-          {isEditing && (
-            <>
-              <div className="border-t my-1"></div>
-              <button
-                onClick={() => contextMenu.task && handleDeleteTask(contextMenu.task.id)}
-                disabled={isLoading}
-                className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600 text-red-400' : 'hover:bg-gray-100 text-red-600'} disabled:opacity-50`}
-              >
-                Delete Task
-              </button>
-            </>
-          )}
         </div>
       )}
 

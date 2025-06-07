@@ -1,6 +1,20 @@
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 
+class CommentBase(BaseModel):
+    text: str
+    author: Optional[str] = "User"
+
+class CommentCreate(CommentBase):
+    task_id: int
+
+class Comment(CommentBase):
+    id: str
+    task_id: int
+    timestamp: str
+    
+    model_config = ConfigDict(from_attributes=True)
+
 class TaskBase(BaseModel):
     date: str
     description: str
@@ -15,6 +29,7 @@ class TaskCreate(TaskBase):
 class Task(TaskBase):
     id: int
     client_id: str
+    comments: Optional[List[Comment]] = []
     
     model_config = ConfigDict(from_attributes=True)
 

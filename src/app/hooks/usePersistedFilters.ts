@@ -11,6 +11,7 @@ interface FilterState {
   dateRange: { start: string; end: string };
   selectedClients: string[];
   slaFilter: SLAFilter;
+  descriptionFilter: string;
 }
 
 const defaultFilters: FilterState = {
@@ -20,7 +21,8 @@ const defaultFilters: FilterState = {
   selectedClientId: null,
   dateRange: { start: '', end: '' },
   selectedClients: [],
-  slaFilter: 'all'
+  slaFilter: 'all',
+  descriptionFilter: ''
 };
 
 export function usePersistedFilters(storageKey: string) {
@@ -59,6 +61,9 @@ export function usePersistedFilters(storageKey: string) {
       }
       if (searchParams.get('sla')) {
         urlFilters.slaFilter = searchParams.get('sla') as SLAFilter;
+      }
+      if (searchParams.get('description')) {
+        urlFilters.descriptionFilter = searchParams.get('description') || '';
       }
 
       // If no URL params, try localStorage
@@ -125,6 +130,9 @@ export function usePersistedFilters(storageKey: string) {
       if (updatedFilters.slaFilter !== 'all') {
         params.set('sla', updatedFilters.slaFilter);
       }
+      if (updatedFilters.descriptionFilter) {
+        params.set('description', updatedFilters.descriptionFilter);
+      }
 
       const queryString = params.toString();
       const newUrl = queryString ? `?${queryString}` : window.location.pathname;
@@ -183,6 +191,10 @@ export function usePersistedFilters(storageKey: string) {
     updateFilters({ slaFilter });
   }, [updateFilters]);
 
+  const setDescriptionFilter = useCallback((description: string) => {
+    updateFilters({ descriptionFilter: description });
+  }, [updateFilters]);
+
   // Get shareable URL
   const getShareableUrl = useCallback(() => {
     const params = new URLSearchParams();
@@ -211,6 +223,9 @@ export function usePersistedFilters(storageKey: string) {
     if (filters.slaFilter !== 'all') {
       params.set('sla', filters.slaFilter);
     }
+    if (filters.descriptionFilter) {
+      params.set('description', filters.descriptionFilter);
+    }
 
     const queryString = params.toString();
     return queryString ? `${window.location.origin}${window.location.pathname}?${queryString}` : window.location.href;
@@ -228,6 +243,7 @@ export function usePersistedFilters(storageKey: string) {
     setDateRange,
     setSelectedClients,
     setSlaFilter,
+    setDescriptionFilter,
     getShareableUrl
   };
 } 

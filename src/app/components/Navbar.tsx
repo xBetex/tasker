@@ -11,9 +11,10 @@ interface NavbarProps {
   darkMode: boolean;
   onToggleDarkMode: () => void;
   clients?: Client[];
+  onUpdate?: () => void;
 }
 
-export default function Navbar({ darkMode, onToggleDarkMode, clients = [] }: NavbarProps) {
+export default function Navbar({ darkMode, onToggleDarkMode, clients = [], onUpdate }: NavbarProps) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
@@ -93,11 +94,22 @@ export default function Navbar({ darkMode, onToggleDarkMode, clients = [] }: Nav
             >
               Tasks
             </Link>
+            <Link 
+              href="/sla"
+              className={`text-lg font-semibold transition-colors ${
+                isActive('/sla') 
+                  ? 'text-blue-400' 
+                  : 'hover:text-blue-300'
+              }`}
+            >
+              SLA
+            </Link>
             
             {/* SLA Notifications */}
             <SLANotifications
               {...slaNotifications}
               darkMode={darkMode}
+              onUpdate={onUpdate}
             />
             
             {/* Dark Mode Toggle - Desktop */}
@@ -127,6 +139,7 @@ export default function Navbar({ darkMode, onToggleDarkMode, clients = [] }: Nav
             <SLANotifications
               {...slaNotifications}
               darkMode={darkMode}
+              onUpdate={onUpdate}
             />
             
             {/* Hamburger Button */}
@@ -185,6 +198,17 @@ export default function Navbar({ darkMode, onToggleDarkMode, clients = [] }: Nav
               onClick={handleLinkClick}
             >
               📋 Tasks
+            </Link>
+            <Link
+              href="/sla"
+              className={`block px-4 py-2 rounded-lg transition-colors ${
+                isActive('/sla') 
+                  ? 'bg-blue-600 text-white' 
+                  : 'hover:bg-gray-700'
+              }`}
+              onClick={handleLinkClick}
+            >
+              🎯 SLA
             </Link>
             
             {/* Dark Mode Toggle - Mobile */}
