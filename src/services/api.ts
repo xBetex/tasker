@@ -1,4 +1,4 @@
-import { Client, Task, TaskStatus, TaskPriority } from '@/types/types';
+import { Client, Task, TaskStatus, TaskPriority, Comment } from '@/types/types';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -17,6 +17,11 @@ interface TaskPayload {
   client_id?: string;
   sla_date?: string;
   completion_date?: string;
+}
+
+interface CommentPayload {
+  text: string;
+  author?: string;
 }
 
 interface ApiError {
@@ -305,6 +310,67 @@ export const api = {
       return response.json();
     } catch (error) {
       console.error('Error updating client:', error);
+      throw new Error(formatErrorMessage(error));
+    }
+  },
+
+  // Comment functions
+  async createComment(taskId: number, comment: CommentPayload): Promise<Comment> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/comments/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          task_id: taskId,
+          text: comment.text,
+          author: comment.author || 'User'
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw error;
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('Error creating comment:', error);
+      throw new Error(formatErrorMessage(error));
+    }
+  },
+
+  async getTaskComments(taskId: number): Promise<Comment[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/comments/`);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw error;
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      throw new Error(formatErrorMessage(error));
+    }
+  },
+
+  async deleteComment(commentId: string): Promise<Comment> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/comments/${commentId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw error;
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('Error deleting comment:', error);
       throw new Error(formatErrorMessage(error));
     }
   },

@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Client, Task, TaskStatus, TaskPriority } from '@/types/types';
+import { Client, Task, TaskStatus, TaskPriority, Comment } from '@/types/types';
 import EditTaskModal from './EditTaskModal';
 import { api } from '@/services/api';
 import { MoreVerticalIcon, EditIcon, TrashIcon } from './Icons';
 import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
 import DateDisplay from './DateDisplay';
 import { getSLAStatus, getSLAStatusColor, getSLAStatusBadge, getSLAStatusText, getDaysUntilSLA } from '@/utils/slaUtils';
+import CommentsSection from './CommentsSection';
+import { useToast } from '../hooks/useToast';
 
 interface ClientCardProps {
   client: Client;
@@ -48,12 +50,14 @@ export default function ClientCard({
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAddingComment, setIsAddingComment] = useState(false);
   
   // Estados para long press
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [isLongPress, setIsLongPress] = useState(false);
 
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
 
   const calculateCompletionProgress = (tasks: Task[]) => {
     const totalTasks = tasks.length;
@@ -217,6 +221,7 @@ export default function ClientCard({
       });
 
       onUpdate();
+      toast.success('Task Added', `"${newTask.description}" has been added successfully!`);
       setIsAddingTask(false);
       setNewTask({
         date: getCurrentDateForInput(),
@@ -229,7 +234,9 @@ export default function ClientCard({
       });
     } catch (error) {
       console.error('Error adding task:', error);
-      setError(error instanceof Error ? error.message : 'Failed to add task');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add task';
+      setError(errorMessage);
+      toast.error('Failed to Add Task', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -278,10 +285,13 @@ export default function ClientCard({
       await Promise.all(updatePromises);
       
       onUpdate();
+      toast.success('Changes Saved', 'Client and tasks have been updated successfully!');
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating client and tasks:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update client and tasks');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update client and tasks';
+      setError(errorMessage);
+      toast.error('Failed to Save Changes', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -351,10 +361,13 @@ export default function ClientCard({
       setError(null);
       await api.deleteTask(taskId);
       onUpdate();
+      toast.success('Task Deleted', 'Task has been deleted successfully!');
       setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
     } catch (error) {
       console.error('Error deleting task:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete task');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete task';
+      setError(errorMessage);
+      toast.error('Failed to Delete Task', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -409,9 +422,12 @@ export default function ClientCard({
         setError(null);
         await api.updateTaskStatus(contextMenu.task.id, newStatus);
         onUpdate();
+        toast.success('Status Updated', `Task status changed to "${newStatus}"!`);
       } catch (error) {
         console.error('Error updating task status:', error);
-        setError(error instanceof Error ? error.message : 'Failed to update task status');
+        const errorMessage = error instanceof Error ? error.message : 'Failed to update task status';
+        setError(errorMessage);
+        toast.error('Failed to Update Status', errorMessage);
       } finally {
         setIsLoading(false);
         setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
@@ -462,6 +478,29 @@ export default function ClientCard({
       setEditingTask(contextMenu.task);
     }
     setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
+  };
+
+  const handleAddComment = async (taskId: number, commentText: string) => {
+    try {
+      setIsAddingComment(true);
+      
+      // Create comment via API
+      await api.createComment(taskId, {
+        text: commentText,
+        author: 'User'
+      });
+      
+      toast.success('Comment Added', 'Your comment has been added successfully!');
+      
+      // Reload client data to show new comment
+      onUpdate();
+      
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast.error('Failed to Add Comment', 'Please try again later.');
+    } finally {
+      setIsAddingComment(false);
+    }
   };
 
   const getStatusColorText = (status: string) => {
@@ -1052,6 +1091,14 @@ export default function ClientCard({
                           </div>
                         </div>
                       )}
+
+                      {/* Comments Section */}
+                      <CommentsSection
+                        comments={task.comments || []}
+                        onAddComment={(text) => handleAddComment(task.id, text)}
+                        darkMode={darkMode}
+                        isLoading={isAddingComment}
+                      />
                     </div>
                   ))}
                 </div>

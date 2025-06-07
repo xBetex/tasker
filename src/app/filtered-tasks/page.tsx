@@ -12,6 +12,7 @@ import EditTaskModal from '../components/EditTaskModal';
 import { MoreVerticalIcon, EditIcon, TrashIcon } from '../components/Icons';
 import { useSearchParams } from 'next/navigation';
 import { getSLAStatus, getSLAStatusColor, getSLAStatusBadge } from '@/utils/slaUtils';
+import { useToast } from '../hooks/useToast';
 
 interface TaskListViewProps {
   tasks: Task[];
@@ -37,6 +38,7 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [editingData, setEditingData] = useState<Partial<Task>>({});
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
 
   // Click outside handler
   useEffect(() => {
@@ -161,8 +163,10 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
         setIsLoading(true);
         await api.deleteTask(contextMenu.task.id);
         onUpdate();
+        toast.success('Task Deleted', 'Task has been deleted successfully!');
       } catch (error) {
         console.error('Error deleting task:', error);
+        toast.error('Failed to Delete Task', 'Please try again later.');
       } finally {
         setIsLoading(false);
         setContextMenu({ visible: false, x: 0, y: 0, task: null });
@@ -176,8 +180,10 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
         setIsLoading(true);
         await api.updateTaskStatus(contextMenu.task.id, newStatus);
         onUpdate();
+        toast.success('Status Updated', `Task status changed to "${newStatus}"!`);
       } catch (error) {
         console.error('Error updating task status:', error);
+        toast.error('Failed to Update Status', 'Please try again later.');
       } finally {
         setIsLoading(false);
         setContextMenu({ visible: false, x: 0, y: 0, task: null });
@@ -210,10 +216,12 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
       setIsLoading(true);
       await api.updateTask(editingTaskId, editingData);
       onUpdate();
+      toast.success('Task Updated', 'Task has been updated successfully!');
       setEditingTaskId(null);
       setEditingData({});
     } catch (error) {
       console.error('Error updating task:', error);
+      toast.error('Failed to Update Task', 'Please try again later.');
     } finally {
       setIsLoading(false);
     }
