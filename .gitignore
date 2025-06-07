@@ -45,3 +45,4 @@ next-env.d.ts
 
 # database
 backend/task_manager.db
+__pycache__/
