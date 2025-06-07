@@ -11,6 +11,7 @@ import DateDisplay from '../components/DateDisplay';
 import EditTaskModal from '../components/EditTaskModal';
 import { MoreVerticalIcon, EditIcon, TrashIcon } from '../components/Icons';
 import { useSearchParams } from 'next/navigation';
+import { getSLAStatus, getSLAStatusColor, getSLAStatusBadge } from '@/utils/slaUtils';
 
 interface TaskListViewProps {
   tasks: Task[];
@@ -33,6 +34,8 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
   }>({ visible: false, x: 0, y: 0, task: null });
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [editingData, setEditingData] = useState<Partial<Task>>({});
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
   // Click outside handler
@@ -182,6 +185,44 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
     }
   };
 
+  // Inline editing handlers
+  const handleStartEdit = (task: Task) => {
+    setEditingTaskId(task.id);
+    setEditingData({
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      date: task.date,
+      sla_date: task.sla_date,
+      completion_date: task.completion_date
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTaskId(null);
+    setEditingData({});
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingTaskId || !editingData) return;
+    
+    try {
+      setIsLoading(true);
+      await api.updateTask(editingTaskId, editingData);
+      onUpdate();
+      setEditingTaskId(null);
+      setEditingData({});
+    } catch (error) {
+      console.error('Error updating task:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditChange = (field: keyof Task, value: string) => {
+    setEditingData(prev => ({ ...prev, [field]: value }));
+  };
+
   const sortedTasks = [...tasks].sort((a, b) => {
     let comparison = 0;
     
@@ -266,7 +307,13 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                   </button>
                 </th>
                 <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                  SLA Due
+                </th>
+                <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                   Client
+                </th>
+                <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -274,41 +321,165 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
               {sortedTasks.map((task) => (
                 <tr 
                   key={task.id} 
-                  className={`hover:${darkMode ? 'bg-gray-700' : 'bg-gray-50'} transition-colors ${
+                  className={`table-row-transition hover:${darkMode ? 'bg-gray-700' : 'bg-gray-50'} ${
                     highlightTaskId && task.id.toString() === highlightTaskId 
                       ? darkMode ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-200' 
+                      : ''
+                  } ${
+                    editingTaskId === task.id 
+                      ? darkMode ? 'bg-gray-750 ring-2 ring-blue-500' : 'bg-blue-25 ring-2 ring-blue-300'
                       : ''
                   }`}
                   onContextMenu={(e) => handleContextMenu(e, task)}
                 >
                   <td className={`px-6 py-4 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                    <DateDisplay date={task.date} />
+                    {editingTaskId === task.id ? (
+                      <input
+                        type="date"
+                        value={editingData.date || task.date}
+                        onChange={(e) => handleEditChange('date', e.target.value)}
+                        className={`w-full px-2 py-1 text-xs rounded border ${
+                          darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                        }`}
+                      />
+                    ) : (
+                      <DateDisplay date={task.date} />
+                    )}
                   </td>
                   <td className={`px-6 py-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                    <div className="max-w-xs truncate">{task.description}</div>
+                    {editingTaskId === task.id ? (
+                      <textarea
+                        value={editingData.description || task.description}
+                        onChange={(e) => handleEditChange('description', e.target.value)}
+                        className={`w-full px-2 py-1 text-xs rounded border resize-none ${
+                          darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                        }`}
+                        rows={2}
+                      />
+                    ) : (
+                      <div className="max-w-xs break-words">{task.description}</div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-white ${getStatusColor(task.status)}`}>
-                      {task.status}
-                    </span>
+                    {editingTaskId === task.id ? (
+                      <select
+                        value={editingData.status || task.status}
+                        onChange={(e) => handleEditChange('status', e.target.value)}
+                        className={`px-2 py-1 text-xs rounded border ${
+                          darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                        }`}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="in progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="awaiting client">Awaiting Client</option>
+                      </select>
+                    ) : (
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-white ${getStatusColor(task.status)}`}>
+                        {task.status}
+                      </span>
+                    )}
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${getPriorityColor(task.priority)}`}>
-                    {task.priority.toUpperCase()}
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium`}>
+                    {editingTaskId === task.id ? (
+                      <select
+                        value={editingData.priority || task.priority}
+                        onChange={(e) => handleEditChange('priority', e.target.value)}
+                        className={`px-2 py-1 text-xs rounded border ${
+                          darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
+                        }`}
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </select>
+                    ) : (
+                      <span className={getPriorityColor(task.priority)}>
+                        {task.priority.toUpperCase()}
+                      </span>
+                    )}
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
-                    <div className="flex items-center justify-between">
-                      <span>{getClientName(task.client_id)}</span>
-                      <button
-                        onClick={(e) => handleMoreVerticalClick(e, task)}
-                        className={`p-1 rounded transition-colors ${
-                          darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                    {editingTaskId === task.id ? (
+                      <input
+                        type="date"
+                        value={editingData.sla_date || task.sla_date || ''}
+                        onChange={(e) => handleEditChange('sla_date', e.target.value)}
+                        className={`w-full px-2 py-1 text-xs rounded border ${
+                          darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
                         }`}
-                        title="Task options"
-                        aria-label="Task options"
-                      >
-                        <MoreVerticalIcon size={16} />
-                      </button>
-                    </div>
+                      />
+                    ) : (
+                      task.sla_date ? (
+                        <div className="flex flex-col">
+                          <DateDisplay date={task.sla_date} />
+                          {task.status !== 'completed' && (
+                            <span className={`text-xs font-medium mt-1 ${
+                              task.sla_date && new Date(task.sla_date) < new Date()
+                                ? 'text-red-600'
+                                : task.sla_date && new Date(task.sla_date).toDateString() === new Date().toDateString()
+                                ? 'text-orange-600'
+                                : 'text-green-600'
+                            }`}>
+                              {task.sla_date && new Date(task.sla_date) < new Date() && '⚠️ Overdue'}
+                              {task.sla_date && new Date(task.sla_date).toDateString() === new Date().toDateString() && '⚠️ Due Today'}
+                              {task.sla_date && new Date(task.sla_date) > new Date() && '✅ On Track'}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">No SLA</span>
+                      )
+                    )}
+                  </td>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                    <span>{getClientName(task.client_id)}</span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {editingTaskId === task.id ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSaveEdit}
+                          disabled={isLoading}
+                          className={`px-3 py-1 text-xs rounded ${
+                            darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'
+                          } text-white disabled:opacity-50 transition-colors`}
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className={`px-3 py-1 text-xs rounded ${
+                            darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-400 hover:bg-gray-500'
+                          } text-white transition-colors`}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleStartEdit(task)}
+                          className={`p-1 rounded transition-colors ${
+                            darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                          }`}
+                          title="Edit task"
+                          aria-label="Edit task"
+                        >
+                          <EditIcon size={16} />
+                        </button>
+                        <button
+                          onClick={(e) => handleMoreVerticalClick(e, task)}
+                          className={`p-1 rounded transition-colors ${
+                            darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                          }`}
+                          title="More options"
+                          aria-label="More options"
+                        >
+                          <MoreVerticalIcon size={16} />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -326,10 +497,16 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
         {sortedTasks.map((task) => (
           <div 
             key={task.id} 
-            className={`p-4 rounded-lg border shadow hover:shadow-lg transition-shadow ${
+            className={`p-4 rounded-lg border shadow task-card-hover ${
               highlightTaskId && task.id.toString() === highlightTaskId
                 ? darkMode ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-200'
                 : darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+            } ${
+              task.sla_date && task.status !== 'completed' && getSLAStatus(task) === 'overdue'
+                ? 'border-l-4 border-l-red-500'
+                : task.sla_date && task.status !== 'completed' && getSLAStatus(task) === 'due_today'
+                ? 'border-l-4 border-l-orange-500'
+                : ''
             }`}
             onContextMenu={(e) => handleContextMenu(e, task)}
           >
@@ -354,11 +531,11 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
               </div>
             </div>
             
-            <h3 className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h3 className={`font-medium mb-3 break-words-enhanced leading-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>
               {task.description}
             </h3>
             
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-2">
               <span className={`text-sm font-medium ${getPriorityColor(task.priority)}`}>
                 {task.priority.toUpperCase()} Priority
               </span>
@@ -366,6 +543,39 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                 {getClientName(task.client_id)}
               </div>
             </div>
+
+            {/* SLA Footer */}
+            {task.sla_date && task.status !== 'completed' && (
+              <div className={`mt-3 pt-2 border-t ${
+                darkMode ? 'border-gray-700' : 'border-gray-200'
+              } flex items-center justify-between`}>
+                <span className={`text-xs font-medium ${
+                  getSLAStatus(task) === 'overdue' 
+                    ? 'text-red-600' 
+                    : getSLAStatus(task) === 'due_today'
+                    ? 'text-orange-600'
+                    : getSLAStatus(task) === 'due_this_week'
+                    ? 'text-yellow-600'
+                    : 'text-green-600'
+                }`}>
+                  {getSLAStatusBadge(getSLAStatus(task))} SLA: <DateDisplay date={task.sla_date} />
+                </span>
+                <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                  getSLAStatus(task) === 'overdue' 
+                    ? 'bg-red-100 text-red-800 border border-red-200' 
+                    : getSLAStatus(task) === 'due_today'
+                    ? 'bg-orange-100 text-orange-800 border border-orange-200'
+                    : getSLAStatus(task) === 'due_this_week'
+                    ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                    : 'bg-green-100 text-green-800 border border-green-200'
+                }`}>
+                  {getSLAStatus(task) === 'overdue' && 'OVERDUE'}
+                  {getSLAStatus(task) === 'due_today' && 'DUE TODAY'}
+                  {getSLAStatus(task) === 'due_this_week' && 'THIS WEEK'}
+                  {getSLAStatus(task) === 'on_track' && 'ON TRACK'}
+                </span>
+              </div>
+            )}
           </div>
         ))}
       </div>

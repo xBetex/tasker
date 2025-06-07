@@ -948,73 +948,50 @@ export default function ClientCard({
                   </div>
                 )}
 
-                {client.tasks.map((task, index) => (
-                  <div
-                    key={task.id}
-                    className={`p-3 rounded-lg ${getStatusBgColor(task.status)} transition-all duration-200 hover:shadow-sm`}
-                    onContextMenu={(e) => handleContextMenu(e, index)}
-                    onTouchStart={(e) => handleTouchStart(e, task, index)}
-                    onTouchEnd={handleTouchEnd}
-                    onTouchCancel={handleTouchCancel}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="font-medium">{task.description}</p>
-                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                          <DateDisplay date={task.date} /> • <span className={getPriorityColor(task.priority)}>{task.priority}</span>
-                          {task.sla_date && (
-                            <>
-                              {' • '}
-                              <span className={`${getSLAStatusColor(getSLAStatus(task), darkMode)} font-medium`}>
-                                {getSLAStatusBadge(getSLAStatus(task))} SLA: <DateDisplay date={task.sla_date} />
-                                {getSLAStatus(task) === 'overdue' && (
-                                  <span className="font-semibold">
-                                    {' '}({Math.abs(getDaysUntilSLA(task) || 0)} days overdue)
-                                  </span>
-                                )}
-                                {getSLAStatus(task) === 'due_today' && (
-                                  <span className="font-semibold"> (DUE TODAY)</span>
-                                )}
-                                {getSLAStatus(task) === 'due_this_week' && getDaysUntilSLA(task) && (
-                                  <span className="font-semibold">
-                                    {' '}({getDaysUntilSLA(task)} days left)
-                                  </span>
-                                )}
-                              </span>
-                            </>
-                          )}
-                          {task.completion_date && (
-                            <>
-                              {' • '}
-                              <span className="text-green-600 font-medium">
-                                ✅ Completed: <DateDisplay date={task.completion_date} />
-                              </span>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {/* SLA Status Badge */}
-                        {task.sla_date && task.status !== 'completed' && (
-                          <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                            getSLAStatus(task) === 'overdue' 
-                              ? 'bg-red-100 text-red-700 border border-red-200' 
-                              : getSLAStatus(task) === 'due_today'
-                              ? 'bg-orange-100 text-orange-700 border border-orange-200'
-                              : getSLAStatus(task) === 'due_this_week'
-                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
-                              : 'bg-green-100 text-green-700 border border-green-200'
-                          }`}>
-                            {getSLAStatusBadge(getSLAStatus(task))} {getSLAStatusText(getSLAStatus(task))}
+                <div 
+                  className="max-h-72 overflow-y-auto scrollbar-thin"
+                  style={{ 
+                    maxHeight: `${3 * 6}rem`, // Aproximadamente 3 tasks (6rem cada uma)
+                  }}
+                >
+                  {client.tasks.map((task, index) => (
+                    <div
+                      key={task.id}
+                      className={`rounded-lg border-l-4 transition-all duration-200 hover:shadow-lg mb-3 last:mb-0 ${
+                        darkMode ? 'bg-gray-800 hover:bg-gray-750' : 'bg-white hover:bg-gray-50'
+                      } ${
+                        getSLAStatus(task) === 'overdue' 
+                          ? 'border-l-red-500 shadow-red-500/20' 
+                          : getSLAStatus(task) === 'due_today'
+                          ? 'border-l-orange-500 shadow-orange-500/20'
+                          : getSLAStatus(task) === 'due_this_week'
+                          ? 'border-l-yellow-500 shadow-yellow-500/20'
+                          : task.status === 'completed'
+                          ? 'border-l-green-500 shadow-green-500/20'
+                          : 'border-l-blue-500 shadow-blue-500/20'
+                      } shadow-sm`}
+                      onContextMenu={(e) => handleContextMenu(e, index)}
+                      onTouchStart={(e) => handleTouchStart(e, task, index)}
+                      onTouchEnd={handleTouchEnd}
+                      onTouchCancel={handleTouchCancel}
+                    >
+                      {/* Header com status e botão de ações */}
+                      <div className="flex justify-between items-start p-3 pb-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`px-2 py-1 text-xs rounded-full font-medium ${getStatusColor(task.status)} text-white`}>
+                            {task.status}
                           </span>
-                        )}
-                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(task.status)} bg-opacity-100 text-white`}>
-                          {task.status}
-                        </span>
+                          <span className={`text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                            {task.priority.toUpperCase()}
+                          </span>
+                          <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <DateDisplay date={task.date} />
+                          </span>
+                        </div>
                         <button
                           onClick={(e) => handleMoreVerticalClick(e, task, index)}
-                          className={`p-1 rounded transition-colors ${
-                            darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                          className={`p-1.5 rounded-md transition-colors ${
+                            darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
                           }`}
                           title="Task options"
                           aria-label="Task options"
@@ -1022,9 +999,62 @@ export default function ClientCard({
                           <MoreVerticalIcon size={16} />
                         </button>
                       </div>
+
+                      {/* Conteúdo principal */}
+                      <div className="px-3 pb-2">
+                        <h4 className={`font-medium leading-tight break-words-enhanced ${
+                          darkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {task.description}
+                        </h4>
+                        
+                        {task.completion_date && (
+                          <div className="mt-2 flex items-center gap-1 text-green-600">
+                            <span className="text-sm">✅</span>
+                            <span className="text-xs font-medium">
+                              Completed: <DateDisplay date={task.completion_date} />
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Rodapé com SLA */}
+                      {task.sla_date && task.status !== 'completed' && (
+                        <div className={`px-3 py-2 border-t ${
+                          darkMode ? 'border-gray-700 bg-gray-900/50' : 'border-gray-100 bg-gray-50/50'
+                        }`}>
+                          <div className={`flex items-center justify-between text-xs`}>
+                            <span className={`font-medium ${
+                              getSLAStatus(task) === 'overdue' 
+                                ? 'text-red-600' 
+                                : getSLAStatus(task) === 'due_today'
+                                ? 'text-orange-600'
+                                : getSLAStatus(task) === 'due_this_week'
+                                ? 'text-yellow-600'
+                                : 'text-green-600'
+                            }`}>
+                              {getSLAStatusBadge(getSLAStatus(task))} SLA Due: <DateDisplay date={task.sla_date} />
+                            </span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                              getSLAStatus(task) === 'overdue' 
+                                ? 'bg-red-100 text-red-800 border border-red-200' 
+                                : getSLAStatus(task) === 'due_today'
+                                ? 'bg-orange-100 text-orange-800 border border-orange-200'
+                                : getSLAStatus(task) === 'due_this_week'
+                                ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                                : 'bg-green-100 text-green-800 border border-green-200'
+                            }`}>
+                                                             {getSLAStatus(task) === 'overdue' && `${Math.abs(getDaysUntilSLA(task) || 0)}d overdue`}
+                               {getSLAStatus(task) === 'due_today' && 'DUE TODAY'}
+                               {getSLAStatus(task) === 'due_this_week' && getDaysUntilSLA(task) && `${getDaysUntilSLA(task)}d left`}
+                               {getSLAStatus(task) === 'on_track' && 'On Track'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>

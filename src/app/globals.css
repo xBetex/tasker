@@ -140,3 +140,29 @@ body {
 .animate-notification-bounce {
   animation: notification-bounce 2s infinite;
 }
+
+/* Task card enhancements */
+.task-card-hover {
+  transition: all 0.3s ease;
+}
+
+.task-card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Enhanced text wrapping */
+.break-words-enhanced {
+  word-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+/* Smooth table transitions */
+.table-row-transition {
+  transition: all 0.2s ease-in-out;
+}
+
+.table-row-transition:hover {
+  transform: scale(1.01);
+}
