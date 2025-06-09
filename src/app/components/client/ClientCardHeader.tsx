@@ -46,7 +46,7 @@ export default function ClientCardHeader({
               }`}
             />
           ) : (
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
               {client.name}
             </h3>
           )}

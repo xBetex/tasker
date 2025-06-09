@@ -47,7 +47,7 @@ export default function Navbar({ darkMode, onToggleDarkMode, clients = [], onUpd
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 ${
-      darkMode ? 'bg-gray-800' : 'bg-gray-800'
+      darkMode ? 'bg-gray-950' : 'bg-gray-800'
     } text-white shadow-lg`}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
@@ -171,7 +171,7 @@ export default function Navbar({ darkMode, onToggleDarkMode, clients = [], onUpd
               className={`block px-4 py-2 rounded-lg transition-colors ${
                 isActive('/') 
                   ? 'bg-blue-600 text-white' 
-                  : 'hover:bg-gray-700'
+                  : darkMode ? 'hover:bg-gray-900' : 'hover:bg-gray-700'
               }`}
               onClick={handleLinkClick}
             >
@@ -182,7 +182,7 @@ export default function Navbar({ darkMode, onToggleDarkMode, clients = [], onUpd
               className={`block px-4 py-2 rounded-lg transition-colors ${
                 isActive('/analytics') 
                   ? 'bg-blue-600 text-white' 
-                  : 'hover:bg-gray-700'
+                  : darkMode ? 'hover:bg-gray-900' : 'hover:bg-gray-700'
               }`}
               onClick={handleLinkClick}
             >
@@ -193,7 +193,7 @@ export default function Navbar({ darkMode, onToggleDarkMode, clients = [], onUpd
               className={`block px-4 py-2 rounded-lg transition-colors ${
                 isActive('/filtered-tasks') 
                   ? 'bg-blue-600 text-white' 
-                  : 'hover:bg-gray-700'
+                  : darkMode ? 'hover:bg-gray-900' : 'hover:bg-gray-700'
               }`}
               onClick={handleLinkClick}
             >

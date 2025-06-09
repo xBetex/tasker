@@ -87,7 +87,7 @@ function ClientLayout({ children }: { children: ReactNode }) {
     <DarkModeContext.Provider value={{ darkMode, toggleDarkMode }}>
       <ClientsContext.Provider value={{ clients, refreshClients, isLoading }}>
         <NotificationProvider>
-          <div className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+          <div className={`${geistSans.variable} ${geistMono.variable} antialiased ${darkMode ? 'dark' : ''}`}>
             <Navbar 
               darkMode={darkMode} 
               onToggleDarkMode={toggleDarkMode}

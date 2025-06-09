@@ -253,12 +253,12 @@ export default function ClientDetailModal({
       <div
         ref={modalRef}
         className={`w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-lg shadow-xl ${
-          darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
+          darkMode ? 'bg-gray-950 text-gray-100' : 'bg-white text-gray-900'
         }`}
       >
         {/* Header */}
         <div className={`sticky top-0 px-6 py-4 border-b ${
-          darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
+          darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-white'
         }`}>
           <div className="flex justify-between items-start">
             <div>
@@ -281,25 +281,25 @@ export default function ClientDetailModal({
           {/* Stats */}
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className={`p-3 rounded-lg ${
-              darkMode ? 'bg-gray-700' : 'bg-gray-100'
+              darkMode ? 'bg-gray-900' : 'bg-gray-100'
             }`}>
               <div className="text-xs font-medium text-gray-500">Total</div>
               <div className="text-xl font-bold">{stats.total}</div>
             </div>
             <div className={`p-3 rounded-lg ${
-              darkMode ? 'bg-gray-700' : 'bg-gray-100'
+              darkMode ? 'bg-gray-900' : 'bg-gray-100'
             }`}>
               <div className="text-xs font-medium text-gray-500">Concluídas</div>
               <div className="text-xl font-bold text-green-600">{stats.completed}</div>
             </div>
             <div className={`p-3 rounded-lg ${
-              darkMode ? 'bg-gray-700' : 'bg-gray-100'
+              darkMode ? 'bg-gray-900' : 'bg-gray-100'
             }`}>
               <div className="text-xs font-medium text-gray-500">Em Progresso</div>
               <div className="text-xl font-bold text-yellow-600">{stats.inProgress}</div>
             </div>
             <div className={`p-3 rounded-lg ${
-              darkMode ? 'bg-gray-700' : 'bg-gray-100'
+              darkMode ? 'bg-gray-900' : 'bg-gray-100'
             }`}>
               <div className="text-xs font-medium text-gray-500">Progresso</div>
               <div className="text-xl font-bold text-blue-600">{stats.progress}%</div>
@@ -356,7 +356,7 @@ export default function ClientDetailModal({
                   <div
                     key={task.id}
                     className={`border rounded-lg p-4 ${
-                      darkMode ? 'border-gray-700 bg-gray-750' : 'border-gray-200 bg-gray-50'
+                      darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-gray-50'
                     }`}
                   >
                     <div className="flex justify-between items-start mb-3">
@@ -444,8 +444,8 @@ export default function ClientDetailModal({
         <div
           ref={contextMenuRef}
           className={`fixed z-50 py-1 rounded-md shadow-lg w-52 ${
-            darkMode ? 'bg-gray-700' : 'bg-white'
-          } border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}
+            darkMode ? 'bg-gray-900' : 'bg-white'
+          } border ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}
           style={{
             top: `${contextMenu.y}px`,
             left: `${contextMenu.x}px`,
@@ -463,7 +463,7 @@ export default function ClientDetailModal({
             onClick={handleEditTask}
             disabled={isLoading}
             className={`flex items-center w-full text-left px-4 py-2 text-sm ${
-              darkMode ? 'hover:bg-gray-600 text-white' : 'hover:bg-gray-100 text-gray-900'
+              darkMode ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-900'
             } disabled:opacity-50 transition-colors`}
           >
             <EditIcon size={16} className="mr-3" />

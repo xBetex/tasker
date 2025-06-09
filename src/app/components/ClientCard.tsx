@@ -152,7 +152,7 @@ export default function ClientCard({
     <div 
       className={`p-6 rounded-lg shadow-lg border transition-all duration-300 ${
         darkMode 
-          ? 'bg-gray-800 border-gray-700 hover:bg-gray-750' 
+          ? 'bg-gray-950 border-gray-800 hover:bg-gray-900' 
           : 'bg-white border-gray-200 hover:shadow-xl'
       }`}
       onClick={(e) => {
