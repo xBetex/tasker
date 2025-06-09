@@ -16,6 +16,7 @@ interface ClientCardProps {
   isExpanded: boolean;
   onToggleExpand: () => void;
   darkMode: boolean;
+  onShowDetails?: (client: Client) => void;
 }
 
 export default function ClientCard({
@@ -25,6 +26,7 @@ export default function ClientCard({
   darkMode,
   isExpanded,
   onToggleExpand,
+  onShowDetails,
 }: ClientCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
@@ -571,6 +573,24 @@ export default function ClientCard({
                 </>
               )}
               
+              {/* Details button - only when expanded and not editing */}
+              {isExpanded && !isEditing && onShowDetails && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShowDetails(client);
+                  }}
+                  className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                    darkMode 
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  }`}
+                  title="Ver detalhes completos"
+                >
+                  Detalhes
+                </button>
+              )}
+
               {/* Edit button - only when expanded and not editing */}
               {isExpanded && !isEditing && (
                 <button

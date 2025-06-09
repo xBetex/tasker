@@ -1,6 +1,9 @@
 'use client'
 import { useState, useEffect, useRef } from 'react';
 import ClientCard from './components/ClientCard';
+import ClientListView from './components/ClientListView';
+import ClientDetailModal from './components/ClientDetailModal';
+import ClientViewModeToggle, { ViewMode } from './components/ClientViewModeToggle';
 import FilterBar, { SLAFilter } from './components/FilterBar';
 import AddClientModal from './components/AddClientModal';
 import { Client, TaskStatus, TaskPriority } from '@/types/types';
@@ -29,6 +32,10 @@ export default function Home() {
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('compact');
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
@@ -360,24 +367,28 @@ export default function Home() {
 
         <div className="flex flex-wrap gap-4 mb-6">
           <div className="flex-1 flex space-x-2">
-            <button
-              onClick={() => {
-                const allExpanded: Record<string, boolean> = {};
-                clients.forEach(client => {
-                  allExpanded[client.id] = true;
-                });
-                setExpandedCards(allExpanded);
-              }}
-              className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
-            >
-              Open All Cards
-            </button>
-            <button
-              onClick={() => setExpandedCards({})}
-              className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
-            >
-              Collapse All
-            </button>
+            {viewMode === 'compact' && (
+              <>
+                <button
+                  onClick={() => {
+                    const allExpanded: Record<string, boolean> = {};
+                    clients.forEach(client => {
+                      allExpanded[client.id] = true;
+                    });
+                    setExpandedCards(allExpanded);
+                  }}
+                  className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+                >
+                  Open All Cards
+                </button>
+                <button
+                  onClick={() => setExpandedCards({})}
+                  className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+                >
+                  Collapse All
+                </button>
+              </>
+            )}
             {(dateRangeFilter.start || dateRangeFilter.end) && (
               <button
                 onClick={clearDateFilter}
@@ -386,6 +397,14 @@ export default function Home() {
                 Clear Date Filter
               </button>
             )}
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <ClientViewModeToggle
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              darkMode={darkMode}
+            />
           </div>
           <div className="flex space-x-2">
             <input
@@ -476,25 +495,40 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredClients.map(client => (
-            <ClientCard
-              key={client.id}
-              client={client}
-              isExpanded={expandedCards[client.id] || false}
-              onToggleExpand={() => setExpandedCards(prev => ({
-                ...prev,
-                [client.id]: !prev[client.id]
-              }))}
-              onUpdate={refreshClients}
-              onDeleteTask={async (clientId, taskIndex) => {
-                // Implement task deletion here when backend endpoint is ready
-                await refreshClients();
-              }}
-              darkMode={darkMode}
-            />
-          ))}
-        </div>
+        {/* Render different view modes */}
+        {viewMode === 'list' ? (
+          <ClientListView
+            clients={filteredClients}
+            onClientClick={(client) => {
+              setSelectedClient(client);
+              setIsDetailModalOpen(true);
+            }}
+            darkMode={darkMode}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredClients.map(client => (
+              <ClientCard
+                key={client.id}
+                client={client}
+                isExpanded={expandedCards[client.id] || false}
+                onToggleExpand={() => setExpandedCards(prev => ({
+                  ...prev,
+                  [client.id]: !prev[client.id]
+                }))}
+                onUpdate={refreshClients}
+                onDeleteTask={async (clientId, taskIndex) => {
+                  await refreshClients();
+                }}
+                onShowDetails={(client) => {
+                  setSelectedClient(client);
+                  setIsDetailModalOpen(true);
+                }}
+                darkMode={darkMode}
+              />
+            ))}
+          </div>
+        )}
 
         {filteredClients.length === 0 && !isLoading && (
           <div className={`text-center py-12 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -522,6 +556,16 @@ export default function Home() {
         }}
         darkMode={darkMode}
       />
+
+              {selectedClient && (
+          <ClientDetailModal
+            isOpen={isDetailModalOpen}
+            onClose={() => setIsDetailModalOpen(false)}
+            client={selectedClient}
+            onUpdate={refreshClients}
+            darkMode={darkMode}
+          />
+        )}
     </div>
   );
 }

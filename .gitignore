@@ -35,10 +35,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
-<<<<<<< HEAD
-=======
 .venv/
->>>>>>> task_sla
 
 # vercel
 .vercel
@@ -49,8 +46,5 @@ next-env.d.ts
 
 # database
 backend/task_manager.db
-<<<<<<< HEAD
 __pycache__/
 backend/__pycache__/
-=======
->>>>>>> task_sla

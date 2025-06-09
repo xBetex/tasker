@@ -374,4 +374,12 @@ export const api = {
       throw new Error(formatErrorMessage(error));
     }
   },
+
+  // Alias for createComment to maintain compatibility
+  async addComment(taskId: number, commentText: string): Promise<Comment> {
+    return this.createComment(taskId, {
+      text: commentText,
+      author: 'User'
+    });
+  },
 }; 
