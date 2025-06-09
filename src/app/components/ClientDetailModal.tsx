@@ -5,8 +5,10 @@ import { getSLAStatus, getSLAStatusColor, getSLAStatusBadge, getDaysUntilSLA } f
 import CommentsSection from './CommentsSection';
 import { MoreVerticalIcon, EditIcon, TrashIcon } from './Icons';
 import EditTaskModal from './EditTaskModal';
+import AddTaskForm from './client/AddTaskForm';
 import { api } from '@/services/api';
 import { useToast } from '../hooks/useToast';
+import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
 
 interface ClientDetailModalProps {
   client: Client;
@@ -32,6 +34,17 @@ export default function ClientDetailModal({
   }>({ visible: false, x: 0, y: 0, taskIndex: null });
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showAddTaskForm, setShowAddTaskForm] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [newTask, setNewTask] = useState<Omit<Task, 'id'>>({
+    description: '',
+    date: getCurrentDateForInput(),
+    sla_date: getDefaultSLADate(),
+    priority: 'medium',
+    status: 'pending',
+    client_id: client.id,
+    comments: []
+  });
   const modalRef = useRef<HTMLDivElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
@@ -173,6 +186,64 @@ export default function ClientDetailModal({
     }
   };
 
+  const handleNewTaskChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewTask(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddTask = async () => {
+    if (!newTask.description.trim()) {
+      toast.error('Task Description Required', 'Please enter a task description');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await api.createTask(newTask);
+      
+      // Force refresh of client data
+      await onUpdate();
+      
+      // Force re-render of modal
+      setRefreshKey(prev => prev + 1);
+      
+      // Small delay to ensure data is updated before showing success
+      setTimeout(() => {
+        toast.success('Task Added', 'New task has been added successfully!');
+      }, 100);
+      
+      setNewTask({
+        description: '',
+        date: getCurrentDateForInput(),
+        sla_date: getDefaultSLADate(),
+        priority: 'medium',
+        status: 'pending',  
+        client_id: client.id,
+        comments: []
+      });
+      setShowAddTaskForm(false);
+    } catch (error) {
+      console.error('Error adding task:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add task';
+      toast.error('Failed to Add Task', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelAddTask = () => {
+    setShowAddTaskForm(false);
+    setNewTask({
+      description: '',
+      date: getCurrentDateForInput(),
+      sla_date: getDefaultSLADate(),
+      priority: 'medium',
+      status: 'pending',
+      client_id: client.id,
+      comments: []
+    });
+  };
+
   const stats = getTaskStats();
 
   if (!isOpen) return null;
@@ -238,9 +309,36 @@ export default function ClientDetailModal({
 
         {/* Tasks */}
         <div className="p-6">
-          <h3 className="text-lg font-semibold mb-4">
-            Tasks ({client.tasks.length})
-          </h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">
+              Tasks ({client.tasks.length})
+            </h3>
+            {!showAddTaskForm && (
+              <button
+                onClick={() => setShowAddTaskForm(true)}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+                  darkMode
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                } hover:scale-110 shadow-md hover:shadow-lg`}
+                title="Add New Task"
+              >
+                +
+              </button>
+            )}
+          </div>
+
+          {showAddTaskForm && (
+            <div className="mb-4">
+              <AddTaskForm
+                newTask={newTask}
+                darkMode={darkMode}
+                onNewTaskChange={handleNewTaskChange}
+                onAddTask={handleAddTask}
+                onCancel={handleCancelAddTask}
+              />
+            </div>
+          )}
 
           {client.tasks.length === 0 ? (
             <div className={`text-center py-8 ${
@@ -249,7 +347,7 @@ export default function ClientDetailModal({
               <p>Nenhuma task encontrada para este cliente</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4" key={refreshKey}>
               {client.tasks.map((task, index) => {
                 const slaStatus = getSLAStatus(task);
                 const daysUntilSLA = getDaysUntilSLA(task);

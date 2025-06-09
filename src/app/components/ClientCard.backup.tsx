@@ -7,6 +7,12 @@ import TaskItem from './client/TaskItem';
 import AddTaskForm from './client/AddTaskForm';
 import { useClientCard } from '../hooks/client/useClientCard';
 import { api } from '@/services/api';
+import { MoreVerticalIcon, EditIcon, TrashIcon } from './Icons';
+import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
+import DateDisplay from './DateDisplay';
+import { getSLAStatus, getSLAStatusColor, getSLAStatusBadge, getSLAStatusText, getDaysUntilSLA } from '@/utils/slaUtils';
+import CommentsSection from './CommentsSection';
+import { useToast } from '../hooks/useToast';
 
 interface ClientCardProps {
   client: Client;
@@ -61,21 +67,27 @@ export default function ClientCard({
     handleTouchCancel,
   } = useClientCard(client, onUpdate, onDeleteTask);
 
-  // Função para apenas expandir/recolher (mostrar tarefas)
-  const handleToggleExpand = () => {
+  const toast = useToast();
+
+  // Função combinada para expansão e edição
+  const handleToggleExpandAndEdit = () => {
     if (isExpanded) {
+      // Se está expandido, recolher e sair do modo de edição
       setIsEditing(false);
       setIsAddingTask(false);
+    } else {
+      // Se está recolhido, expandir e entrar no modo de edição
+      setIsEditing(true);
     }
     onToggleExpand();
   };
 
-  // Função para ativar apenas o modo de edição
+  // Função para ativar apenas o modo de edição (sem mexer na expansão)
   const handleStartEdit = () => {
     setIsEditing(true);
   };
 
-  // Função para salvar e sair do modo de edição
+  // Função para salvar e sair do modo de edição (sem mexer na expansão)
   const handleSaveAndExitEdit = async () => {
     await handleSave();
     setIsEditing(false);
@@ -133,48 +145,67 @@ export default function ClientCard({
     }
   };
 
+  const handleContextMenu = (e: React.MouseEvent, index: number) => {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const menuWidth = 208; // w-52 = 208px
+    const menuHeight = 320;
+    
+    // Posicionar o menu próximo ao clique, mas ajustar se estiver muito perto das bordas
+    let x = e.clientX;
+    let y = e.clientY;
+    
+    // Ajustar posição horizontal
+    if (x + menuWidth > windowWidth) {
+      x = windowWidth - menuWidth - 10; // 10px de margem
+    }
+    if (x < 10) {
+      x = 10; // Margem mínima da esquerda
+    }
+    
+    // Ajustar posição vertical
+    if (y + menuHeight > windowHeight) {
+      y = windowHeight - menuHeight - 10; // 10px de margem
+    }
+    if (y < 10) {
+      y = 10; // Margem mínima do topo
+    }
+    
+    const tasks = isEditing ? editData.tasks : client.tasks;
+    const task = tasks[index];
+    
+    setContextMenu({
+      visible: true,
+      x,
+      y,
+      taskIndex: index,
+      task
+    });
+  };
+
   const getStatusColorText = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'Completed';
+        return 'Concluída';
       case 'in progress':
-        return 'In Progress';
+        return 'Em Andamento';
       case 'awaiting client':
-        return 'Awaiting Client';
+        return 'Aguardando Cliente';
       default:
-        return 'Pending';
+        return 'Pendente';
     }
   };
 
   const displayTasks = isEditing ? editData.tasks : client.tasks;
 
   return (
-    <div 
-      className={`p-6 rounded-lg shadow-lg border transition-all duration-300 ${
-        darkMode 
-          ? 'bg-gray-800 border-gray-700 hover:bg-gray-750' 
-          : 'bg-white border-gray-200 hover:shadow-xl'
-      }`}
-      onClick={(e) => {
-        // Só permitir expansão se clicou no header ou barra de progresso
-        const target = e.target as HTMLElement;
-        
-        // Identificar se clicou em área "clicável" para expandir
-        const isHeaderArea = target.closest('.client-header') || 
-                            target.closest('.client-progress') ||
-                            (!isExpanded && !target.closest('button, input, select, textarea, form, [role="button"]'));
-        
-        // Se está expandido, não fechar ao clicar em qualquer lugar
-        if (isExpanded) {
-          return;
-        }
-        
-        // Se não está expandido e clicou em área válida, expandir
-        if (isHeaderArea && !target.closest('button, input, select, textarea, form')) {
-          handleToggleExpand();
-        }
-      }}
-    >
+    <div className={`p-6 rounded-lg shadow-lg border transition-all duration-300 ${
+      darkMode 
+        ? 'bg-gray-800 border-gray-700 hover:bg-gray-750' 
+        : 'bg-white border-gray-200 hover:shadow-xl'
+    }`}>
       <ClientCardHeader
         client={client}
         editData={editData}
@@ -182,7 +213,7 @@ export default function ClientCard({
         isExpanded={isExpanded}
         darkMode={darkMode}
         onInputChange={handleInputChange}
-        onToggleExpand={handleToggleExpand}
+        onToggleExpandAndEdit={handleToggleExpandAndEdit}
         onStartEdit={handleStartEdit}
         onSaveAndExitEdit={handleSaveAndExitEdit}
         onCancelEdit={handleCancelEdit}
@@ -190,14 +221,14 @@ export default function ClientCard({
         onShowDetails={onShowDetails}
       />
 
-      <ClientProgressBar progress={progress} darkMode={darkMode} isExpanded={isExpanded} />
+      <ClientProgressBar progress={progress} darkMode={darkMode} />
 
       {isExpanded && (
         <div>
           {displayTasks.length > 0 && (
             <div className="mb-4">
               <h4 className="font-medium mb-3 text-gray-900 dark:text-white">
-                Tasks ({displayTasks.length})
+                Tarefas ({displayTasks.length})
               </h4>
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {displayTasks.map((task, index) => (
@@ -222,34 +253,26 @@ export default function ClientCard({
             </div>
           )}
 
-          {/* Add Task Button - Always visible when expanded */}
-          <div className="mb-4">
-            {!isAddingTask ? (
-              <div className="flex justify-center">
+          {isEditing && (
+            <div className="mb-4">
+              {!isAddingTask ? (
                 <button
                   onClick={() => setIsAddingTask(true)}
-                  className={`inline-flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 ${
-                    darkMode
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                      : 'bg-blue-500 hover:bg-blue-600 text-white'
-                  }`}
-                  title="Add new task"
+                  className="w-full p-3 border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
+                  + Adicionar Nova Tarefa
                 </button>
-              </div>
-            ) : (
-              <AddTaskForm
-                newTask={newTask}
-                darkMode={darkMode}
-                onNewTaskChange={handleNewTaskChange}
-                onAddTask={handleAddTask}
-                onCancel={() => setIsAddingTask(false)}
-              />
-            )}
-          </div>
+              ) : (
+                <AddTaskForm
+                  newTask={newTask}
+                  darkMode={darkMode}
+                  onNewTaskChange={handleNewTaskChange}
+                  onAddTask={handleAddTask}
+                  onCancel={() => setIsAddingTask(false)}
+                />
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -267,6 +290,7 @@ export default function ClientCard({
             top: contextMenu.y,
           }}
         >
+          {/* Status Options */}
           <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             Status
           </div>
@@ -294,18 +318,19 @@ export default function ClientCard({
 
           <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
 
+          {/* Actions */}
           <button
             onClick={handleEditTask}
             className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
           >
-            ✏️ Edit Task
+            ✏️ Editar Tarefa
           </button>
           
           <button
             onClick={() => contextMenu.task && handleDeleteTask(contextMenu.task.id)}
             className="w-full text-left px-3 py-2 text-sm hover:bg-red-100 dark:hover:bg-red-900 transition-colors text-red-600 dark:text-red-400"
           >
-            🗑️ Delete Task
+            🗑️ Excluir Tarefa
           </button>
         </div>
       )}
@@ -313,10 +338,17 @@ export default function ClientCard({
       {/* Edit Task Modal */}
       {editingTask && (
         <EditTaskModal
-          isOpen={true}
           task={editingTask}
-          onClose={() => setEditingTask(null)}
-          onUpdate={onUpdate}
+          onSave={async (updatedTask) => {
+            try {
+              await api.updateTask(editingTask.id, updatedTask);
+              onUpdate();
+              setEditingTask(null);
+            } catch (error) {
+              console.error('Error updating task:', error);
+            }
+          }}
+          onCancel={() => setEditingTask(null)}
           darkMode={darkMode}
         />
       )}
@@ -328,10 +360,10 @@ export default function ClientCard({
             darkMode ? 'bg-gray-800' : 'bg-white'
           }`}>
             <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">
-              Confirm Deletion
+              Confirmar Exclusão
             </h3>
             <p className="mb-6 text-gray-600 dark:text-gray-300">
-              Are you sure you want to delete client "{client.name}"? This action cannot be undone.
+              Tem certeza que deseja excluir o cliente "{client.name}"? Esta ação não pode ser desfeita.
             </p>
             <div className="flex space-x-4">
               <button
@@ -339,14 +371,14 @@ export default function ClientCard({
                 disabled={isLoading}
                 className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
-                {isLoading ? 'Deleting...' : 'Delete'}
+                {isLoading ? 'Excluindo...' : 'Excluir'}
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={isLoading}
                 className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
               >
-                Cancel
+                Cancelar
               </button>
             </div>
           </div>
@@ -354,4 +386,4 @@ export default function ClientCard({
       )}
     </div>
   );
-} 
+}
