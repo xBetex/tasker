@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Client, Task } from '@/types/types';
 import EditTaskModal from './EditTaskModal';
 import ClientCardHeader from './client/ClientCardHeader';
 import ClientProgressBar from './client/ClientProgressBar';
 import TaskItem from './client/TaskItem';
 import AddTaskForm from './client/AddTaskForm';
+import ClientTaskTabs, { ClientTabType } from './client/ClientTaskTabs';
 import { useClientCard } from '../hooks/client/useClientCard';
 import { api } from '@/services/api';
 
@@ -27,6 +28,10 @@ export default function ClientCard({
   onToggleExpand,
   onShowDetails,
 }: ClientCardProps) {
+  
+  // Estado para as tabs das tarefas
+  const [activeTab, setActiveTab] = useState<ClientTabType>('active');
+  
   const {
     // Estados
     isEditing,
@@ -156,7 +161,11 @@ export default function ClientCard({
 
 
 
-  const displayTasks = isEditing ? editData.tasks : client.tasks;
+  // Filtra tarefas por tab
+  const allTasks = isEditing ? editData.tasks : client.tasks;
+  const activeTasks = allTasks.filter(task => task.status !== 'completed');
+  const completedTasks = allTasks.filter(task => task.status === 'completed');
+  const displayTasks = activeTab === 'active' ? activeTasks : completedTasks;
 
   return (
     <div 
@@ -212,10 +221,21 @@ export default function ClientCard({
 
       {isExpanded && (
         <div>
+          {/* Task Tabs */}
+          <ClientTaskTabs
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            activeTasks={activeTasks}
+            completedTasks={completedTasks}
+            darkMode={darkMode}
+            client={client}
+            onUpdate={onUpdate}
+          />
+
           {displayTasks.length > 0 && (
             <div className="mb-4">
               <h4 className="font-medium mb-3 text-white dark:text-gray-800">
-                Tasks ({displayTasks.length})
+                {activeTab === 'active' ? 'Tarefas Ativas' : 'Tarefas Concluídas'} ({displayTasks.length})
               </h4>
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {displayTasks.map((task, index) => (
@@ -242,34 +262,53 @@ export default function ClientCard({
             </div>
           )}
 
-          {/* Add Task Button - Always visible when expanded */}
-          <div className="mb-4">
-            {!isAddingTask ? (
-              <div className="flex justify-center">
-                <button
-                  onClick={() => setIsAddingTask(true)}
-                  className={`inline-flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 ${
-                    darkMode
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                      : 'bg-blue-500 hover:bg-blue-600 text-white'
-                  }`}
-                  title="Add new task"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
-              </div>
-            ) : (
-              <AddTaskForm
-                newTask={newTask}
-                darkMode={darkMode}
-                onNewTaskChange={handleNewTaskChange}
-                onAddTask={handleAddTask}
-                onCancel={() => setIsAddingTask(false)}
-              />
-            )}
-          </div>
+          {/* Add Task Button - Only visible in active tab */}
+          {activeTab === 'active' && (
+            <div className="mb-4">
+              {!isAddingTask ? (
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => setIsAddingTask(true)}
+                    className={`inline-flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 ${
+                      darkMode
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    }`}
+                    title="Add new task"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <AddTaskForm
+                  newTask={newTask}
+                  darkMode={darkMode}
+                  onNewTaskChange={handleNewTaskChange}
+                  onAddTask={handleAddTask}
+                  onCancel={() => setIsAddingTask(false)}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Mensagem quando não há tarefas */}
+          {displayTasks.length === 0 && (
+            <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              {activeTab === 'active' ? (
+                <div>
+                  <p className="mb-2">📝 Nenhuma tarefa ativa</p>
+                  <p className="text-sm">Adicione uma nova tarefa para começar!</p>
+                </div>
+              ) : (
+                <div>
+                  <p className="mb-2">🎉 Nenhuma tarefa concluída ainda</p>
+                  <p className="text-sm">Complete algumas tarefas para vê-las aqui!</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -277,7 +316,7 @@ export default function ClientCard({
               {contextMenu.visible && (
         <div
           ref={contextMenuRef}
-          className={`fixed z-50 w-52 rounded-lg shadow-lg border py-2 context-menu-enter ${
+          className={`fixed w-52 rounded-lg shadow-lg border py-2 context-menu-enter ${
             darkMode
               ? 'bg-gray-800 border-gray-700'
               : 'bg-white border-gray-200'
@@ -285,6 +324,7 @@ export default function ClientCard({
           style={{
             left: contextMenu.x,
             top: contextMenu.y,
+            zIndex: 9999, // Force high z-index
           }}
         >
           <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">

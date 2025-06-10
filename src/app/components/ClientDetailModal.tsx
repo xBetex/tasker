@@ -8,6 +8,7 @@ import EditTaskModal from './EditTaskModal';
 import AddTaskForm from './client/AddTaskForm';
 import { api } from '@/services/api';
 import { useToast } from '../hooks/useToast';
+import CopyButton from './CopyButton';
 import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
 
 interface ClientDetailModalProps {
@@ -113,24 +114,29 @@ export default function ClientDetailModal({
     e.preventDefault();
     e.stopPropagation();
     
-    const rect = e.currentTarget.getBoundingClientRect();
+    // Usar coordenadas do mouse para evitar problemas com transforms CSS
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
     const menuWidth = 208;
     const menuHeight = 320;
     
-    let x = rect.right + 5;
-    let y = rect.top;
+    // Posicionar próximo ao cursor
+    let x = mouseX + 5;
+    let y = mouseY + 5;
     
+    // Ajustar se sair da tela horizontalmente
     if (x + menuWidth > windowWidth) {
-      x = rect.left - menuWidth - 5;
+      x = mouseX - menuWidth - 5;
     }
     if (x < 10) {
       x = 10;
     }
     
+    // Ajustar se sair da tela verticalmente
     if (y + menuHeight > windowHeight) {
-      y = windowHeight - menuHeight - 10;
+      y = mouseY - menuHeight - 5;
     }
     if (y < 10) {
       y = 10;
@@ -244,17 +250,31 @@ export default function ClientDetailModal({
     });
   };
 
+
+
   const stats = getTaskStats();
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      onClick={(e) => {
+        // Close modal when clicking on backdrop (outside the modal content)
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div
         ref={modalRef}
         className={`w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-lg shadow-xl ${
           darkMode ? 'bg-gray-950 text-gray-100' : 'bg-white text-gray-900'
         }`}
+        onClick={(e) => {
+          // Prevent click propagation to avoid closing when clicking inside modal
+          e.stopPropagation();
+        }}
       >
         {/* Header */}
         <div className={`sticky top-0 px-6 py-4 border-b ${
@@ -263,9 +283,15 @@ export default function ClientDetailModal({
           <div className="flex justify-between items-start">
             <div>
               <h2 className="text-2xl font-bold">{client.name}</h2>
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                {client.company} • {client.origin} • ID: {client.id}
-              </p>
+                            <div className={`text-sm flex items-center gap-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <span>{client.company} • {client.origin} • ID: {client.id}</span>
+                <CopyButton 
+                  text={client.id}
+                  successMessage="ID Copied!"
+                  title="Copy ID to clipboard"
+                  size={14}
+                />
+              </div>
             </div>
             <button
               onClick={onClose}
@@ -418,18 +444,20 @@ export default function ClientDetailModal({
 
                     {/* Comments */}
                     <CommentsSection
-                      taskId={task.id}
                       comments={task.comments || []}
                       onAddComment={async (commentText) => {
                         try {
                           await api.addComment(task.id, commentText);
                           onUpdate();
+                          // Force refresh to show new comment
+                          setRefreshKey(prev => prev + 1);
                         } catch (error) {
                           console.error('Error adding comment:', error);
                           toast.error('Failed to add comment', 'Please try again');
                         }
                       }}
                       darkMode={darkMode}
+                      autoScrollToNewComment={true}
                     />
                   </div>
                 );
@@ -443,7 +471,7 @@ export default function ClientDetailModal({
       {contextMenu.visible && (
         <div
           ref={contextMenuRef}
-          className={`fixed z-50 py-1 rounded-md shadow-lg w-52 ${
+          className={`fixed py-1 rounded-md shadow-lg w-52 context-menu-enter ${
             darkMode ? 'bg-gray-900' : 'bg-white'
           } border ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}
           style={{
@@ -451,6 +479,7 @@ export default function ClientDetailModal({
             left: `${contextMenu.x}px`,
             maxHeight: 'calc(100vh - 20px)',
             overflowY: 'auto',
+            zIndex: 9999, // Force high z-index
           }}
         >
           <div className={`px-3 py-2 text-xs font-medium ${

@@ -281,27 +281,29 @@ export function useClientCard(client: Client, onUpdate: () => void, onDeleteTask
     e.preventDefault();
     e.stopPropagation();
     
-    const rect = e.currentTarget.getBoundingClientRect();
+    // Usar as coordenadas do mouse ao invés de getBoundingClientRect para evitar problemas com transforms
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
     const menuWidth = 208; // w-52 = 208px
     const menuHeight = 320;
     
-    // Posicionar o menu próximo ao clique, mas ajustar se estiver muito perto das bordas
-    let x = rect.left;
-    let y = rect.bottom + 5; // 5px de margem
+    // Posicionar o menu próximo ao clique do mouse
+    let x = mouseX + 5; // 5px de margem à direita do cursor
+    let y = mouseY + 5; // 5px de margem abaixo do cursor
     
-    // Ajustar posição horizontal
+    // Ajustar posição horizontal se o menu sair da tela
     if (x + menuWidth > windowWidth) {
-      x = windowWidth - menuWidth - 10; // 10px de margem
+      x = mouseX - menuWidth - 5; // Mostrar à esquerda do cursor
     }
     if (x < 10) {
       x = 10; // Margem mínima da esquerda
     }
     
-    // Ajustar posição vertical
+    // Ajustar posição vertical se o menu sair da tela
     if (y + menuHeight > windowHeight) {
-      y = rect.top - menuHeight - 5; // Mostrar acima do botão
+      y = mouseY - menuHeight - 5; // Mostrar acima do cursor
     }
     if (y < 10) {
       y = 10; // Margem mínima do topo

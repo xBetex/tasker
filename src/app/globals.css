@@ -448,32 +448,34 @@ body {
 
 /* Context menu animations */
 .context-menu-enter {
-  animation: contextMenuEnter 0.15s ease-out;
+  animation: contextMenuEnter 0.12s ease-out;
+  transform: translateZ(0);
+  will-change: opacity, transform;
 }
 
 @keyframes contextMenuEnter {
   from {
     opacity: 0;
-    transform: scale(0.95) translateY(-5px);
+    transform: scale(0.95) translateY(-3px) translateZ(0);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale(1) translateY(0) translateZ(0);
   }
 }
 
 .context-menu-exit {
-  animation: contextMenuExit 0.1s ease-in;
+  animation: contextMenuExit 0.08s ease-in;
 }
 
 @keyframes contextMenuExit {
   from {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) translateZ(0);
   }
   to {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.95) translateZ(0);
   }
 }
 
@@ -540,4 +542,136 @@ body {
 .dark .btn-enhanced:hover {
   background: #262626;
   border-color: #3a3a3a;
+}
+
+/* Performance optimizations */
+.gpu-accelerated {
+  transform: translateZ(0);
+}
+
+.smooth-transform {
+  transition: transform 0.15s ease-out;
+}
+
+.drag-performance {
+  backface-visibility: hidden;
+}
+
+/* Scroll to top button */
+.scroll-to-top {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.dark .scroll-to-top {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Copy button animations */
+.copy-success {
+  animation: copySuccess 0.3s ease-out;
+}
+
+@keyframes copySuccess {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+    color: #10b981;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Comment section optimizations */
+.comments-section {
+  contain: layout style;
+}
+
+.comment-item {
+  contain: layout;
+  will-change: auto;
+}
+
+/* Grid optimizations */
+.client-grid {
+  contain: layout;
+}
+
+.client-card-container {
+  contain: layout style;
+  will-change: auto;
+}
+
+/* Reduce repaints during drag */
+.dragging * {
+  pointer-events: none;
+}
+
+.dragging {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Optimize sortable items */
+[data-dnd-sortable] {
+  contain: layout style;
+}
+
+/* Optimize drag overlay */
+.drag-overlay {
+  contain: layout style paint;
+  isolation: isolate;
+}
+
+/* Infinity Pool optimizations */
+.infinity-pool-container {
+  contain: layout style paint;
+  will-change: scroll-position;
+  background: transparent !important;
+}
+
+.infinity-pool-item {
+  contain: layout style;
+  will-change: auto;
+  transform: translateZ(0);
+  pointer-events: auto;
+  isolation: isolate;
+}
+
+.infinity-pool-item:hover {
+  will-change: transform;
+}
+
+/* Virtual scrollbar styling */
+.infinity-pool-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.infinity-pool-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.infinity-pool-container::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+  border-radius: 4px;
+}
+
+.infinity-pool-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
+}
+
+.dark .infinity-pool-container::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.5);
+}
+
+.dark .infinity-pool-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.7);
 }

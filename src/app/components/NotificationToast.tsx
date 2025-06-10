@@ -44,60 +44,67 @@ const Toast = ({ notification, onClose }: ToastProps) => {
   const getColorClasses = () => {
     switch (notification.type) {
       case 'success':
-        return 'bg-green-50 border-green-200 text-green-800 shadow-green-100';
+        return 'bg-green-100 border-green-300 text-green-900 shadow-green-200';
       case 'error':
-        return 'bg-red-50 border-red-200 text-red-800 shadow-red-100';
+        return 'bg-red-100 border-red-300 text-red-900 shadow-red-200';
       case 'warning':
-        return 'bg-yellow-50 border-yellow-200 text-yellow-800 shadow-yellow-100';
+        return 'bg-yellow-100 border-yellow-300 text-yellow-900 shadow-yellow-200';
       case 'info':
-        return 'bg-blue-50 border-blue-200 text-blue-800 shadow-blue-100';
+        return 'bg-blue-100 border-blue-300 text-blue-900 shadow-blue-200';
       default:
-        return 'bg-gray-50 border-gray-200 text-gray-800 shadow-gray-100';
+        return 'bg-gray-100 border-gray-300 text-gray-900 shadow-gray-200';
     }
   };
 
-  const getDarkColorClasses = () => {
+  const getToastClasses = () => {
+    const baseClasses = 'transform transition-all duration-300 ease-in-out max-w-sm w-full border-2 rounded-lg shadow-xl p-4 mb-3 backdrop-blur-sm font-medium';
+    const visibilityClasses = isVisible && !isLeaving ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0';
+    
+    // Light mode classes
+    const lightModeClasses = getColorClasses();
+    
+    // Dark mode classes with explicit color definitions
+    let darkModeClasses = '';
     switch (notification.type) {
       case 'success':
-        return 'bg-green-900 border-green-700 text-green-100';
+        darkModeClasses = 'dark:bg-green-700 dark:border-green-500 dark:text-white dark:shadow-green-900/50';
+        break;
       case 'error':
-        return 'bg-red-900 border-red-700 text-red-100';
+        darkModeClasses = 'dark:bg-red-700 dark:border-red-500 dark:text-white dark:shadow-red-900/50';
+        break;
       case 'warning':
-        return 'bg-yellow-900 border-yellow-700 text-yellow-100';
+        darkModeClasses = 'dark:bg-amber-600 dark:border-amber-400 dark:text-white dark:shadow-amber-900/50';
+        break;
       case 'info':
-        return 'bg-blue-900 border-blue-700 text-blue-100';
+        darkModeClasses = 'dark:bg-blue-700 dark:border-blue-500 dark:text-white dark:shadow-blue-900/50';
+        break;
       default:
-        return 'bg-gray-900 border-gray-700 text-gray-100';
+        darkModeClasses = 'dark:bg-gray-700 dark:border-gray-500 dark:text-white dark:shadow-gray-900/50';
+        break;
     }
+    
+    return `${baseClasses} ${visibilityClasses} ${lightModeClasses} ${darkModeClasses}`;
   };
-
+  
   return (
-    <div
-      className={`
-        transform transition-all duration-300 ease-in-out
-        ${isVisible && !isLeaving ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}
-        max-w-sm w-full border rounded-lg shadow-lg p-4 mb-3
-        ${getColorClasses()}
-        dark:${getDarkColorClasses()}
-      `}
-    >
+    <div className={getToastClasses()}>
       <div className="flex items-start">
         <div className="flex-shrink-0 text-lg mr-3">
           {getIcon()}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-sm mb-1">
+          <div className="font-bold text-sm mb-1 text-current">
             {notification.title}
           </div>
           {notification.message && (
-            <div className="text-xs opacity-90 leading-relaxed">
+            <div className="text-xs opacity-95 leading-relaxed text-current font-medium">
               {notification.message}
             </div>
           )}
           {notification.action && (
             <button
               onClick={notification.action.onClick}
-              className="mt-2 text-xs underline hover:no-underline font-medium"
+              className="mt-2 text-xs underline hover:no-underline font-medium text-current opacity-90 hover:opacity-100 transition-opacity"
             >
               {notification.action.label}
             </button>
@@ -105,7 +112,7 @@ const Toast = ({ notification, onClose }: ToastProps) => {
         </div>
         <button
           onClick={handleClose}
-          className="flex-shrink-0 ml-3 text-lg opacity-70 hover:opacity-100 transition-opacity"
+          className="flex-shrink-0 ml-3 text-xl font-bold opacity-80 hover:opacity-100 transition-opacity text-current"
         >
           ×
         </button>

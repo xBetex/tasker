@@ -14,6 +14,7 @@ interface SortableClientCardProps {
   darkMode: boolean;
   onShowDetails?: (client: Client) => void;
   isPinned?: boolean;
+  disableDrag?: boolean; // Nova prop para desabilitar drag
 }
 
 // Pin icon component
@@ -43,6 +44,7 @@ function PinIcon({ isPinned, className = "" }: { isPinned: boolean; className?: 
   );
 }
 
+
 // Drag handle component
 function DragHandle({ className = "" }: { className?: string }) {
   return (
@@ -66,7 +68,7 @@ function DragHandle({ className = "" }: { className?: string }) {
 }
 
 const SortableClientCard = forwardRef<HTMLDivElement, SortableClientCardProps>(
-  ({ client, onUpdate, onDeleteTask, isExpanded, onToggleExpand, darkMode, onShowDetails, isPinned = false }, ref) => {
+  ({ client, onUpdate, onDeleteTask, isExpanded, onToggleExpand, darkMode, onShowDetails, isPinned = false, disableDrag = false }, ref) => {
     const { pinnedClients, togglePinClient, isDragging } = useDragDrop();
     const isClientPinned = pinnedClients.includes(client.id);
     
@@ -79,14 +81,16 @@ const SortableClientCard = forwardRef<HTMLDivElement, SortableClientCardProps>(
       isDragging: isSortableDragging,
     } = useSortable({ 
       id: client.id,
-      disabled: isExpanded // Disable dragging when expanded to avoid conflicts
+      disabled: disableDrag || isExpanded // Disable dragging when disableDrag prop is true or when expanded
     });
 
     const style = {
       transform: CSS.Transform.toString(transform),
-      transition,
+      transition: isSortableDragging ? 'none' : transition,
       zIndex: isSortableDragging ? 1000 : 'auto',
-      opacity: isSortableDragging ? 0.5 : 1,
+      opacity: isSortableDragging ? 0.9 : 1,
+      willChange: isSortableDragging ? 'transform, opacity' : 'auto',
+      pointerEvents: isSortableDragging ? ('none' as const) : ('auto' as const),
     };
 
     const handlePinToggle = (e: React.MouseEvent) => {
@@ -99,7 +103,7 @@ const SortableClientCard = forwardRef<HTMLDivElement, SortableClientCardProps>(
       <div
         ref={setNodeRef}
         style={style}
-        className={`relative group ${isSortableDragging ? 'cursor-grabbing' : ''} ${isExpanded ? 'z-10' : ''}`}
+        className={`relative group ${isSortableDragging ? 'cursor-grabbing dragging' : ''} ${isExpanded ? 'z-10' : ''}`}
       >
         {/* Pin indicator and controls */}
         <div className="absolute -top-2 -right-2 z-20 flex gap-1">
@@ -119,8 +123,8 @@ const SortableClientCard = forwardRef<HTMLDivElement, SortableClientCardProps>(
             <PinIcon isPinned={isClientPinned} className="w-4 h-4" />
           </button>
 
-          {/* Drag handle - only show when not expanded */}
-          {!isExpanded && (
+          {/* Drag handle - only show when not expanded and drag is enabled */}
+          {!isExpanded && !disableDrag && (
             <button
               {...attributes}
               {...listeners}

@@ -1,21 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragOverlay,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+
 import { useDragDrop } from './contexts/DragDropContext';
 import SortableClientCard from './components/SortableClientCard';
 import ClientCard from './components/ClientCard';
@@ -24,13 +9,17 @@ import ClientDetailModal from './components/ClientDetailModal';
 import ClientViewModeToggle, { ViewMode } from './components/ClientViewModeToggle';
 import FilterBar, { SLAFilter } from './components/FilterBar';
 import AddClientModal from './components/AddClientModal';
-import { ClientCardsGridSkeleton, DragOverlaySkeleton } from './components/SkeletonLoaders';
+import { ClientCardsGridSkeleton } from './components/SkeletonLoaders';
 import { Client, TaskStatus, TaskPriority } from '@/types/types';
 import { api } from '@/services/api';
 import { useDarkMode, useClients } from './layout';
 import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
 import { getSLAStatus } from '@/utils/slaUtils';
 import { useToast } from './hooks/useToast';
+import ScrollToTop from './components/ScrollToTop';
+import VirtualizedClientGrid from './components/VirtualizedClientGrid';
+import { useContainerHeight } from './hooks/useContainerHeight';
+
 
 export default function Home() {
   // Use contexts
@@ -56,22 +45,54 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<ViewMode>('compact');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Create a wrapper for refreshClients that also updates selectedClient
+  const refreshClientsAndModal = useCallback(async () => {
+    await refreshClients();
+    
+    // Update selectedClient if it exists by fetching fresh data from server
+    if (selectedClient) {
+      try {
+        const updatedClient = await api.getClient(selectedClient.id);
+        if (updatedClient) {
+          setSelectedClient(updatedClient);
+        }
+      } catch (error) {
+        console.error('Error fetching updated client:', error);
+        // Fallback: try to find in the updated clients list
+        const fallbackClient = clients.find(c => c.id === selectedClient.id);
+        if (fallbackClient) {
+          setSelectedClient(fallbackClient);
+        }
+      }
+    }
+  }, [refreshClients, selectedClient, clients]);
+
+  const [useInfinityPool, setUseInfinityPool] = useState(true); // Always start with true for SSR
+  const [lastScrollPosition, setLastScrollPosition] = useState(0);
+  const [isClient, setIsClient] = useState(false);
+
+  // Handle client-side hydration
+  useEffect(() => {
+    setIsClient(true);
+    const saved = localStorage.getItem('useInfinityPool');
+    if (saved !== null) {
+      setUseInfinityPool(JSON.parse(saved));
+    }
+  }, []);
+
+  // Save Infinity Pool preference
+  useEffect(() => {
+    if (isClient) {
+      localStorage.setItem('useInfinityPool', JSON.stringify(useInfinityPool));
+    }
+  }, [useInfinityPool, isClient]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
+  const containerHeight = useContainerHeight(280, 600); // 280px offset for headers, 600px minimum
 
-  // Drag and drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+
 
   // Separate pinned and unpinned clients, then apply ordering
   const separateAndOrderClients = useCallback((clientsList: Client[]) => {
@@ -377,28 +398,7 @@ export default function Home() {
     setDateRangeFilter({ start: '', end: '' });
   };
 
-  // Handle drag end event
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
 
-    if (active.id !== over?.id) {
-      const oldIndex = orderedClients.findIndex(client => client.id === active.id);
-      const newIndex = orderedClients.findIndex(client => client.id === over?.id);
-      
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newOrderedClients = arrayMove(orderedClients, oldIndex, newIndex);
-        setOrderedClients(newOrderedClients);
-        
-        // Save the new order to localStorage or backend if needed
-        toast.success('Reordered', 'Client order updated successfully!');
-      }
-    }
-  };
-
-  const handleDragStart = (event: any) => {
-    setActiveId(event.active.id);
-  };
 
   if (isLoading) {
     return (
@@ -495,6 +495,29 @@ export default function Home() {
               onViewModeChange={setViewMode}
               darkMode={darkMode}
             />
+            
+            {viewMode === 'compact' && isClient && (
+              <button
+                onClick={() => setUseInfinityPool(!useInfinityPool)}
+                className={`px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                  useInfinityPool
+                    ? darkMode 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                    : darkMode 
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+                title={useInfinityPool ? 'Switch to Traditional Grid' : 'Switch to Infinity Pool'}
+              >
+                <span className="hidden sm:inline">
+                  {useInfinityPool ? '♾️ Pool' : '📊 Grid'}
+                </span>
+                <span className="sm:hidden">
+                  {useInfinityPool ? '♾️' : '📊'}
+                </span>
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             <input
@@ -588,6 +611,8 @@ export default function Home() {
           </div>
         </div>
 
+
+
         {/* Render different view modes */}
         {viewMode === 'list' ? (
           <ClientListView
@@ -598,50 +623,50 @@ export default function Home() {
             }}
             darkMode={darkMode}
           />
+        ) : (isClient && useInfinityPool) ? (
+          <VirtualizedClientGrid
+            clients={filteredClients}
+            expandedCards={expandedCards}
+            onToggleExpand={(clientId) => setExpandedCards(prev => ({
+              ...prev,
+              [clientId]: !prev[clientId]
+            }))}
+            onUpdate={refreshClientsAndModal}
+            onDeleteTask={async (clientId, taskIndex) => {
+              await refreshClientsAndModal();
+            }}
+            onShowDetails={(client) => {
+              setSelectedClient(client);
+              setIsDetailModalOpen(true);
+            }}
+            darkMode={darkMode}
+            containerHeight={containerHeight}
+          />
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext 
-              items={filteredClients.map(client => client.id)} 
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-                {filteredClients.map(client => (
-                  <SortableClientCard
-                    key={client.id}
-                    client={client}
-                    isExpanded={expandedCards[client.id] || false}
-                    onToggleExpand={() => setExpandedCards(prev => ({
-                      ...prev,
-                      [client.id]: !prev[client.id]
-                    }))}
-                    onUpdate={refreshClients}
-                    onDeleteTask={async (clientId, taskIndex) => {
-                      await refreshClients();
-                    }}
-                    onShowDetails={(client) => {
-                      setSelectedClient(client);
-                      setIsDetailModalOpen(true);
-                    }}
-                    darkMode={darkMode}
-                    isPinned={pinnedClients.includes(client.id)}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-            
-            <DragOverlay>
-              {activeId ? (
-                <div className="drag-overlay">
-                  <DragOverlaySkeleton />
-                </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
+          <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+            {filteredClients.map(client => (
+              <SortableClientCard
+                key={client.id}
+                client={client}
+                isExpanded={expandedCards[client.id] || false}
+                onToggleExpand={() => setExpandedCards(prev => ({
+                  ...prev,
+                  [client.id]: !prev[client.id]
+                }))}
+                onUpdate={refreshClients}
+                onDeleteTask={async (clientId, taskIndex) => {
+                  await refreshClients();
+                }}
+                onShowDetails={(client) => {
+                  setSelectedClient(client);
+                  setIsDetailModalOpen(true);
+                }}
+                darkMode={darkMode}
+                isPinned={pinnedClients.includes(client.id)}
+                disableDrag={true}
+              />
+            ))}
+          </div>
         )}
 
         {filteredClients.length === 0 && !isLoading && (
@@ -676,10 +701,13 @@ export default function Home() {
             isOpen={isDetailModalOpen}
             onClose={() => setIsDetailModalOpen(false)}
             client={selectedClient}
-            onUpdate={refreshClients}
+            onUpdate={refreshClientsAndModal}
             darkMode={darkMode}
           />
         )}
+
+      {/* Scroll to Top Button */}
+      <ScrollToTop darkMode={darkMode} />
     </div>
   );
 }

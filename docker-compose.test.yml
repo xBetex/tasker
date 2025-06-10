@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # Serviço para testes unitários
+  test-unit:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      target: test-unit
+    volumes:
+      - ./src:/app/src
+      - ./jest.config.js:/app/jest.config.js
+      - ./jest.setup.js:/app/jest.setup.js
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - test-coverage:/app/coverage
+    environment:
+      - NODE_ENV=test
+      - CI=true
+    command: npm run test:coverage
+
+  # Serviço para testes E2E
+  test-e2e:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      target: test-e2e
+    volumes:
+      - ./tests:/app/tests
+      - ./playwright.config.ts:/app/playwright.config.ts
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - test-results:/app/test-results
+      - test-screenshots:/app/test-screenshots
+    environment:
+      - NODE_ENV=test
+      - CI=true
+      - PLAYWRIGHT_BROWSERS_PATH=/ms/playwright
+    depends_on:
+      - app-test
+    command: npm run test:e2e
+
+  # Aplicação para testes E2E
+  app-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=test
+      - NEXT_PUBLIC_API_URL=http://backend-test:8000
+    depends_on:
+      - backend-test
+
+  # Backend para testes
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      - PYTHON_ENV=test
+      - DATABASE_URL=sqlite:///test.db
+    volumes:
+      - ./backend:/app
+    command: python run.py
+
+  # Serviço completo para executar todos os testes
+  test-all:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      target: test-all
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./jest.config.js:/app/jest.config.js
+      - ./jest.setup.js:/app/jest.setup.js
+      - ./playwright.config.ts:/app/playwright.config.ts
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - test-coverage:/app/coverage
+      - test-results:/app/test-results
+    environment:
+      - NODE_ENV=test
+      - CI=true
+      - PLAYWRIGHT_BROWSERS_PATH=/ms/playwright
+    depends_on:
+      - app-test
+    command: |
+      sh -c "
+        echo 'Running unit tests...' &&
+        npm run test:coverage &&
+        echo 'Running E2E tests...' &&
+        npm run test:e2e
+      "
+
+volumes:
+  test-coverage:
+  test-results:
+  test-screenshots: 

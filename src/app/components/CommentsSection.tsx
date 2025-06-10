@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Comment } from '@/types/types';
 import DateDisplay from './DateDisplay';
 
@@ -9,16 +9,40 @@ interface CommentsSectionProps {
   onAddComment: (text: string) => void;
   darkMode: boolean;
   isLoading?: boolean;
+  autoScrollToNewComment?: boolean;
 }
 
 export default function CommentsSection({ 
   comments = [], 
   onAddComment, 
   darkMode, 
-  isLoading = false 
+  isLoading = false,
+  autoScrollToNewComment = true
 }: CommentsSectionProps) {
   const [newComment, setNewComment] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [previousCommentsLength, setPreviousCommentsLength] = useState(comments.length);
+  const commentsListRef = useRef<HTMLDivElement>(null);
+  const latestCommentRef = useRef<HTMLDivElement>(null);
+
+  // Effect to handle auto-scroll to new comments and auto-expand
+  useEffect(() => {
+    if (comments.length > previousCommentsLength && autoScrollToNewComment) {
+      // Auto-expand comments section when new comment is added
+      setIsExpanded(true);
+      
+      // Scroll to the latest comment after a short delay to ensure DOM is updated
+      setTimeout(() => {
+        if (latestCommentRef.current) {
+          latestCommentRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'nearest' 
+          });
+        }
+      }, 100);
+    }
+    setPreviousCommentsLength(comments.length);
+  }, [comments.length, previousCommentsLength, autoScrollToNewComment]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,17 +143,18 @@ export default function CommentsSection({
           </form>
 
           {/* Comments List */}
-          <div className="space-y-3">
+          <div className="space-y-3" ref={commentsListRef}>
             {sortedComments.length === 0 ? (
               <div className="text-center py-4" style={{ color: 'var(--muted-text)' }}>
                 <div className="text-2xl mb-2">💭</div>
                 <p className="text-sm">No comments yet. Be the first to add one!</p>
               </div>
             ) : (
-              sortedComments.map((comment) => (
+              sortedComments.map((comment, index) => (
                 <div
                   key={comment.id}
-                  className="p-3 rounded-lg border-l-4 border-l-blue-500"
+                  ref={index === 0 ? latestCommentRef : null} // First comment is the most recent due to sorting
+                  className="p-3 rounded-lg border-l-4 border-l-blue-500 comment-item"
                   style={{
                     backgroundColor: 'var(--card-background-hover)',
                   }}

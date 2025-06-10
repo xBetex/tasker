@@ -1,6 +1,7 @@
 import React from 'react';
 import { Client } from '@/types/types';
 import { EditIcon, TrashIcon } from '../Icons';
+import CopyButton from '../CopyButton';
 
 interface ClientCardHeaderProps {
   client: Client;
@@ -134,13 +135,21 @@ export default function ClientCardHeader({
                   <span className="font-medium opacity-70" style={{ color: 'var(--secondary-text)' }}>
                     ID:
                   </span>
-                  <span className="font-mono bg-opacity-20 px-2 py-1 rounded text-xs" 
-                        style={{ 
-                          backgroundColor: 'var(--card-background-hover)', 
-                          color: 'var(--primary-text)' 
-                        }}>
-                    {client.id}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-mono bg-opacity-20 px-2 py-1 rounded text-xs" 
+                          style={{ 
+                            backgroundColor: 'var(--card-background-hover)', 
+                            color: 'var(--primary-text)' 
+                          }}>
+                      {client.id}
+                    </span>
+                    <CopyButton 
+                      text={client.id}
+                      successMessage="ID Copied!"
+                      title="Copy ID to clipboard"
+                      size={12}
+                    />
+                  </div>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="font-medium opacity-70" style={{ color: 'var(--secondary-text)' }}>

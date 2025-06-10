@@ -1,0 +1,122 @@
+# Base stage com Node.js
+FROM node:20-alpine AS base
+
+WORKDIR /app
+
+# Copiar arquivos de dependências
+COPY package*.json ./
+COPY tsconfig.json ./
+
+# Instalar dependências
+RUN npm ci --only=production=false && npm cache clean --force
+
+# Copiar código fonte
+COPY . .
+
+# Stage para testes unitários
+FROM base AS test-unit
+
+# Instalar dependências de desenvolvimento
+RUN npm install
+
+# Configurar timezone
+RUN apk add --no-cache tzdata
+ENV TZ=America/Sao_Paulo
+
+# Comando para executar testes unitários
+CMD ["npm", "run", "test:coverage"]
+
+# Stage para testes E2E com Playwright
+FROM base AS test-e2e
+
+# Instalar dependências do sistema para Playwright
+RUN apk add --no-cache \
+    chromium \
+    firefox \
+    webkit2gtk \
+    glib \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+# Instalar Playwright
+RUN npm install @playwright/test
+RUN npx playwright install --with-deps
+
+# Configurar variáveis do Playwright
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms/playwright
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
+# Configurar timezone
+RUN apk add --no-cache tzdata
+ENV TZ=America/Sao_Paulo
+
+# Comando para executar testes E2E
+CMD ["npm", "run", "test:e2e"]
+
+# Stage para executar todos os testes
+FROM test-e2e AS test-all
+
+# Copiar configurações de teste
+COPY jest.config.js ./
+COPY jest.setup.js ./
+COPY playwright.config.ts ./
+
+# Script para executar todos os testes sequencialmente
+RUN echo '#!/bin/sh\n\
+echo "=== Executando Testes Unitários ==="\n\
+npm run test:coverage\n\
+UNIT_EXIT_CODE=$?\n\
+\n\
+echo "=== Executando Testes E2E ==="\n\
+npm run test:e2e\n\
+E2E_EXIT_CODE=$?\n\
+\n\
+echo "=== Resumo dos Testes ==="\n\
+echo "Testes Unitários: $([ $UNIT_EXIT_CODE -eq 0 ] && echo "✅ PASSOU" || echo "❌ FALHOU")"\n\
+echo "Testes E2E: $([ $E2E_EXIT_CODE -eq 0 ] && echo "✅ PASSOU" || echo "❌ FALHOU")"\n\
+\n\
+if [ $UNIT_EXIT_CODE -ne 0 ] || [ $E2E_EXIT_CODE -ne 0 ]; then\n\
+    echo "❌ Alguns testes falharam!"\n\
+    exit 1\n\
+else\n\
+    echo "✅ Todos os testes passaram!"\n\
+    exit 0\n\
+fi' > /app/run-all-tests.sh
+
+RUN chmod +x /app/run-all-tests.sh
+
+CMD ["/app/run-all-tests.sh"]
+
+# Stage para desenvolvimento com hot reload
+FROM base AS test-dev
+
+# Instalar todas as dependências incluindo Playwright
+RUN npm install
+RUN npx playwright install --with-deps
+
+# Instalar dependências do sistema
+RUN apk add --no-cache \
+    chromium \
+    firefox \
+    webkit2gtk \
+    glib \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    tzdata
+
+ENV TZ=America/Sao_Paulo
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms/playwright
+
+# Expor porta para testes interativos
+EXPOSE 9323
+
+# Comando padrão para desenvolvimento
+CMD ["npm", "run", "test:watch"] 
