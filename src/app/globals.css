@@ -314,6 +314,169 @@ body {
   }
 }
 
+/* Enhanced task highlighting animations */
+.task-highlight-glow {
+  animation: taskHighlightGlow 4s ease-in-out;
+  position: relative;
+  z-index: 10;
+}
+
+@keyframes taskHighlightGlow {
+  0% {
+    background-color: var(--card-background);
+    transform: scale(1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  10% {
+    background-color: #fef3c7;
+    transform: scale(1.03);
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.4), 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  }
+  30% {
+    background-color: #dbeafe;
+    transform: scale(1.02);
+    box-shadow: 0 0 25px rgba(59, 130, 246, 0.3), 0 10px 30px -5px rgba(0, 0, 0, 0.15);
+  }
+  70% {
+    background-color: #dbeafe;
+    transform: scale(1.01);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.2), 0 8px 20px -3px rgba(0, 0, 0, 0.1);
+  }
+  100% {
+    background-color: var(--card-background);
+    transform: scale(1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.task-highlight-fade {
+  animation: taskHighlightFade 0.5s ease-out;
+}
+
+@keyframes taskHighlightFade {
+  from {
+    background-color: #dbeafe;
+    transform: scale(1.01);
+  }
+  to {
+    background-color: var(--card-background);
+    transform: scale(1);
+  }
+}
+
+.task-highlight-pulse {
+  animation: taskHighlightPulse 2s ease-in-out infinite;
+}
+
+@keyframes taskHighlightPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+}
+
+/* Drag and drop animations */
+.drag-overlay {
+  animation: dragOverlay 0.2s ease-out;
+  z-index: 1000;
+}
+
+@keyframes dragOverlay {
+  from {
+    transform: scale(0.95) rotate(0deg);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(1.05) rotate(2deg);
+    opacity: 0.9;
+  }
+}
+
+.drop-zone-active {
+  animation: dropZoneActive 0.3s ease-in-out infinite alternate;
+}
+
+@keyframes dropZoneActive {
+  from {
+    background-color: rgba(59, 130, 246, 0.05);
+    border-color: rgba(59, 130, 246, 0.2);
+  }
+  to {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.4);
+  }
+}
+
+/* Pin animations */
+.pin-bounce {
+  animation: pinBounce 0.5s ease-out;
+}
+
+@keyframes pinBounce {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2) rotate(10deg);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Skeleton loading animations */
+.skeleton-shimmer {
+  background: linear-gradient(90deg, 
+    var(--card-background) 25%, 
+    var(--card-background-hover) 50%, 
+    var(--card-background) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Context menu animations */
+.context-menu-enter {
+  animation: contextMenuEnter 0.15s ease-out;
+}
+
+@keyframes contextMenuEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.context-menu-exit {
+  animation: contextMenuExit 0.1s ease-in;
+}
+
+@keyframes contextMenuExit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
 /* Smooth table transitions */
 .table-row-transition {
   transition: all 0.2s ease-in-out;

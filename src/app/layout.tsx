@@ -9,6 +9,7 @@ import { api } from '@/services/api';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ScrollProvider } from './contexts/ScrollContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { DragDropProvider } from './contexts/DragDropContext';
 import NotificationToast from './components/NotificationToast';
 import "./globals.css";
 
@@ -131,15 +132,17 @@ function ClientLayout({ children }: { children: ReactNode }) {
     <ThemeProvider>
       <NotificationProvider>
         <ScrollProvider>
-          <ThemeSync 
-            darkMode={darkMode}
-            toggleDarkMode={toggleDarkMode}
-            clients={clients}
-            refreshClients={refreshClients}
-            isLoading={isLoading}
-          >
-            {children}
-          </ThemeSync>
+          <DragDropProvider>
+            <ThemeSync 
+              darkMode={darkMode}
+              toggleDarkMode={toggleDarkMode}
+              clients={clients}
+              refreshClients={refreshClients}
+              isLoading={isLoading}
+            >
+              {children}
+            </ThemeSync>
+          </DragDropProvider>
         </ScrollProvider>
       </NotificationProvider>
     </ThemeProvider>

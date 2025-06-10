@@ -260,11 +260,17 @@ export function useClientCard(client: Client, onUpdate: () => void, onDeleteTask
       const updatedTask = { ...contextMenu.task, status: newStatus };
       await api.updateTask(contextMenu.task.id, updatedTask);
       
-      // Definir a tarefa como focada antes de atualizar
+      // Definir a tarefa como focada antes de atualizar para trigger enhanced scroll
       setFocusedTaskId(contextMenu.task.id);
-      onUpdate();
+      
+      // Close context menu immediately for better UX
       setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
-      toast.success('Status updated', 'The task status was updated!');
+      
+      // Update data
+      onUpdate();
+      
+      // Success notification with enhanced animation
+      toast.success('Status updated', `Task status changed to "${newStatus}"!`);
     } catch (error) {
       console.error('Error updating task status:', error);
       toast.error('Error', 'Error updating status. Please try again.');

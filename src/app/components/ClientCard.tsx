@@ -274,10 +274,10 @@ export default function ClientCard({
       )}
 
       {/* Context Menu */}
-      {contextMenu.visible && (
+              {contextMenu.visible && (
         <div
           ref={contextMenuRef}
-          className={`fixed z-50 w-52 rounded-lg shadow-lg border py-2 ${
+          className={`fixed z-50 w-52 rounded-lg shadow-lg border py-2 context-menu-enter ${
             darkMode
               ? 'bg-gray-800 border-gray-700'
               : 'bg-white border-gray-200'

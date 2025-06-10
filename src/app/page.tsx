@@ -1,11 +1,30 @@
 'use client'
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { useDragDrop } from './contexts/DragDropContext';
+import SortableClientCard from './components/SortableClientCard';
 import ClientCard from './components/ClientCard';
 import ClientListView from './components/ClientListView';
 import ClientDetailModal from './components/ClientDetailModal';
 import ClientViewModeToggle, { ViewMode } from './components/ClientViewModeToggle';
 import FilterBar, { SLAFilter } from './components/FilterBar';
 import AddClientModal from './components/AddClientModal';
+import { ClientCardsGridSkeleton, DragOverlaySkeleton } from './components/SkeletonLoaders';
 import { Client, TaskStatus, TaskPriority } from '@/types/types';
 import { api } from '@/services/api';
 import { useDarkMode, useClients } from './layout';
@@ -17,10 +36,12 @@ export default function Home() {
   // Use contexts
   const { darkMode } = useDarkMode();
   const { clients, refreshClients, isLoading } = useClients();
+  const { pinnedClients, reorderClients } = useDragDrop();
   
   const [error, setError] = useState<string | null>(null);
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+  const [orderedClients, setOrderedClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [taskFilter, setTaskFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all' | 'active'>('all');
@@ -35,10 +56,43 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<ViewMode>('compact');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Separate pinned and unpinned clients, then apply ordering
+  const separateAndOrderClients = useCallback((clientsList: Client[]) => {
+    const pinned = clientsList.filter(client => pinnedClients.includes(client.id));
+    const unpinned = clientsList.filter(client => !pinnedClients.includes(client.id));
+    
+    // Sort pinned clients by their order in pinnedClients array
+    const orderedPinned = pinnedClients
+      .map(id => pinned.find(client => client.id === id))
+      .filter(Boolean) as Client[];
+    
+    return [...orderedPinned, ...unpinned];
+  }, [pinnedClients]);
+
+  // Update ordered clients when clients or pinned clients change
+  useEffect(() => {
+    const ordered = separateAndOrderClients(clients);
+    setOrderedClients(ordered);
+  }, [clients, separateAndOrderClients]);
+
+  // Existing file upload handler
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -196,7 +250,7 @@ export default function Home() {
 
   // Filter clients based on all filter criteria
   useEffect(() => {
-    let result = [...clients];
+    let result = [...orderedClients];
 
     // Date range filter
     if (dateRangeFilter.start || dateRangeFilter.end) {
@@ -283,7 +337,7 @@ export default function Home() {
     }
 
     setFilteredClients(result);
-  }, [clients, searchTerm, taskFilter, statusFilter, priorityFilter, slaFilter, dateRangeFilter]);
+  }, [orderedClients, searchTerm, taskFilter, statusFilter, priorityFilter, slaFilter, dateRangeFilter]);
 
   // Calculate statistics
   const totalTasks = clients.reduce((sum, client) => sum + client.tasks.length, 0);
@@ -323,10 +377,43 @@ export default function Home() {
     setDateRangeFilter({ start: '', end: '' });
   };
 
+  // Handle drag end event
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (active.id !== over?.id) {
+      const oldIndex = orderedClients.findIndex(client => client.id === active.id);
+      const newIndex = orderedClients.findIndex(client => client.id === over?.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newOrderedClients = arrayMove(orderedClients, oldIndex, newIndex);
+        setOrderedClients(newOrderedClients);
+        
+        // Save the new order to localStorage or backend if needed
+        toast.success('Reordered', 'Client order updated successfully!');
+      }
+    }
+  };
+
+  const handleDragStart = (event: any) => {
+    setActiveId(event.active.id);
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl">Loading...</div>
+      <div className={`min-h-screen ${darkMode ? 'bg-black text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold">Task Dashboard</h1>
+          </div>
+          <div className="mb-6">
+            <div className="animate-pulse">
+              <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4"></div>
+            </div>
+          </div>
+          <ClientCardsGridSkeleton count={6} />
+        </div>
       </div>
     );
   }
@@ -512,28 +599,49 @@ export default function Home() {
             darkMode={darkMode}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-            {filteredClients.map(client => (
-              <ClientCard
-                key={client.id}
-                client={client}
-                isExpanded={expandedCards[client.id] || false}
-                onToggleExpand={() => setExpandedCards(prev => ({
-                  ...prev,
-                  [client.id]: !prev[client.id]
-                }))}
-                onUpdate={refreshClients}
-                onDeleteTask={async (clientId, taskIndex) => {
-                  await refreshClients();
-                }}
-                onShowDetails={(client) => {
-                  setSelectedClient(client);
-                  setIsDetailModalOpen(true);
-                }}
-                darkMode={darkMode}
-              />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext 
+              items={filteredClients.map(client => client.id)} 
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                {filteredClients.map(client => (
+                  <SortableClientCard
+                    key={client.id}
+                    client={client}
+                    isExpanded={expandedCards[client.id] || false}
+                    onToggleExpand={() => setExpandedCards(prev => ({
+                      ...prev,
+                      [client.id]: !prev[client.id]
+                    }))}
+                    onUpdate={refreshClients}
+                    onDeleteTask={async (clientId, taskIndex) => {
+                      await refreshClients();
+                    }}
+                    onShowDetails={(client) => {
+                      setSelectedClient(client);
+                      setIsDetailModalOpen(true);
+                    }}
+                    darkMode={darkMode}
+                    isPinned={pinnedClients.includes(client.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+            
+            <DragOverlay>
+              {activeId ? (
+                <div className="drag-overlay">
+                  <DragOverlaySkeleton />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         )}
 
         {filteredClients.length === 0 && !isLoading && (
