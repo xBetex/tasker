@@ -101,28 +101,36 @@ export default function ClientCard({
   };
 
   const getPriorityColor = (priority: string) => {
+    return 'px-2 py-1 rounded-full text-xs font-medium';
+  };
+
+  const getPriorityStyle = (priority: string) => {
     switch (priority) {
       case 'high':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+        return { backgroundColor: 'var(--high-priority-bg)', color: 'var(--primary-text)' };
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+        return { backgroundColor: 'var(--medium-priority-bg)', color: 'var(--primary-text)' };
       case 'low':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+        return { backgroundColor: 'var(--low-priority-bg)', color: 'var(--primary-text)' };
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+        return { backgroundColor: 'var(--card-background-hover)', color: 'var(--secondary-text)' };
     }
   };
 
   const getStatusBgColor = (status: string) => {
+    return 'px-2 py-1 rounded-full text-xs font-medium';
+  };
+
+  const getStatusStyle = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+        return { backgroundColor: 'var(--completed-color)', color: '#ffffff' };
       case 'in progress':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+        return { backgroundColor: 'var(--in-progress-color)', color: '#ffffff' };
       case 'awaiting client':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+        return { backgroundColor: 'var(--awaiting-client-color)', color: '#ffffff' };
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+        return { backgroundColor: 'var(--pending-color)', color: '#ffffff' };
     }
   };
 
@@ -146,32 +154,42 @@ export default function ClientCard({
     }
   };
 
+
+
   const displayTasks = isEditing ? editData.tasks : client.tasks;
 
   return (
     <div 
-      className={`p-6 rounded-lg shadow-lg border transition-all duration-300 ${
-        darkMode 
-          ? 'bg-gray-950 border-gray-800 hover:bg-gray-900' 
-          : 'bg-white border-gray-200 hover:shadow-xl'
-      }`}
+      className="p-4 sm:p-6 rounded-lg shadow-lg border transition-all duration-300 hover:shadow-xl"
+      style={{
+        backgroundColor: 'var(--card-background)',
+        borderColor: 'var(--card-border)'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--card-background)';
+      }}
       onClick={(e) => {
-        // Só permitir expansão se clicou no header ou barra de progresso
+        // Só permitir expansão/contração se clicou no header ou barra de progresso
         const target = e.target as HTMLElement;
         
-        // Identificar se clicou em área "clicável" para expandir
+        // Identificar se clicou em área "clicável" para expandir/contrair
         const isHeaderArea = target.closest('.client-header') || 
-                            target.closest('.client-progress') ||
-                            (!isExpanded && !target.closest('button, input, select, textarea, form, [role="button"]'));
+                            target.closest('.client-progress');
         
-        // Se está expandido, não fechar ao clicar em qualquer lugar
-        if (isExpanded) {
-          return;
+        // Verificar se clicou em elementos interativos (não deve expandir/contrair)
+        const isInteractiveElement = target.closest('button, input, select, textarea, form, [role="button"], .comments-section');
+        
+        // Se clicou em área válida (header ou progress bar) e não em elementos interativos
+        if (isHeaderArea && !isInteractiveElement) {
+          handleToggleExpand();
         }
         
-        // Se não está expandido e clicou em área válida, expandir
-        if (isHeaderArea && !target.closest('button, input, select, textarea, form')) {
-          handleToggleExpand();
+        // Se está expandido e clicou fora da área de header/progress, apenas impedir propagação
+        if (isExpanded && !isHeaderArea) {
+          e.stopPropagation();
         }
       }}
     >
@@ -196,7 +214,7 @@ export default function ClientCard({
         <div>
           {displayTasks.length > 0 && (
             <div className="mb-4">
-              <h4 className="font-medium mb-3 text-gray-900 dark:text-white">
+              <h4 className="font-medium mb-3 text-white dark:text-gray-800">
                 Tasks ({displayTasks.length})
               </h4>
               <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -212,10 +230,12 @@ export default function ClientCard({
                     onTouchStart={handleTouchStart}
                     onTouchEnd={handleTouchEnd}
                     onTouchCancel={handleTouchCancel}
-                    onAddComment={handleAddComment}
-                    getStatusColor={getStatusColor}
-                    getPriorityColor={getPriorityColor}
-                    getStatusBgColor={getStatusBgColor}
+                            onAddComment={handleAddComment}
+        getStatusColor={getStatusColor}
+        getPriorityColor={getPriorityColor}
+        getStatusBgColor={getStatusBgColor}
+        getPriorityStyle={getPriorityStyle}
+        getStatusStyle={getStatusStyle}
                   />
                 ))}
               </div>

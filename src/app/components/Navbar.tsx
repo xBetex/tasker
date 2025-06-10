@@ -104,6 +104,16 @@ export default function Navbar({ darkMode, onToggleDarkMode, clients = [], onUpd
             >
               SLA
             </Link>
+            <Link 
+              href="/settings"
+              className={`text-lg font-semibold transition-colors ${
+                isActive('/settings') 
+                  ? 'text-blue-400' 
+                  : 'hover:text-blue-300'
+              }`}
+            >
+              ⚙️
+            </Link>
             
             {/* SLA Notifications */}
             <SLANotifications
@@ -209,6 +219,17 @@ export default function Navbar({ darkMode, onToggleDarkMode, clients = [], onUpd
               onClick={handleLinkClick}
             >
               🎯 SLA
+            </Link>
+            <Link
+              href="/settings"
+              className={`block px-4 py-2 rounded-lg transition-colors ${
+                isActive('/settings') 
+                  ? 'bg-blue-600 text-white' 
+                  : darkMode ? 'hover:bg-gray-900' : 'hover:bg-gray-700'
+              }`}
+              onClick={handleLinkClick}
+            >
+              ⚙️ Configurações
             </Link>
             
             {/* Dark Mode Toggle - Mobile */}

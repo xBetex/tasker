@@ -5,43 +5,48 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #1a1a1a;
+  /* Theme variables will be set by ThemeContext */
+  --page-background: #f8f9fa;
   --card-background: #ffffff;
-  --card-border: #e5e7eb;
-  --muted: #6b7280;
-  --muted-foreground: #9ca3af;
+  --card-background-hover: #f8f9fa;
+  --primary-text: #212529;
+  --secondary-text: #6c757d;
+  --muted-text: #adb5bd;
+  --card-border: #dee2e6;
+  --input-border: #ced4da;
+  --primary-button: #0d6efd;
+  --primary-button-hover: #0b5ed7;
+  --secondary-button: #6c757d;
+  --secondary-button-hover: #5c636a;
+  --danger-button: #dc3545;
+  --danger-button-hover: #bb2d3b;
+  --input-background: #ffffff;
+  --input-text: #212529;
+  --pending-color: #ffc107;
+  --in-progress-color: #0dcaf0;
+  --completed-color: #198754;
+  --awaiting-client-color: #fd7e14;
+  --low-priority-bg: #d1ecf1;
+  --medium-priority-bg: #fff3cd;
+  --high-priority-bg: #f8d7da;
+
+  /* Legacy support */
+  --background: var(--page-background);
+  --foreground: var(--primary-text);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--page-background);
+  --color-foreground: var(--primary-text);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #fafafa;
-    --card-background: #121212;
-    --card-border: #1f1f1f;
-    --muted: #a1a1aa;
-    --muted-foreground: #71717a;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--page-background);
+  color: var(--primary-text);
   font-family: Arial, Helvetica, sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-/* Enhanced dark mode styles */
-.dark body {
-  background: #0a0a0a;
-  color: #fafafa;
+  transition: all 0.3s ease;
 }
 
 /* Card improvements */
@@ -51,18 +56,9 @@ body {
   transition: all 0.3s ease;
 }
 
-.dark .card-base {
-  background: #121212;
-  border-color: #1f1f1f;
-}
-
 .card-base:hover {
+  background: var(--card-background-hover);
   transform: translateY(-1px);
-}
-
-.dark .card-base:hover {
-  background: #1a1a1a;
-  border-color: #2a2a2a;
 }
 
 /* Text color improvements */
@@ -275,6 +271,47 @@ body {
   word-wrap: break-word;
   word-break: break-word;
   hyphens: auto;
+}
+
+/* Responsive card improvements */
+@media (max-width: 640px) {
+  .client-card {
+    margin-bottom: 1rem;
+  }
+  
+  .client-card .task-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .mobile-compact {
+    padding: 0.75rem;
+  }
+  
+  .mobile-text-sm {
+    font-size: 0.875rem;
+  }
+}
+
+/* Task highlight effect for scroll-to-task */
+.task-highlight {
+  animation: taskHighlight 2s ease-in-out;
+  transform: scale(1.02);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+}
+
+@keyframes taskHighlight {
+  0% {
+    background-color: rgba(59, 130, 246, 0.1);
+    transform: scale(1);
+  }
+  50% {
+    background-color: rgba(59, 130, 246, 0.2);
+    transform: scale(1.02);
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
 }
 
 /* Smooth table transitions */

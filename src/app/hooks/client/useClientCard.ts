@@ -3,8 +3,10 @@ import { Client, Task, TaskStatus } from '@/types/types';
 import { api } from '@/services/api';
 import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
 import { useToast } from '../useToast';
+import { useScroll } from '../../contexts/ScrollContext';
 
 export function useClientCard(client: Client, onUpdate: () => void, onDeleteTask: (clientId: string, taskIndex: number) => void) {
+  const { setFocusedTaskId } = useScroll();
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [editData, setEditData] = useState<Client>({ ...client });
@@ -238,6 +240,9 @@ export function useClientCard(client: Client, onUpdate: () => void, onDeleteTask
     try {
       setIsAddingComment(true);
       await api.addComment(taskId, commentText);
+      
+      // Definir a tarefa como focada antes de atualizar
+      setFocusedTaskId(taskId);
       onUpdate();
       toast.success('Comment added', 'The comment was added successfully!');
     } catch (error) {
@@ -254,6 +259,9 @@ export function useClientCard(client: Client, onUpdate: () => void, onDeleteTask
     try {
       const updatedTask = { ...contextMenu.task, status: newStatus };
       await api.updateTask(contextMenu.task.id, updatedTask);
+      
+      // Definir a tarefa como focada antes de atualizar
+      setFocusedTaskId(contextMenu.task.id);
       onUpdate();
       setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
       toast.success('Status updated', 'The task status was updated!');

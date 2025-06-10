@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Task, TaskStatus, TaskPriority } from '@/types/types';
 import { MoreVerticalIcon } from '../Icons';
 import DateDisplay from '../DateDisplay';
 import { getSLAStatus, getSLAStatusColor, getSLAStatusBadge } from '@/utils/slaUtils';
 import CommentsSection from '../CommentsSection';
+import { useScroll } from '../../contexts/ScrollContext';
 
 interface TaskItemProps {
   task: Task;
@@ -19,6 +20,8 @@ interface TaskItemProps {
   getStatusColor: (status: string) => string;
   getPriorityColor: (priority: string) => string;
   getStatusBgColor: (status: string) => string;
+  getPriorityStyle?: (priority: string) => React.CSSProperties;
+  getStatusStyle?: (status: string) => React.CSSProperties;
 }
 
 export default function TaskItem({
@@ -35,10 +38,25 @@ export default function TaskItem({
   getStatusColor,
   getPriorityColor,
   getStatusBgColor,
+  getPriorityStyle,
+  getStatusStyle,
 }: TaskItemProps) {
+  const { registerTaskRef, unregisterTaskRef } = useScroll();
+  const taskRef = useRef<HTMLDivElement>(null);
   const slaStatus = getSLAStatus(task);
   const slaColor = getSLAStatusColor(slaStatus);
   const slaBadge = getSLAStatusBadge(slaStatus);
+
+  // Registrar a referência da tarefa
+  useEffect(() => {
+    if (taskRef.current) {
+      registerTaskRef(task.id, taskRef.current);
+    }
+    
+    return () => {
+      unregisterTaskRef(task.id);
+    };
+  }, [task.id, registerTaskRef, unregisterTaskRef]);
 
   const getStatusBorderColor = (status: string) => {
     switch (status) {
@@ -55,13 +73,24 @@ export default function TaskItem({
 
   return (
     <div
-      className={`p-4 rounded-lg border-l-4 border-t border-r border-b transition-all duration-200 hover:shadow-md cursor-context-menu ${
+      ref={taskRef}
+      className={`p-3 sm:p-4 rounded-lg border-l-4 border-t border-r border-b transition-all duration-200 hover:shadow-md cursor-context-menu ${
         getStatusBorderColor(task.status)
-      } ${
-        darkMode
-          ? 'bg-gray-700 border-gray-600 hover:bg-gray-650'
-          : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
       }`}
+      style={{
+        backgroundColor: 'var(--card-background)',
+        borderTopColor: 'var(--card-border)',
+        borderRightColor: 'var(--card-border)', 
+        borderBottomColor: 'var(--card-border)',
+        // Deixamos borderLeftColor ser controlado pelas classes Tailwind para as cores de status
+        color: 'var(--primary-text)'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--card-background)';
+      }}
       onTouchStart={(e) => onTouchStart(e, task, index)}
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchCancel}
@@ -78,14 +107,15 @@ export default function TaskItem({
               type="text"
               value={task.description}
               onChange={(e) => onTaskChange(index, 'description', e.target.value)}
-              className={`w-full p-2 border rounded-lg ${
-                darkMode
-                  ? 'bg-gray-600 border-gray-500 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}
+              className="w-full p-2 border rounded-lg"
+              style={{
+                backgroundColor: 'var(--input-background)',
+                borderColor: 'var(--input-border)',
+                color: 'var(--input-text)'
+              }}
             />
           ) : (
-            <p className={`font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+            <p className="font-medium" style={{ color: 'var(--primary-text)' }}>
               {task.description}
             </p>
           )}
@@ -93,11 +123,19 @@ export default function TaskItem({
         
         <button
           onClick={(e) => onMoreVerticalClick(e, task, index)}
-          className={`ml-2 p-1 rounded-full transition-all duration-200 hover:scale-110 ${
-            darkMode 
-              ? 'hover:bg-gray-600 text-gray-400 hover:text-white' 
-              : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
-          }`}
+          className="ml-2 p-1 rounded-full transition-all duration-200 hover:scale-110"
+          style={{ 
+            color: 'var(--secondary-text)',
+            backgroundColor: 'transparent'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+            e.currentTarget.style.color = 'var(--primary-text)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'var(--secondary-text)';
+          }}
           title="Task options (or right-click)"
         >
           <MoreVerticalIcon />
@@ -110,11 +148,12 @@ export default function TaskItem({
             <select
               value={task.status}
               onChange={(e) => onTaskChange(index, 'status', e.target.value)}
-              className={`px-2 py-1 rounded-full text-xs font-medium border ${
-                darkMode
-                  ? 'bg-gray-600 border-gray-500 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}
+              className="px-2 py-1 rounded-full text-xs font-medium border"
+              style={{
+                backgroundColor: 'var(--input-background)',
+                borderColor: 'var(--input-border)',
+                color: 'var(--input-text)'
+              }}
             >
               <option value="pending">Pending</option>
               <option value="in progress">In Progress</option>
@@ -125,11 +164,12 @@ export default function TaskItem({
             <select
               value={task.priority}
               onChange={(e) => onTaskChange(index, 'priority', e.target.value)}
-              className={`px-2 py-1 rounded-full text-xs font-medium border ${
-                darkMode
-                  ? 'bg-gray-600 border-gray-500 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}
+              className="px-2 py-1 rounded-full text-xs font-medium border"
+              style={{
+                backgroundColor: 'var(--input-background)',
+                borderColor: 'var(--input-border)',
+                color: 'var(--input-text)'
+              }}
             >
               <option value="low">Low</option>
               <option value="medium">Medium</option>
@@ -139,7 +179,8 @@ export default function TaskItem({
         ) : (
           <>
             <span
-              className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBgColor(task.status)}`}
+              className={getStatusBgColor(task.status)}
+              style={getStatusStyle ? getStatusStyle(task.status) : {}}
             >
               {task.status === 'pending' && 'Pending'}
               {task.status === 'in progress' && 'In Progress'}
@@ -148,7 +189,8 @@ export default function TaskItem({
             </span>
             
             <span
-              className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}
+              className={getPriorityColor(task.priority)}
+              style={getPriorityStyle ? getPriorityStyle(task.priority) : {}}
             >
               {task.priority === 'low' && 'Low'}
               {task.priority === 'medium' && 'Medium'}
@@ -164,7 +206,7 @@ export default function TaskItem({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-2">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm mb-2" style={{ color: 'var(--secondary-text)' }}>
         <div className="flex items-center">
           <span className="font-medium mr-1">Date:</span>
           {isEditing ? (
@@ -172,11 +214,12 @@ export default function TaskItem({
               type="date"
               value={task.date}
               onChange={(e) => onTaskChange(index, 'date', e.target.value)}
-              className={`px-2 py-1 border rounded ${
-                darkMode
-                  ? 'bg-gray-600 border-gray-500 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}
+              className="px-1.5 sm:px-2 py-1 border rounded text-xs sm:text-sm"
+              style={{
+                backgroundColor: 'var(--input-background)',
+                borderColor: 'var(--input-border)',
+                color: 'var(--input-text)'
+              }}
             />
           ) : (
             <DateDisplay date={task.date} />
@@ -191,11 +234,12 @@ export default function TaskItem({
                 type="date"
                 value={task.sla_date}
                 onChange={(e) => onTaskChange(index, 'sla_date', e.target.value)}
-                className={`px-2 py-1 border rounded ${
-                  darkMode
-                    ? 'bg-gray-600 border-gray-500 text-white'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
+                className="px-1.5 sm:px-2 py-1 border rounded text-xs sm:text-sm"
+                style={{
+                  backgroundColor: 'var(--input-background)',
+                  borderColor: 'var(--input-border)',
+                  color: 'var(--input-text)'
+                }}
               />
             ) : (
               <DateDisplay date={task.sla_date} />

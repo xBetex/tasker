@@ -33,30 +33,150 @@ export default function ClientCardHeader({
 }: ClientCardHeaderProps) {
   return (
     <div className={`mb-4 client-header ${!isExpanded ? 'cursor-pointer' : ''}`}>
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex-1">
+      {/* Client Information Display */}
+      <div className="flex justify-between items-start mb-3 gap-3">
+        <div className="flex-1 min-w-0">
           {isEditing ? (
-            <input
-              type="text"
-              name="name"
-              value={editData.name}
-              onChange={onInputChange}
-              className={`text-xl font-bold bg-transparent border-b-2 border-blue-500 focus:outline-none w-full ${
-                darkMode ? 'text-white' : 'text-gray-900'
-              }`}
-            />
+            <div className="space-y-3">
+              {/* Nome */}
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--secondary-text)' }}>
+                  NOME
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={editData.name}
+                  onChange={onInputChange}
+                  className="w-full text-lg font-bold bg-transparent border-b-2 border-blue-500 focus:outline-none"
+                  style={{ color: 'var(--primary-text)' }}
+                />
+              </div>
+              
+              {/* Company */}
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--secondary-text)' }}>
+                  COMPANY
+                </label>
+                <input
+                  type="text"
+                  name="company"
+                  value={editData.company}
+                  onChange={onInputChange}
+                  className="w-full p-2 border rounded-lg"
+                  style={{
+                    backgroundColor: 'var(--input-background)',
+                    borderColor: 'var(--input-border)',
+                    color: 'var(--input-text)'
+                  }}
+                />
+              </div>
+              
+              {/* ID & Origin in same row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--secondary-text)' }}>
+                    ID
+                  </label>
+                  <input
+                    type="text"
+                    name="id"
+                    value={editData.id}
+                    onChange={onInputChange}
+                    className="w-full p-2 border rounded-lg text-sm"
+                    style={{
+                      backgroundColor: 'var(--input-background)',
+                      borderColor: 'var(--input-border)',
+                      color: 'var(--input-text)'
+                    }}
+                    disabled
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--secondary-text)' }}>
+                    ORIGIN
+                  </label>
+                  <input
+                    type="text"
+                    name="origin"
+                    value={editData.origin}
+                    onChange={onInputChange}
+                    className="w-full p-2 border rounded-lg text-sm"
+                    style={{
+                      backgroundColor: 'var(--input-background)',
+                      borderColor: 'var(--input-border)',
+                      color: 'var(--input-text)'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
           ) : (
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              {client.name}
-            </h3>
+            <div className="space-y-2">
+              {/* Nome - Principal */}
+              <h3 className="text-xl sm:text-2xl font-bold truncate" style={{ color: 'var(--primary-text)' }}>
+                {client.name}
+              </h3>
+              
+              {/* Company - Secundário */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium opacity-70" style={{ color: 'var(--secondary-text)' }}>
+                  COMPANY:
+                </span>
+                <span className="text-sm font-medium" style={{ color: 'var(--primary-text)' }}>
+                  {client.company}
+                </span>
+              </div>
+              
+              {/* ID e Origin - Terciário */}
+              <div className="flex flex-wrap items-center gap-4 text-xs">
+                <div className="flex items-center gap-1">
+                  <span className="font-medium opacity-70" style={{ color: 'var(--secondary-text)' }}>
+                    ID:
+                  </span>
+                  <span className="font-mono bg-opacity-20 px-2 py-1 rounded text-xs" 
+                        style={{ 
+                          backgroundColor: 'var(--card-background-hover)', 
+                          color: 'var(--primary-text)' 
+                        }}>
+                    {client.id}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium opacity-70" style={{ color: 'var(--secondary-text)' }}>
+                    ORIGIN:
+                  </span>
+                  <span className="px-2 py-1 rounded-full text-xs font-medium"
+                        style={{ 
+                          backgroundColor: 'var(--low-priority-bg)', 
+                          color: 'var(--primary-text)' 
+                        }}>
+                    {client.origin}
+                  </span>
+                </div>
+              </div>
+            </div>
           )}
         </div>
         
-        <div className="flex items-center space-x-2">
+        {/* Action Buttons */}
+        <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
           {isExpanded && !isEditing && (
             <button
               onClick={onStartEdit}
-              className="p-2 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+              className="p-1.5 sm:p-2 transition-colors rounded-lg"
+              style={{ 
+                color: 'var(--secondary-text)',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                e.currentTarget.style.color = 'var(--primary-button)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--secondary-text)';
+              }}
               title="Edit client"
             >
               <EditIcon />
@@ -66,7 +186,19 @@ export default function ClientCardHeader({
           {isExpanded && !isEditing && (
             <button
               onClick={onDeleteClient}
-              className="p-2 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
+              className="p-1.5 sm:p-2 transition-colors rounded-lg"
+              style={{ 
+                color: 'var(--secondary-text)',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                e.currentTarget.style.color = 'var(--danger-button)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--secondary-text)';
+              }}
               title="Delete client"
             >
               <TrashIcon />
@@ -76,19 +208,32 @@ export default function ClientCardHeader({
           {isExpanded && !isEditing && onShowDetails && (
             <button
               onClick={() => onShowDetails(client)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              className="px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm text-white"
+              style={{ backgroundColor: 'var(--primary-button)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--primary-button-hover)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--primary-button)';
+              }}
             >
-              Details
+              <span className="hidden sm:inline">Details</span>
+              <span className="sm:hidden">📋</span>
             </button>
           )}
           
           <button
             onClick={onToggleExpand}
-            className={`p-2 rounded-full transition-colors ${
-              isExpanded
-                ? 'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900 dark:text-red-400'
-                : 'bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-400'
-            }`}
+            className="p-1.5 sm:p-2 rounded-full transition-colors text-white"
+            style={{
+              backgroundColor: isExpanded ? 'var(--danger-button)' : 'var(--primary-button)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = isExpanded ? 'var(--danger-button-hover)' : 'var(--primary-button-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = isExpanded ? 'var(--danger-button)' : 'var(--primary-button)';
+            }}
             title={isExpanded ? 'Collapse tasks' : 'View tasks'}
           >
             {isExpanded ? '▲' : '▼'}
@@ -96,47 +241,35 @@ export default function ClientCardHeader({
         </div>
       </div>
       
+      {/* Edit Mode Action Buttons */}
       {isEditing && (
-        <div className="mb-4">
-          <input
-            type="text"
-            name="company"
-            placeholder="Company"
-            value={editData.company}
-            onChange={onInputChange}
-            className={`w-full p-2 border rounded-lg mb-2 ${
-              darkMode
-                ? 'bg-gray-700 border-gray-600 text-white'
-                : 'bg-white border-gray-300 text-gray-900'
-            }`}
-          />
-          <input
-            type="text"
-            name="origin"
-            placeholder="Origin"
-            value={editData.origin}
-            onChange={onInputChange}
-            className={`w-full p-2 border rounded-lg ${
-              darkMode
-                ? 'bg-gray-700 border-gray-600 text-white'
-                : 'bg-white border-gray-300 text-gray-900'
-            }`}
-          />
-          
-          <div className="flex space-x-2 mt-4">
-            <button
-              onClick={onSaveAndExitEdit}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Save
-            </button>
-            <button
-              onClick={onCancelEdit}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
+        <div className="flex space-x-3 mt-4 pt-3 border-t" style={{ borderColor: 'var(--card-border)' }}>
+          <button
+            onClick={onSaveAndExitEdit}
+            className="flex-1 px-4 py-2 text-white rounded-lg transition-colors font-medium"
+            style={{ backgroundColor: 'var(--completed-color)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+          >
+            ✓ Save Changes
+          </button>
+          <button
+            onClick={onCancelEdit}
+            className="flex-1 px-4 py-2 text-white rounded-lg transition-colors font-medium"
+            style={{ backgroundColor: 'var(--secondary-button)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--secondary-button-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--secondary-button)';
+            }}
+          >
+            ✕ Cancel
+          </button>
         </div>
       )}
     </div>

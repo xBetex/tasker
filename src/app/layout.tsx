@@ -7,6 +7,8 @@ import Navbar from './components/Navbar';
 import { Client } from '@/types/types';
 import { api } from '@/services/api';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { ScrollProvider } from './contexts/ScrollContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import NotificationToast from './components/NotificationToast';
 import "./globals.css";
 
@@ -42,6 +44,48 @@ const ClientsContext = createContext<{
 
 export const useDarkMode = () => useContext(DarkModeContext);
 export const useClients = () => useContext(ClientsContext);
+
+// Inner component that has access to ThemeContext
+function ThemeSync({ children, darkMode, toggleDarkMode, clients, refreshClients, isLoading }: {
+  children: ReactNode;
+  darkMode: boolean;
+  toggleDarkMode: () => void;
+  clients: Client[];
+  refreshClients: () => void;
+  isLoading: boolean;
+}) {
+  const { isDarkMode, toggleDarkMode: toggleThemeMode } = useTheme();
+
+  // Sync the old dark mode with the new theme system
+  useEffect(() => {
+    if (darkMode !== isDarkMode) {
+      toggleThemeMode();
+    }
+  }, [darkMode, isDarkMode, toggleThemeMode]);
+
+  const handleToggleDarkMode = () => {
+    toggleDarkMode();
+  };
+
+  return (
+    <DarkModeContext.Provider value={{ darkMode, toggleDarkMode: handleToggleDarkMode }}>
+      <ClientsContext.Provider value={{ clients, refreshClients, isLoading }}>
+        <div className={`${geistSans.variable} ${geistMono.variable} antialiased ${darkMode ? 'dark' : ''}`}>
+          <Navbar 
+            darkMode={darkMode} 
+            onToggleDarkMode={handleToggleDarkMode}
+            clients={clients}
+            onUpdate={refreshClients}
+          />
+          <main className="pt-16">
+            {children}
+          </main>
+          <NotificationToast />
+        </div>
+      </ClientsContext.Provider>
+    </DarkModeContext.Provider>
+  );
+}
 
 function ClientLayout({ children }: { children: ReactNode }) {
   const [darkMode, setDarkMode] = useState(false);
@@ -84,24 +128,21 @@ function ClientLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <DarkModeContext.Provider value={{ darkMode, toggleDarkMode }}>
-      <ClientsContext.Provider value={{ clients, refreshClients, isLoading }}>
-        <NotificationProvider>
-          <div className={`${geistSans.variable} ${geistMono.variable} antialiased ${darkMode ? 'dark' : ''}`}>
-            <Navbar 
-              darkMode={darkMode} 
-              onToggleDarkMode={toggleDarkMode}
-              clients={clients}
-              onUpdate={refreshClients}
-            />
-            <main className="pt-16">
-              {children}
-            </main>
-            <NotificationToast />
-          </div>
-        </NotificationProvider>
-      </ClientsContext.Provider>
-    </DarkModeContext.Provider>
+    <ThemeProvider>
+      <NotificationProvider>
+        <ScrollProvider>
+          <ThemeSync 
+            darkMode={darkMode}
+            toggleDarkMode={toggleDarkMode}
+            clients={clients}
+            refreshClients={refreshClients}
+            isLoading={isLoading}
+          >
+            {children}
+          </ThemeSync>
+        </ScrollProvider>
+      </NotificationProvider>
+    </ThemeProvider>
   );
 }
 

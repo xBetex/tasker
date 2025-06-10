@@ -39,13 +39,21 @@ export default function CommentsSection({
   );
 
   return (
-    <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} mt-3`}>
+    <div className="comments-section border-t mt-3" style={{ borderColor: 'var(--card-border)' }}>
       {/* Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className={`w-full flex items-center justify-between p-3 text-left transition-colors ${
-          darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'
-        }`}
+        className="w-full flex items-center justify-between p-3 text-left transition-colors"
+        style={{ 
+          color: 'var(--primary-text)',
+          backgroundColor: 'transparent'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+        }}
       >
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">💬 Comments</span>
@@ -73,26 +81,36 @@ export default function CommentsSection({
                 onChange={(e) => setNewComment(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Add a comment... (Ctrl+Enter to submit)"
-                className={`w-full px-3 py-2 text-sm rounded-lg border resize-none focus:outline-none focus:ring-2 ${
-                  darkMode 
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-blue-500 placeholder-gray-400' 
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 placeholder-gray-500'
-                }`}
+                className="w-full px-3 py-2 text-sm rounded-lg border resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{
+                  backgroundColor: 'var(--input-background)',
+                  borderColor: 'var(--input-border)',
+                  color: 'var(--input-text)'
+                }}
                 rows={2}
                 disabled={isLoading}
               />
               <div className="flex justify-between items-center mt-2">
-                <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <span className="text-xs" style={{ color: 'var(--muted-text)' }}>
                   Ctrl+Enter to submit
                 </span>
                 <button
                   type="submit"
                   disabled={!newComment.trim() || isLoading}
-                  className={`px-3 py-1 text-xs rounded-md font-medium transition-colors ${
-                    darkMode 
-                      ? 'bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700' 
-                      : 'bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300'
-                  } text-white disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className="px-3 py-1 text-xs rounded-md font-medium transition-colors text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: 'var(--primary-button)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = 'var(--primary-button-hover)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = 'var(--primary-button)';
+                    }
+                  }}
                 >
                   {isLoading ? 'Adding...' : 'Add Comment'}
                 </button>
@@ -103,7 +121,7 @@ export default function CommentsSection({
           {/* Comments List */}
           <div className="space-y-3">
             {sortedComments.length === 0 ? (
-              <div className={`text-center py-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <div className="text-center py-4" style={{ color: 'var(--muted-text)' }}>
                 <div className="text-2xl mb-2">💭</div>
                 <p className="text-sm">No comments yet. Be the first to add one!</p>
               </div>
@@ -111,25 +129,20 @@ export default function CommentsSection({
               sortedComments.map((comment) => (
                 <div
                   key={comment.id}
-                  className={`p-3 rounded-lg border-l-4 ${
-                    darkMode 
-                      ? 'bg-gray-800 border-l-blue-500' 
-                      : 'bg-gray-50 border-l-blue-400'
-                  }`}
+                  className="p-3 rounded-lg border-l-4 border-l-blue-500"
+                  style={{
+                    backgroundColor: 'var(--card-background-hover)',
+                  }}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className={`text-xs font-medium ${
-                      darkMode ? 'text-blue-400' : 'text-blue-600'
-                    }`}>
+                    <span className="text-xs font-medium text-blue-500">
                       {comment.author || 'User'}
                     </span>
-                    <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <span className="text-xs" style={{ color: 'var(--muted-text)' }}>
                       <DateDisplay date={comment.timestamp} showTime />
                     </span>
                   </div>
-                  <p className={`text-sm leading-relaxed ${
-                    darkMode ? 'text-gray-200' : 'text-gray-800'
-                  }`}>
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--primary-text)' }}>
                     {comment.text}
                   </p>
                 </div>

@@ -365,8 +365,8 @@ export default function Home() {
           />
         </div>
 
-        <div className="flex flex-wrap gap-4 mb-6">
-          <div className="flex-1 flex space-x-2">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-4 mb-6">
+          <div className="flex-1 flex flex-wrap gap-2">
             {viewMode === 'compact' && (
               <>
                 <button
@@ -377,36 +377,39 @@ export default function Home() {
                     });
                     setExpandedCards(allExpanded);
                   }}
-                  className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+                  className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
                 >
-                  Open All Cards
+                  <span className="hidden sm:inline">Open All Cards</span>
+                  <span className="sm:hidden">Open All</span>
                 </button>
                 <button
                   onClick={() => setExpandedCards({})}
-                  className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+                  className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
                 >
-                  Collapse All
+                  <span className="hidden sm:inline">Collapse All</span>
+                  <span className="sm:hidden">Close All</span>
                 </button>
               </>
             )}
             {(dateRangeFilter.start || dateRangeFilter.end) && (
               <button
                 onClick={clearDateFilter}
-                className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+                className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
               >
-                Clear Date Filter
+                <span className="hidden sm:inline">Clear Date Filter</span>
+                <span className="sm:hidden">Clear Date</span>
               </button>
             )}
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-center sm:justify-end space-x-2 sm:space-x-4">
             <ClientViewModeToggle
               viewMode={viewMode}
               onViewModeChange={setViewMode}
               darkMode={darkMode}
             />
           </div>
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap gap-2">
             <input
               type="file"
               ref={fileInputRef}
@@ -417,29 +420,32 @@ export default function Home() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
-              className={`px-4 py-2 rounded-lg transition-colors ${
+              className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
                 darkMode 
                   ? 'bg-green-600 hover:bg-green-700' 
                   : 'bg-green-500 hover:bg-green-600'
               } text-white disabled:opacity-50`}
             >
-              {isImporting ? 'Importing...' : 'Import JSON'}
+              <span className="hidden sm:inline">{isImporting ? 'Importing...' : 'Import JSON'}</span>
+              <span className="sm:hidden">{isImporting ? 'Import...' : '📥'}</span>
             </button>
             <button
               onClick={handleExportJson}
-              className={`px-4 py-2 rounded-lg transition-colors ${
+              className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
                 darkMode 
                   ? 'bg-purple-600 hover:bg-purple-700' 
                   : 'bg-purple-500 hover:bg-purple-600'
               } text-white`}
             >
-              Export JSON
+              <span className="hidden sm:inline">Export JSON</span>
+              <span className="sm:hidden">📤</span>
             </button>
             <button
               onClick={() => setIsModalOpen(true)}
-              className={`px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+              className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
             >
-              Add New Client
+              <span className="hidden sm:inline">Add New Client</span>
+              <span className="sm:hidden">➕</span>
             </button>
           </div>
         </div>
@@ -506,7 +512,7 @@ export default function Home() {
             darkMode={darkMode}
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
             {filteredClients.map(client => (
               <ClientCard
                 key={client.id}

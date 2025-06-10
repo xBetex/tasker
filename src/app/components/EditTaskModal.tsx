@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Task, TaskStatus, TaskPriority } from '@/types/types';
 import { api } from '@/services/api';
 import { isValidStorageDate, getDefaultSLADate } from '@/utils/dateUtils';
+import { useScroll } from '../contexts/ScrollContext';
 
 interface EditTaskModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface EditTaskModalProps {
 }
 
 export default function EditTaskModal({ isOpen, onClose, task, onUpdate, darkMode }: EditTaskModalProps) {
+  const { setFocusedTaskId } = useScroll();
   const [formData, setFormData] = useState({
     date: task.date,
     description: task.description,
@@ -44,6 +46,9 @@ export default function EditTaskModal({ isOpen, onClose, task, onUpdate, darkMod
         sla_date: formData.sla_date || undefined,
         completion_date: formData.completion_date || undefined
       });
+      
+      // Definir a tarefa como focada antes de atualizar
+      setFocusedTaskId(task.id);
       onUpdate();
       onClose();
     } catch (err) {
