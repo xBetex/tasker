@@ -62,24 +62,37 @@ export default function KpiCard({
   };
 
   return (
-    <div className={`${className} ${
-      darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-    } rounded-xl border p-6 transition-all duration-200 hover:shadow-lg transform hover:scale-105`}>
+    <div 
+      className={`${className} rounded-xl border p-6 transition-all duration-200 hover:shadow-lg transform hover:scale-105`}
+      style={{
+        backgroundColor: 'var(--card-background)',
+        borderColor: 'var(--card-border)',
+        color: 'var(--primary-text)'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--card-background)';
+      }}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             {icon && <div className="text-lg">{icon}</div>}
-            <h3 className={`text-sm font-medium ${
-              darkMode ? 'text-gray-300' : 'text-gray-600'
-            }`}>
+            <h3 
+              className="text-sm font-medium"
+              style={{ color: 'var(--secondary-text)' }}
+            >
               {title}
             </h3>
           </div>
           
           <div className="flex items-baseline gap-2">
-            <div className={`text-2xl font-bold ${
-              darkMode ? 'text-white' : 'text-gray-900'
-            }`}>
+            <div 
+              className="text-2xl font-bold"
+              style={{ color: 'var(--primary-text)' }}
+            >
               {value}
             </div>
             
@@ -92,9 +105,10 @@ export default function KpiCard({
           </div>
           
           {description && (
-            <p className={`text-xs mt-2 ${
-              darkMode ? 'text-gray-400' : 'text-gray-500'
-            }`}>
+            <p 
+              className="text-xs mt-2"
+              style={{ color: 'var(--muted-text)' }}
+            >
               {description}
             </p>
           )}

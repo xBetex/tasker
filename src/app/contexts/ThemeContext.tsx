@@ -43,80 +43,80 @@ export interface ThemeColors {
 
 export const defaultLightTheme: ThemeColors = {
   // Background colors
-  pageBackground: '#ffffff',
+  pageBackground: '#f8f9fa',
   cardBackground: '#ffffff',
   cardBackgroundHover: '#f8f9fa',
   
   // Text colors
-  primaryText: '#000000',
-  secondaryText: '#4a5568',
-  mutedText: '#718096',
+  primaryText: '#212529',
+  secondaryText: '#6c757d',
+  mutedText: '#adb5bd',
   
   // Border colors
-  cardBorder: '#e2e8f0',
-  inputBorder: '#cbd5e0',
+  cardBorder: '#dee2e6',
+  inputBorder: '#ced4da',
   
   // Button colors
-  primaryButton: '#3182ce',
-  primaryButtonHover: '#2c5aa0',
-  secondaryButton: '#718096',
-  secondaryButtonHover: '#4a5568',
-  dangerButton: '#e53e3e',
-  dangerButtonHover: '#c53030',
+  primaryButton: '#0d6efd',
+  primaryButtonHover: '#0b5ed7',
+  secondaryButton: '#6c757d',
+  secondaryButtonHover: '#5c636a',
+  dangerButton: '#dc3545',
+  dangerButtonHover: '#bb2d3b',
   
   // Input colors
   inputBackground: '#ffffff',
-  inputText: '#000000',
+  inputText: '#212529',
   
   // Status colors
-  pendingColor: '#ed8936',
-  inProgressColor: '#3182ce',
-  completedColor: '#38a169',
-  awaitingClientColor: '#d69e2e',
+  pendingColor: '#ffc107',
+  inProgressColor: '#0dcaf0',
+  completedColor: '#198754',
+  awaitingClientColor: '#fd7e14',
   
   // Priority colors
-  lowPriorityBg: '#c6f6d5',
-  mediumPriorityBg: '#fef5e7',
-  highPriorityBg: '#fed7d7',
+  lowPriorityBg: '#d1ecf1',
+  mediumPriorityBg: '#fff3cd',
+  highPriorityBg: '#f8d7da',
 };
 
 export const defaultDarkTheme: ThemeColors = {
   // Background colors
-  pageBackground: '#1a202c',
-  cardBackground: '#2d3748',
-  cardBackgroundHover: '#4a5568',
+  pageBackground: '#0d1117',
+  cardBackground: '#21262d',
+  cardBackgroundHover: '#30363d',
   
   // Text colors
-  primaryText: '#ffffff',
-  secondaryText: '#a0aec0',
-  mutedText: '#718096',
+  primaryText: '#f0f6fc',
+  secondaryText: '#8b949e',
+  mutedText: '#6e7681',
   
   // Border colors
-  cardBorder: '#4a5568',
-  inputBorder: '#718096',
+  cardBorder: '#30363d',
+  inputBorder: '#30363d',
   
   // Button colors
-  primaryButton: '#4299e1',
-  primaryButtonHover: '#3182ce',
-  secondaryButton: '#718096',
-  secondaryButtonHover: '#a0aec0',
-  dangerButton: '#f56565',
-  dangerButtonHover: '#e53e3e',
+  primaryButton: '#238be6',
+  primaryButtonHover: '#1f7bd4',
+  secondaryButton: '#8b949e',
+  secondaryButtonHover: '#b1bac4',
+  dangerButton: '#f85149',
+  dangerButtonHover: '#da3633',
   
   // Input colors
-  inputBackground: '#2d3748',
-  inputText: '#ffffff',
+  inputBackground: '#21262d',
+  inputText: '#f0f6fc',
   
   // Status colors
-  pendingColor: '#ed8936',
-  inProgressColor: '#4299e1',
-  completedColor: '#48bb78',
-  awaitingClientColor: '#d69e2e',
+  pendingColor: '#d29922',
+  inProgressColor: '#1f6feb',
+  completedColor: '#3fb950',
+  awaitingClientColor: '#fb8500',
   
   // Priority colors
-  lowPriorityBg: '#22543d',
-  mediumPriorityBg: '#744210',
-  highPriorityBg: '#742a2a',
+  lowPriorityBg: '#0d4529',
+  mediumPriorityBg: '#4d2d00',
+  highPriorityBg: '#4c1a1a',
 };
 
 interface ThemeContextType {

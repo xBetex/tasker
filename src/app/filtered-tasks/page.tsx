@@ -252,12 +252,25 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
 
   if (viewMode === 'table') {
     return (
-      <div className={`rounded-xl ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border shadow-lg overflow-hidden`}>
+      <div 
+        className="rounded-xl border shadow-lg overflow-hidden"
+        style={{
+          backgroundColor: 'var(--card-background)',
+          borderColor: 'var(--card-border)'
+        }}
+      >
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+            <thead 
+              style={{
+                backgroundColor: 'var(--card-background-hover)'
+              }}
+            >
               <tr>
-                <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                  style={{ color: 'var(--secondary-text)' }}
+                >
                   <button 
                     onClick={() => {
                       if (sortBy === 'date') {
@@ -275,10 +288,16 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                     )}
                   </button>
                 </th>
-                <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                  style={{ color: 'var(--secondary-text)' }}
+                >
                   Description
                 </th>
-                <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                  style={{ color: 'var(--secondary-text)' }}
+                >
                   <button 
                     onClick={() => {
                       if (sortBy === 'status') {
@@ -296,7 +315,10 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                     )}
                   </button>
                 </th>
-                <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                  style={{ color: 'var(--secondary-text)' }}
+                >
                   <button 
                     onClick={() => {
                       if (sortBy === 'priority') {
@@ -314,54 +336,93 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                     )}
                   </button>
                 </th>
-                <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                  style={{ color: 'var(--secondary-text)' }}
+                >
                   SLA Due
                 </th>
-                <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                  style={{ color: 'var(--secondary-text)' }}
+                >
                   Client
                 </th>
-                <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                  style={{ color: 'var(--secondary-text)' }}
+                >
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className={`${darkMode ? 'bg-gray-800' : 'bg-white'} divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+            <tbody 
+              className="divide-y"
+              style={{
+                backgroundColor: 'var(--card-background)',
+                borderColor: 'var(--card-border)'
+              }}
+            >
               {sortedTasks.map((task) => (
                 <tr 
                   key={task.id} 
-                  className={`table-row-transition hover:${darkMode ? 'bg-gray-700' : 'bg-gray-50'} ${
-                    highlightTaskId && task.id.toString() === highlightTaskId 
-                      ? darkMode ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-200' 
-                      : ''
-                  } ${
-                    editingTaskId === task.id 
-                      ? darkMode ? 'bg-gray-750 ring-2 ring-blue-500' : 'bg-blue-25 ring-2 ring-blue-300'
-                      : ''
-                  }`}
+                  className="table-row-transition"
+                  style={{
+                    backgroundColor: highlightTaskId && task.id.toString() === highlightTaskId 
+                      ? darkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
+                      : editingTaskId === task.id 
+                      ? 'var(--card-background-hover)'
+                      : 'var(--card-background)',
+                    borderColor: editingTaskId === task.id 
+                      ? 'rgba(59, 130, 246, 0.5)'
+                      : 'var(--card-border)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!(highlightTaskId && task.id.toString() === highlightTaskId) && editingTaskId !== task.id) {
+                      e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!(highlightTaskId && task.id.toString() === highlightTaskId) && editingTaskId !== task.id) {
+                      e.currentTarget.style.backgroundColor = 'var(--card-background)';
+                    }
+                  }}
                   onContextMenu={(e) => handleContextMenu(e, task)}
                 >
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                  <td 
+                    className="px-6 py-4 whitespace-nowrap text-sm"
+                    style={{ color: 'var(--primary-text)' }}
+                  >
                     {editingTaskId === task.id ? (
                       <input
                         type="date"
                         value={editingData.date || task.date}
                         onChange={(e) => handleEditChange('date', e.target.value)}
-                        className={`w-full px-2 py-1 text-xs rounded border ${
-                          darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                        }`}
+                        className="w-full px-2 py-1 text-xs rounded border"
+                        style={{
+                          backgroundColor: 'var(--input-background)',
+                          borderColor: 'var(--input-border)',
+                          color: 'var(--input-text)'
+                        }}
                       />
                     ) : (
                       <DateDisplay date={task.date} />
                     )}
                   </td>
-                  <td className={`px-6 py-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                  <td 
+                    className="px-6 py-4 text-sm"
+                    style={{ color: 'var(--primary-text)' }}
+                  >
                     {editingTaskId === task.id ? (
                       <textarea
                         value={editingData.description || task.description}
                         onChange={(e) => handleEditChange('description', e.target.value)}
-                        className={`w-full px-2 py-1 text-xs rounded border resize-none ${
-                          darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                        }`}
+                        className="w-full px-2 py-1 text-xs rounded border resize-none"
+                        style={{
+                          backgroundColor: 'var(--input-background)',
+                          borderColor: 'var(--input-border)',
+                          color: 'var(--input-text)'
+                        }}
                         rows={2}
                       />
                     ) : (
@@ -373,9 +434,12 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                       <select
                         value={editingData.status || task.status}
                         onChange={(e) => handleEditChange('status', e.target.value)}
-                        className={`px-2 py-1 text-xs rounded border ${
-                          darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                        }`}
+                        className="px-2 py-1 text-xs rounded border"
+                        style={{
+                          backgroundColor: 'var(--input-background)',
+                          borderColor: 'var(--input-border)',
+                          color: 'var(--input-text)'
+                        }}
                       >
                         <option value="pending">Pending</option>
                         <option value="in progress">In Progress</option>
@@ -388,14 +452,17 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                       </span>
                     )}
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium`}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     {editingTaskId === task.id ? (
                       <select
                         value={editingData.priority || task.priority}
                         onChange={(e) => handleEditChange('priority', e.target.value)}
-                        className={`px-2 py-1 text-xs rounded border ${
-                          darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                        }`}
+                        className="px-2 py-1 text-xs rounded border"
+                        style={{
+                          backgroundColor: 'var(--input-background)',
+                          borderColor: 'var(--input-border)',
+                          color: 'var(--input-text)'
+                        }}
                       >
                         <option value="low">Low</option>
                         <option value="medium">Medium</option>
@@ -407,15 +474,21 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                       </span>
                     )}
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                  <td 
+                    className="px-6 py-4 whitespace-nowrap text-sm"
+                    style={{ color: 'var(--primary-text)' }}
+                  >
                     {editingTaskId === task.id ? (
                       <input
                         type="date"
                         value={editingData.sla_date || task.sla_date || ''}
                         onChange={(e) => handleEditChange('sla_date', e.target.value)}
-                        className={`w-full px-2 py-1 text-xs rounded border ${
-                          darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                        }`}
+                        className="w-full px-2 py-1 text-xs rounded border"
+                        style={{
+                          backgroundColor: 'var(--input-background)',
+                          borderColor: 'var(--input-border)',
+                          color: 'var(--input-text)'
+                        }}
                       />
                     ) : (
                       task.sla_date ? (
@@ -436,11 +509,19 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                           )}
                         </div>
                       ) : (
-                        <span className="text-gray-400 text-xs">No SLA</span>
+                        <span 
+                          className="text-xs"
+                          style={{ color: 'var(--muted-text)' }}
+                        >
+                          No SLA
+                        </span>
                       )
                     )}
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                  <td 
+                    className="px-6 py-4 whitespace-nowrap text-sm"
+                    style={{ color: 'var(--primary-text)' }}
+                  >
                     <span>{getClientName(task.client_id)}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -449,17 +530,35 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                         <button
                           onClick={handleSaveEdit}
                           disabled={isLoading}
-                          className={`px-3 py-1 text-xs rounded ${
-                            darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'
-                          } text-white disabled:opacity-50 transition-colors`}
+                          className="px-3 py-1 text-xs rounded text-white disabled:opacity-50 transition-colors"
+                          style={{
+                            backgroundColor: 'var(--success-button)'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isLoading) {
+                              e.currentTarget.style.backgroundColor = 'var(--success-button-hover)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isLoading) {
+                              e.currentTarget.style.backgroundColor = 'var(--success-button)';
+                            }
+                          }}
                         >
                           Save
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className={`px-3 py-1 text-xs rounded ${
-                            darkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-400 hover:bg-gray-500'
-                          } text-white transition-colors`}
+                          className="px-3 py-1 text-xs rounded text-white transition-colors"
+                          style={{
+                            backgroundColor: 'var(--secondary-button)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--secondary-button-hover)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--secondary-button)';
+                          }}
                         >
                           Cancel
                         </button>
@@ -468,9 +567,16 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleStartEdit(task)}
-                          className={`p-1 rounded transition-colors ${
-                            darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
-                          }`}
+                          className="p-1 rounded transition-colors"
+                          style={{ color: 'var(--secondary-text)' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                            e.currentTarget.style.color = 'var(--primary-text)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = 'var(--secondary-text)';
+                          }}
                           title="Edit task"
                           aria-label="Edit task"
                         >
@@ -478,9 +584,16 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                         </button>
                         <button
                           onClick={(e) => handleMoreVerticalClick(e, task)}
-                          className={`p-1 rounded transition-colors ${
-                            darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
-                          }`}
+                          className="p-1 rounded transition-colors"
+                          style={{ color: 'var(--secondary-text)' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                            e.currentTarget.style.color = 'var(--primary-text)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = 'var(--secondary-text)';
+                          }}
                           title="More options"
                           aria-label="More options"
                         >
@@ -506,20 +619,38 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
           <div 
             key={task.id} 
             className={`p-4 rounded-lg border shadow task-card-hover ${
-              highlightTaskId && task.id.toString() === highlightTaskId
-                ? darkMode ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-200'
-                : darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-            } ${
               task.sla_date && task.status !== 'completed' && getSLAStatus(task) === 'overdue'
                 ? 'border-l-4 border-l-red-500'
                 : task.sla_date && task.status !== 'completed' && getSLAStatus(task) === 'due_today'
                 ? 'border-l-4 border-l-orange-500'
                 : ''
             }`}
+            style={{
+              backgroundColor: highlightTaskId && task.id.toString() === highlightTaskId
+                ? darkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
+                : 'var(--card-background)',
+              borderColor: highlightTaskId && task.id.toString() === highlightTaskId
+                ? darkMode ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)'
+                : 'var(--card-border)',
+              color: 'var(--primary-text)'
+            }}
+            onMouseEnter={(e) => {
+              if (!(highlightTaskId && task.id.toString() === highlightTaskId)) {
+                e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!(highlightTaskId && task.id.toString() === highlightTaskId)) {
+                e.currentTarget.style.backgroundColor = 'var(--card-background)';
+              }
+            }}
             onContextMenu={(e) => handleContextMenu(e, task)}
           >
             <div className="flex items-start justify-between mb-2">
-              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <div 
+                className="text-sm"
+                style={{ color: 'var(--secondary-text)' }}
+              >
                 <DateDisplay date={task.date} />
               </div>
               <div className="flex items-center gap-2">
@@ -528,9 +659,16 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                 </span>
                 <button
                   onClick={(e) => handleMoreVerticalClick(e, task)}
-                  className={`p-1 rounded transition-colors ${
-                    darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
-                  }`}
+                  className="p-1 rounded transition-colors"
+                  style={{ color: 'var(--secondary-text)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                    e.currentTarget.style.color = 'var(--primary-text)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--secondary-text)';
+                  }}
                   title="Task options"
                   aria-label="Task options"
                 >
@@ -539,7 +677,10 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
               </div>
             </div>
             
-            <h3 className={`font-medium mb-3 break-words-enhanced leading-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h3 
+              className="font-medium mb-3 break-words-enhanced leading-tight"
+              style={{ color: 'var(--primary-text)' }}
+            >
               {task.description}
             </h3>
             
@@ -547,16 +688,20 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
               <span className={`text-sm font-medium ${getPriorityColor(task.priority)}`}>
                 {task.priority.toUpperCase()} Priority
               </span>
-              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <div 
+                className="text-sm"
+                style={{ color: 'var(--secondary-text)' }}
+              >
                 {getClientName(task.client_id)}
               </div>
             </div>
 
             {/* SLA Footer */}
             {task.sla_date && task.status !== 'completed' && (
-              <div className={`mt-3 pt-2 border-t ${
-                darkMode ? 'border-gray-700' : 'border-gray-200'
-              } flex items-center justify-between`}>
+              <div 
+                className="mt-3 pt-2 border-t flex items-center justify-between"
+                style={{ borderColor: 'var(--card-border)' }}
+              >
                 <span className={`text-xs font-medium ${
                   getSLAStatus(task) === 'overdue' 
                     ? 'text-red-600' 
@@ -592,8 +737,10 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
       {contextMenu.visible && (
         <div
           ref={contextMenuRef}
-          className={`fixed z-50 py-1 rounded-md shadow-lg w-52 ${darkMode ? 'bg-gray-700' : 'bg-white'} border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}
+          className="fixed z-50 py-1 rounded-md shadow-lg w-52 border"
           style={{
+            backgroundColor: 'var(--card-background)',
+            borderColor: 'var(--card-border)',
             top: `${contextMenu.y}px`,
             left: `${contextMenu.x}px`,
             maxHeight: 'calc(100vh - 20px)',
@@ -601,14 +748,24 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
           }}
         >
           {/* Seção de Ações Principais */}
-          <div className={`px-3 py-2 text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          <div 
+            className="px-3 py-2 text-xs font-medium"
+            style={{ color: 'var(--muted-text)' }}
+          >
             Task Actions
           </div>
           
           <button
             onClick={handleEditTask}
             disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600 text-white' : 'hover:bg-gray-100 text-gray-900'} disabled:opacity-50 transition-colors`}
+            className="flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors"
+            style={{ color: 'var(--primary-text)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
             <EditIcon size={16} className="mr-3" />
             Edit Task
@@ -617,24 +774,48 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
           <button
             onClick={handleDeleteTask}
             disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600 text-red-400' : 'hover:bg-gray-100 text-red-600'} disabled:opacity-50 transition-colors`}
+            className="flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors text-red-600"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
             <TrashIcon size={16} className="mr-3" />
             Delete Task
           </button>
 
           {/* Separador */}
-          <div className={`border-t my-1 ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}></div>
+          <div 
+            className="border-t my-1"
+            style={{ borderColor: 'var(--card-border)' }}
+          ></div>
 
           {/* Seção de Status */}
-          <div className={`px-3 py-2 text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          <div 
+            className="px-3 py-2 text-xs font-medium"
+            style={{ color: 'var(--muted-text)' }}
+          >
             Change Status
           </div>
           
           <button
             onClick={() => handleStatusChange('pending')}
             disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'pending' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors ${
+              contextMenu.task?.status === 'pending' ? 'font-semibold' : ''
+            }`}
+            style={{ 
+              color: 'var(--primary-text)',
+              backgroundColor: contextMenu.task?.status === 'pending' ? 'var(--card-background-hover)' : 'transparent'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = contextMenu.task?.status === 'pending' ? 'var(--card-background-hover)' : 'transparent';
+            }}
           >
             <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-3"></span>
             Pending
@@ -643,7 +824,19 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
           <button
             onClick={() => handleStatusChange('in progress')}
             disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'in progress' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors ${
+              contextMenu.task?.status === 'in progress' ? 'font-semibold' : ''
+            }`}
+            style={{ 
+              color: 'var(--primary-text)',
+              backgroundColor: contextMenu.task?.status === 'in progress' ? 'var(--card-background-hover)' : 'transparent'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = contextMenu.task?.status === 'in progress' ? 'var(--card-background-hover)' : 'transparent';
+            }}
           >
             <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 mr-3"></span>
             In Progress
@@ -652,7 +845,19 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
           <button
             onClick={() => handleStatusChange('completed')}
             disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'completed' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors ${
+              contextMenu.task?.status === 'completed' ? 'font-semibold' : ''
+            }`}
+            style={{ 
+              color: 'var(--primary-text)',
+              backgroundColor: contextMenu.task?.status === 'completed' ? 'var(--card-background-hover)' : 'transparent'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = contextMenu.task?.status === 'completed' ? 'var(--card-background-hover)' : 'transparent';
+            }}
           >
             <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-3"></span>
             Completed
@@ -661,7 +866,19 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
           <button
             onClick={() => handleStatusChange('awaiting client')}
             disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'} ${contextMenu.task?.status === 'awaiting client' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
+            className={`flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors ${
+              contextMenu.task?.status === 'awaiting client' ? 'font-semibold' : ''
+            }`}
+            style={{ 
+              color: 'var(--primary-text)',
+              backgroundColor: contextMenu.task?.status === 'awaiting client' ? 'var(--card-background-hover)' : 'transparent'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = contextMenu.task?.status === 'awaiting client' ? 'var(--card-background-hover)' : 'transparent';
+            }}
           >
             <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-3"></span>
             Awaiting Client

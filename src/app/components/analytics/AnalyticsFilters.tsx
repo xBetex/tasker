@@ -70,20 +70,89 @@ export default function AnalyticsFilters({
   const displayValue = selectedClient ? `${selectedClient.name} (${selectedClient.company})` : clientSearch;
 
   return (
-    <div className={`p-6 rounded-xl ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} shadow-lg border mb-8 transition-all duration-200`}>
-      <div className="mb-6">
-        <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-2`}>
-          Filters & Search
-        </h3>
-        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+    <div 
+      className="p-4 rounded-lg shadow-lg border mb-8 transition-all duration-300 hover:shadow-xl"
+      style={{
+        backgroundColor: 'var(--card-background)',
+        borderColor: 'var(--card-border)'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--card-background)';
+      }}
+    >
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-1 h-5 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full"></div>
+          <h3 
+            className="text-base font-medium"
+            style={{ color: 'var(--primary-text)' }}
+          >
+            Analytics Filters
+          </h3>
+          {hasActiveFilters && (
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+              <span 
+                className="text-xs font-medium px-2 py-1 rounded-full"
+                style={{
+                  backgroundColor: darkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+                  color: darkMode ? 'rgb(147, 197, 253)' : 'rgb(29, 78, 216)'
+                }}
+              >
+                {(() => {
+                  let count = 0;
+                  if (dateRange.start || dateRange.end) count++;
+                  if (statusFilter !== 'all') count++;
+                  if (priorityFilter !== 'all') count++;
+                  if (clientSearch || selectedClientId) count++;
+                  if (descriptionFilter) count++;
+                  if (slaFilter && slaFilter !== 'all') count++;
+                  return count;
+                })()}
+              </span>
+            </div>
+          )}
+        </div>
+        <p 
+          className="text-sm"
+          style={{ color: 'var(--secondary-text)' }}
+        >
           Customize your analytics view
         </p>
+        
+        {hasActiveFilters && (
+          <button
+            onClick={handleClearAllFilters}
+            className="mt-2 px-3 py-1 rounded-md text-xs font-medium transition-all duration-200 hover:scale-105 border border-transparent"
+            style={{
+              color: 'var(--secondary-text)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = darkMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)';
+              e.currentTarget.style.borderColor = darkMode ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)';
+              e.currentTarget.style.color = darkMode ? 'rgb(248, 113, 113)' : 'rgb(220, 38, 38)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = 'transparent';
+              e.currentTarget.style.color = 'var(--secondary-text)';
+            }}
+          >
+            ⨯ Clear All Filters
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         {/* Date Range Filter */}
-        <div className="space-y-3">
-          <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+        <div className="space-y-2">
+          <label 
+            className="block text-sm font-medium"
+            style={{ color: 'var(--secondary-text)' }}
+          >
             📅 Date Range
           </label>
           <div className="space-y-2">
@@ -91,21 +160,30 @@ export default function AnalyticsFilters({
               type="date"
               value={dateRange.start}
               onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-              className={`block w-full rounded-lg text-sm transition-all duration-200 ${
-                darkMode ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'
-              } shadow-sm border px-3 py-2`}
+              className="block w-full rounded-md text-sm transition-all duration-200 shadow-sm border px-3 py-2"
+              style={{
+                backgroundColor: 'var(--input-background)',
+                borderColor: 'var(--input-border)',
+                color: 'var(--input-text)'
+              }}
               placeholder="Start date"
             />
-            <div className={`text-center text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            <div 
+              className="text-center text-xs"
+              style={{ color: 'var(--muted-text)' }}
+            >
               to
             </div>
             <input
               type="date"
               value={dateRange.end}
               onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-              className={`block w-full rounded-lg text-sm transition-all duration-200 ${
-                darkMode ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'
-              } shadow-sm border px-3 py-2`}
+              className="block w-full rounded-md text-sm transition-all duration-200 shadow-sm border px-3 py-2"
+              style={{
+                backgroundColor: 'var(--input-background)',
+                borderColor: 'var(--input-border)',
+                color: 'var(--input-text)'
+              }}
               placeholder="End date"
             />
           </div>
@@ -154,17 +232,24 @@ export default function AnalyticsFilters({
         )}
 
         {/* Client Search */}
-        <div className="space-y-3">
-          <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+        <div className="space-y-2">
+          <label 
+            className="block text-sm font-medium"
+            style={{ color: 'var(--secondary-text)' }}
+          >
             🔍 Client Search
           </label>
           
-          {/* Display selected client or show search input */}
           {selectedClientId ? (
             <div className="space-y-2">
-              <div className={`p-3 rounded-lg border ${
-                darkMode ? 'bg-blue-600 border-blue-500 text-white' : 'bg-blue-100 border-blue-300 text-blue-900'
-              }`}>
+              <div 
+                className="p-3 rounded-md border"
+                style={{
+                  backgroundColor: darkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+                  borderColor: darkMode ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)',
+                  color: darkMode ? 'rgb(147, 197, 253)' : 'rgb(29, 78, 216)'
+                }}
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{displayValue}</span>
                   <button
@@ -178,7 +263,16 @@ export default function AnalyticsFilters({
               </div>
               <button
                 onClick={() => setSelectedClientId(null)}
-                className={`text-xs ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-700'} transition-colors`}
+                className="text-xs transition-colors"
+                style={{ 
+                  color: 'var(--muted-text)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--secondary-text)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--muted-text)';
+                }}
               >
                 Change client selection
               </button>
@@ -194,67 +288,25 @@ export default function AnalyticsFilters({
         </div>
 
         {/* Description Filter */}
-        <div className="space-y-3">
-          <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+        <div className="space-y-2">
+          <label 
+            className="block text-sm font-medium"
+            style={{ color: 'var(--secondary-text)' }}
+          >
             📝 Task Description
           </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={descriptionFilter}
-              onChange={(e) => setDescriptionFilter(e.target.value)}
-              placeholder="Search by task description..."
-              className={`block w-full rounded-lg text-sm transition-all duration-200 ${
-                darkMode ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500'
-              } shadow-sm border px-3 py-2 pr-8`}
-            />
-            {descriptionFilter && (
-              <button
-                onClick={() => setDescriptionFilter('')}
-                className={`absolute right-2 top-1/2 transform -translate-y-1/2 text-xs ${
-                  darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
-                } transition-colors`}
-                title="Clear description filter"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Actions Bar */}
-      <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-          {hasActiveFilters ? (
-            <span className="flex items-center">
-              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
-              Filters applied
-            </span>
-          ) : (
-            'No filters applied'
-          )}
-        </div>
-        
-        <div className="flex gap-3">
-          {hasActiveFilters && (
-            <button
-              onClick={handleClearAllFilters}
-              className={`px-4 py-2 text-sm rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 ${
-                darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-              }`}
-            >
-              Clear All
-            </button>
-          )}
-          
-          <button
-            className={`px-4 py-2 text-sm rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 ${
-              darkMode ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
-            }`}
-          >
-            Apply Filters
-          </button>
+          <input
+            type="text"
+            value={descriptionFilter}
+            onChange={(e) => setDescriptionFilter(e.target.value)}
+            className="block w-full rounded-md text-sm transition-all duration-200 shadow-sm border px-3 py-2"
+            style={{
+              backgroundColor: 'var(--input-background)',
+              borderColor: 'var(--input-border)',
+              color: 'var(--input-text)'
+            }}
+            placeholder="Search task content..."
+          />
         </div>
       </div>
     </div>

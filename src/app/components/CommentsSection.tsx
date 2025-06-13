@@ -82,9 +82,13 @@ export default function CommentsSection({
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">💬 Comments</span>
           {comments.length > 0 && (
-            <span className={`px-2 py-1 text-xs rounded-full ${
-              darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'
-            }`}>
+            <span 
+              className="px-2 py-1 text-xs rounded-full"
+              style={{
+                backgroundColor: darkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)',
+                color: darkMode ? '#93c5fd' : '#1e40af'
+              }}
+            >
               {comments.length}
             </span>
           )}

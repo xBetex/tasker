@@ -21,6 +21,7 @@ import VirtualizedClientGrid from './components/VirtualizedClientGrid';
 import { useContainerHeight } from './hooks/useContainerHeight';
 
 
+
 export default function Home() {
   // Use contexts
   const { darkMode } = useDarkMode();
@@ -464,27 +465,68 @@ export default function Home() {
                     });
                     setExpandedCards(allExpanded);
                   }}
-                  className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+                  className="px-3 sm:px-4 py-2 rounded-lg text-sm transition-all duration-200 hover:scale-105 border"
+                  style={{
+                    backgroundColor: 'var(--card-background)',
+                    borderColor: 'var(--card-border)',
+                    color: 'var(--secondary-text)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                    e.currentTarget.style.color = 'var(--primary-text)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--card-background)';
+                    e.currentTarget.style.color = 'var(--secondary-text)';
+                  }}
                 >
-                  <span className="hidden sm:inline">Open All Cards</span>
-                  <span className="sm:hidden">Open All</span>
+                  <span className="hidden sm:inline">📂 Open All Cards</span>
+                  <span className="sm:hidden">📂 Open All</span>
                 </button>
                 <button
                   onClick={() => setExpandedCards({})}
-                  className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+                  className="px-3 sm:px-4 py-2 rounded-lg text-sm transition-all duration-200 hover:scale-105 border"
+                  style={{
+                    backgroundColor: 'var(--card-background)',
+                    borderColor: 'var(--card-border)',
+                    color: 'var(--secondary-text)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                    e.currentTarget.style.color = 'var(--primary-text)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--card-background)';
+                    e.currentTarget.style.color = 'var(--secondary-text)';
+                  }}
                 >
-                  <span className="hidden sm:inline">Collapse All</span>
-                  <span className="sm:hidden">Close All</span>
+                  <span className="hidden sm:inline">📁 Collapse All</span>
+                  <span className="sm:hidden">📁 Close All</span>
                 </button>
               </>
             )}
             {(dateRangeFilter.start || dateRangeFilter.end) && (
               <button
                 onClick={clearDateFilter}
-                className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+                className="px-3 sm:px-4 py-2 rounded-lg text-sm transition-all duration-200 hover:scale-105 border"
+                style={{
+                  backgroundColor: 'var(--card-background)',
+                  borderColor: 'var(--card-border)',
+                  color: 'var(--secondary-text)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = darkMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)';
+                  e.currentTarget.style.borderColor = darkMode ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)';
+                  e.currentTarget.style.color = darkMode ? 'rgb(248, 113, 113)' : 'rgb(220, 38, 38)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--card-background)';
+                  e.currentTarget.style.borderColor = 'var(--card-border)';
+                  e.currentTarget.style.color = 'var(--secondary-text)';
+                }}
               >
-                <span className="hidden sm:inline">Clear Date Filter</span>
-                <span className="sm:hidden">Clear Date</span>
+                <span className="hidden sm:inline">🗑️ Clear Date Filter</span>
+                <span className="sm:hidden">🗑️ Clear Date</span>
               </button>
             )}
           </div>
@@ -561,7 +603,19 @@ export default function Home() {
         </div>
 
         {/* Statistics Section */}
-        <div className={`mb-8 p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white shadow'}`}>
+        <div 
+          className="mb-8 p-4 sm:p-6 rounded-lg shadow-lg border transition-all duration-300 hover:shadow-xl"
+          style={{
+            backgroundColor: 'var(--card-background)',
+            borderColor: 'var(--card-border)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--card-background)';
+          }}
+        >
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <button 
               onClick={() => {
@@ -570,10 +624,33 @@ export default function Home() {
                 setTaskFilter('');
                 clearDateFilter();
               }}
-              className={`p-4 rounded-lg text-left transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-blue-100 hover:bg-blue-200'}`}
+              className="p-4 rounded-lg text-left transition-all duration-200 hover:scale-105 border"
+              style={{
+                backgroundColor: 'var(--card-background)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--primary-text)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = darkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)';
+                e.currentTarget.style.borderColor = darkMode ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--card-background)';
+                e.currentTarget.style.borderColor = 'var(--card-border)';
+              }}
             >
-              <h3 className="font-semibold">Total Tasks</h3>
-              <p className="text-2xl">{totalTasks}</p>
+              <h3 
+                className="font-semibold mb-2"
+                style={{ color: 'var(--secondary-text)' }}
+              >
+                📋 Total Tasks
+              </h3>
+              <p 
+                className="text-2xl font-bold"
+                style={{ color: 'var(--primary-text)' }}
+              >
+                {totalTasks}
+              </p>
             </button>
             <button 
               onClick={() => {
@@ -581,10 +658,33 @@ export default function Home() {
                 setPriorityFilter('all');
                 setTaskFilter('');
               }}
-              className={`p-4 rounded-lg text-left transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-orange-100 hover:bg-orange-200'}`}
+              className="p-4 rounded-lg text-left transition-all duration-200 hover:scale-105 border"
+              style={{
+                backgroundColor: 'var(--card-background)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--primary-text)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = darkMode ? 'rgba(251, 146, 60, 0.1)' : 'rgba(251, 146, 60, 0.05)';
+                e.currentTarget.style.borderColor = darkMode ? 'rgba(251, 146, 60, 0.3)' : 'rgba(251, 146, 60, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--card-background)';
+                e.currentTarget.style.borderColor = 'var(--card-border)';
+              }}
             >
-              <h3 className="font-semibold">Active Tasks</h3>
-              <p className="text-2xl">{inProgressTasks + pendingTasks}</p>
+              <h3 
+                className="font-semibold mb-2"
+                style={{ color: 'var(--secondary-text)' }}
+              >
+                🔄 Active Tasks
+              </h3>
+              <p 
+                className="text-2xl font-bold"
+                style={{ color: 'var(--primary-text)' }}
+              >
+                {inProgressTasks + pendingTasks}
+              </p>
             </button>
             <button 
               onClick={() => {
@@ -592,10 +692,33 @@ export default function Home() {
                 setPriorityFilter('all');
                 setTaskFilter('');
               }}
-              className={`p-4 rounded-lg text-left transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-yellow-100 hover:bg-yellow-200'}`}
+              className="p-4 rounded-lg text-left transition-all duration-200 hover:scale-105 border"
+              style={{
+                backgroundColor: 'var(--card-background)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--primary-text)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = darkMode ? 'rgba(250, 204, 21, 0.1)' : 'rgba(250, 204, 21, 0.05)';
+                e.currentTarget.style.borderColor = darkMode ? 'rgba(250, 204, 21, 0.3)' : 'rgba(250, 204, 21, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--card-background)';
+                e.currentTarget.style.borderColor = 'var(--card-border)';
+              }}
             >
-              <h3 className="font-semibold">In Progress</h3>
-              <p className="text-2xl">{inProgressTasks}</p>
+              <h3 
+                className="font-semibold mb-2"
+                style={{ color: 'var(--secondary-text)' }}
+              >
+                🟡 In Progress
+              </h3>
+              <p 
+                className="text-2xl font-bold"
+                style={{ color: 'var(--primary-text)' }}
+              >
+                {inProgressTasks}
+              </p>
             </button>
             <button 
               onClick={() => {
@@ -603,10 +726,33 @@ export default function Home() {
                 setPriorityFilter('all');
                 setTaskFilter('');
               }}
-              className={`p-4 rounded-lg text-left transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-green-100 hover:bg-green-200'}`}
+              className="p-4 rounded-lg text-left transition-all duration-200 hover:scale-105 border"
+              style={{
+                backgroundColor: 'var(--card-background)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--primary-text)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = darkMode ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.05)';
+                e.currentTarget.style.borderColor = darkMode ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--card-background)';
+                e.currentTarget.style.borderColor = 'var(--card-border)';
+              }}
             >
-              <h3 className="font-semibold">Completed</h3>
-              <p className="text-2xl">{completedTasks}</p>
+              <h3 
+                className="font-semibold mb-2"
+                style={{ color: 'var(--secondary-text)' }}
+              >
+                ✅ Completed
+              </h3>
+              <p 
+                className="text-2xl font-bold"
+                style={{ color: 'var(--primary-text)' }}
+              >
+                {completedTasks}
+              </p>
             </button>
           </div>
         </div>

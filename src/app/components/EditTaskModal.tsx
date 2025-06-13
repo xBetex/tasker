@@ -62,8 +62,19 @@ export default function EditTaskModal({ isOpen, onClose, task, onUpdate, darkMod
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white'} rounded-lg p-6 max-w-md w-full`}>
-        <h2 className="text-2xl font-bold mb-4">Edit Task</h2>
+      <div 
+        className="rounded-lg p-6 max-w-md w-full"
+        style={{
+          backgroundColor: 'var(--card-background)',
+          color: 'var(--primary-text)'
+        }}
+      >
+        <h2 
+          className="text-2xl font-bold mb-4"
+          style={{ color: 'var(--primary-text)' }}
+        >
+          Edit Task
+        </h2>
         
         {error && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
@@ -74,33 +85,63 @@ export default function EditTaskModal({ isOpen, onClose, task, onUpdate, darkMod
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label className="block mb-1">Date</label>
+              <label 
+                className="block mb-1"
+                style={{ color: 'var(--primary-text)' }}
+              >
+                Date
+              </label>
               <input
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} text-inherit`}
+                className="w-full p-2 border rounded"
+                style={{
+                  backgroundColor: 'var(--input-background)',
+                  borderColor: 'var(--input-border)',
+                  color: 'var(--input-text)'
+                }}
                 required
               />
             </div>
 
             <div>
-              <label className="block mb-1">Description</label>
+              <label 
+                className="block mb-1"
+                style={{ color: 'var(--primary-text)' }}
+              >
+                Description
+              </label>
               <input
                 type="text"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} text-inherit`}
+                className="w-full p-2 border rounded"
+                style={{
+                  backgroundColor: 'var(--input-background)',
+                  borderColor: 'var(--input-border)',
+                  color: 'var(--input-text)'
+                }}
                 required
               />
             </div>
 
             <div>
-              <label className="block mb-1">Status</label>
+              <label 
+                className="block mb-1"
+                style={{ color: 'var(--primary-text)' }}
+              >
+                Status
+              </label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as TaskStatus }))}
-                className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} text-inherit`}
+                className="w-full p-2 border rounded"
+                style={{
+                  backgroundColor: 'var(--input-background)',
+                  borderColor: 'var(--input-border)',
+                  color: 'var(--input-text)'
+                }}
               >
                 <option value="pending">Pending</option>
                 <option value="in progress">In Progress</option>
@@ -110,11 +151,21 @@ export default function EditTaskModal({ isOpen, onClose, task, onUpdate, darkMod
             </div>
 
             <div>
-              <label className="block mb-1">Priority</label>
+              <label 
+                className="block mb-1"
+                style={{ color: 'var(--primary-text)' }}
+              >
+                Priority
+              </label>
               <select
                 value={formData.priority}
                 onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as TaskPriority }))}
-                className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} text-inherit`}
+                className="w-full p-2 border rounded"
+                style={{
+                  backgroundColor: 'var(--input-background)',
+                  borderColor: 'var(--input-border)',
+                  color: 'var(--input-text)'
+                }}
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -123,25 +174,48 @@ export default function EditTaskModal({ isOpen, onClose, task, onUpdate, darkMod
             </div>
 
             <div>
-              <label className="block mb-1">SLA Date (Due Date)</label>
+              <label 
+                className="block mb-1"
+                style={{ color: 'var(--primary-text)' }}
+              >
+                SLA Date (Due Date)
+              </label>
               <input
                 type="date"
                 value={formData.sla_date}
                 onChange={(e) => setFormData(prev => ({ ...prev, sla_date: e.target.value }))}
-                className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} text-inherit`}
+                className="w-full p-2 border rounded"
+                style={{
+                  backgroundColor: 'var(--input-background)',
+                  borderColor: 'var(--input-border)',
+                  color: 'var(--input-text)'
+                }}
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p 
+                className="mt-1 text-xs"
+                style={{ color: 'var(--muted-text)' }}
+              >
                 Default: 24 hours from task creation (can be modified)
               </p>
             </div>
 
             <div>
-              <label className="block mb-1">Completion Date</label>
+              <label 
+                className="block mb-1"
+                style={{ color: 'var(--primary-text)' }}
+              >
+                Completion Date
+              </label>
               <input
                 type="date"
                 value={formData.completion_date}
                 onChange={(e) => setFormData(prev => ({ ...prev, completion_date: e.target.value }))}
-                className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} text-inherit`}
+                className="w-full p-2 border rounded"
+                style={{
+                  backgroundColor: 'var(--input-background)',
+                  borderColor: 'var(--input-border)',
+                  color: 'var(--input-text)'
+                }}
               />
             </div>
           </div>
@@ -150,22 +224,38 @@ export default function EditTaskModal({ isOpen, onClose, task, onUpdate, darkMod
             <button
               type="button"
               onClick={onClose}
-              className={`px-4 py-2 rounded ${
-                darkMode 
-                  ? 'bg-gray-600 hover:bg-gray-500' 
-                  : 'bg-gray-200 hover:bg-gray-300'
-              }`}
+              className="px-4 py-2 rounded transition-colors"
+              style={{
+                backgroundColor: 'var(--secondary-button)',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--secondary-button-hover)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--secondary-button)';
+              }}
               disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className={`px-4 py-2 rounded ${
-                darkMode 
-                  ? 'bg-blue-600 hover:bg-blue-700' 
-                  : 'bg-blue-500 hover:bg-blue-600'
-              } text-white`}
+              className="px-4 py-2 rounded transition-colors"
+              style={{
+                backgroundColor: 'var(--primary-button)',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => {
+                if (!isSubmitting) {
+                  e.currentTarget.style.backgroundColor = 'var(--primary-button-hover)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isSubmitting) {
+                  e.currentTarget.style.backgroundColor = 'var(--primary-button)';
+                }
+              }}
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Saving...' : 'Save Changes'}

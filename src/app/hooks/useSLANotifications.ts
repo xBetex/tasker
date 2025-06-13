@@ -6,7 +6,9 @@ export interface SLANotification {
   type: 'overdue' | 'due_today' | 'due_soon';
   message: string;
   taskId: number;
+  clientId: string;
   clientName: string;
+  clientCompany: string;
   taskDescription: string;
   slaDate: string;
   daysUntilDue: number;
@@ -49,7 +51,9 @@ export const useSLANotifications = (clients: Client[]) => {
             type,
             message,
             taskId: task.id,
+            clientId: client.id,
             clientName: client.name,
+            clientCompany: client.company,
             taskDescription: task.description,
             slaDate: task.sla_date,
             daysUntilDue: diffDays

@@ -8,6 +8,8 @@ import AddTaskForm from './client/AddTaskForm';
 import ClientTaskTabs, { ClientTabType } from './client/ClientTaskTabs';
 import { useClientCard } from '../hooks/client/useClientCard';
 import { api } from '@/services/api';
+import { useToast } from '../hooks/useToast';
+import { CopyIcon } from './Icons';
 
 interface ClientCardProps {
   client: Client;
@@ -31,6 +33,7 @@ export default function ClientCard({
   
   // Estado para as tabs das tarefas
   const [activeTab, setActiveTab] = useState<ClientTabType>('active');
+  const toast = useToast();
   
   const {
     // Estados
@@ -159,6 +162,14 @@ export default function ClientCard({
     }
   };
 
+  const formatTaskForSharing = (task: Task, client: Client): string => {
+    const comments = task.comments && task.comments.length > 0 
+      ? task.comments.map(comment => `• ${comment.text}`).join('\n')
+      : 'Sem comentários';
+    
+    return `${client.name} - ${client.company} - ID: ${client.id} - ${client.origin} - ${task.description}\n\nComentários:\n${comments}`;
+  };
+
 
 
   // Filtra tarefas por tab
@@ -269,11 +280,17 @@ export default function ClientCard({
                 <div className="flex justify-center">
                   <button
                     onClick={() => setIsAddingTask(true)}
-                    className={`inline-flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 ${
-                      darkMode
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                        : 'bg-blue-500 hover:bg-blue-600 text-white'
-                    }`}
+                    className="inline-flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-110"
+                    style={{
+                      backgroundColor: 'var(--primary-button)',
+                      color: 'white'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--primary-button-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--primary-button)';
+                    }}
                     title="Add new task"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -295,7 +312,10 @@ export default function ClientCard({
 
           {/* Mensagem quando não há tarefas */}
           {displayTasks.length === 0 && (
-            <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            <div 
+              className="text-center py-8"
+              style={{ color: 'var(--muted-text)' }}
+            >
               {activeTab === 'active' ? (
                 <div>
                   <p className="mb-2">📝 Nenhuma tarefa ativa</p>
@@ -313,21 +333,22 @@ export default function ClientCard({
       )}
 
       {/* Context Menu */}
-              {contextMenu.visible && (
+      {contextMenu.visible && (
         <div
           ref={contextMenuRef}
-          className={`fixed w-52 rounded-lg shadow-lg border py-2 context-menu-enter ${
-            darkMode
-              ? 'bg-gray-800 border-gray-700'
-              : 'bg-white border-gray-200'
-          }`}
+          className="fixed w-52 rounded-lg shadow-lg border py-2 context-menu-enter"
           style={{
+            backgroundColor: 'var(--card-background)',
+            borderColor: 'var(--card-border)',
             left: contextMenu.x,
             top: contextMenu.y,
             zIndex: 9999, // Force high z-index
           }}
         >
-          <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          <div 
+            className="px-3 py-2 text-xs font-medium uppercase tracking-wide"
+            style={{ color: 'var(--muted-text)' }}
+          >
             Status
           </div>
           
@@ -335,13 +356,23 @@ export default function ClientCard({
             <button
               key={status}
               onClick={() => handleStatusChange(status)}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center ${
-                contextMenu.task?.status === status
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100'
-                  : darkMode
-                  ? 'text-gray-200'
-                  : 'text-gray-700'
+              className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center ${
+                contextMenu.task?.status === status ? 'font-semibold' : ''
               }`}
+              style={{
+                color: 'var(--primary-text)',
+                backgroundColor: contextMenu.task?.status === status 
+                  ? darkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
+                  : 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = contextMenu.task?.status === status 
+                  ? darkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
+                  : 'transparent';
+              }}
             >
               <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
                 status === 'completed' ? 'bg-green-500' :
@@ -352,18 +383,61 @@ export default function ClientCard({
             </button>
           ))}
 
-          <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+          <div 
+            className="border-t my-2"
+            style={{ borderColor: 'var(--card-border)' }}
+          />
+
+          <button
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (contextMenu.task) {
+                const taskText = formatTaskForSharing(contextMenu.task, client);
+                try {
+                  await navigator.clipboard.writeText(taskText);
+                  toast.success('Task Details Copied!', 'Task details copied to clipboard for sharing');
+                  setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
+                } catch (error) {
+                  toast.error('Copy Failed', 'Failed to copy task details');
+                }
+              }
+            }}
+            className="w-full text-left px-3 py-2 text-sm transition-colors flex items-center"
+            style={{ color: 'var(--primary-text)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            <CopyIcon size={16} className="mr-2" />
+            Copy Task Details
+          </button>
 
           <button
             onClick={handleEditTask}
-            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
+            className="w-full text-left px-3 py-2 text-sm transition-colors"
+            style={{ color: 'var(--primary-text)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
             ✏️ Edit Task
           </button>
           
           <button
             onClick={() => contextMenu.task && handleDeleteTask(contextMenu.task.id)}
-            className="w-full text-left px-3 py-2 text-sm hover:bg-red-100 dark:hover:bg-red-900 transition-colors text-red-600 dark:text-red-400"
+            className="w-full text-left px-3 py-2 text-sm transition-colors text-red-600"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
             🗑️ Delete Task
           </button>
@@ -384,27 +458,61 @@ export default function ClientCard({
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`rounded-lg p-6 max-w-md w-full mx-4 ${
-            darkMode ? 'bg-gray-800' : 'bg-white'
-          }`}>
-            <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">
+          <div 
+            className="rounded-lg p-6 max-w-md w-full mx-4"
+            style={{
+              backgroundColor: 'var(--card-background)',
+              borderColor: 'var(--card-border)'
+            }}
+          >
+            <h3 
+              className="text-lg font-bold mb-4"
+              style={{ color: 'var(--primary-text)' }}
+            >
               Confirm Deletion
             </h3>
-            <p className="mb-6 text-gray-600 dark:text-gray-300">
+            <p 
+              className="mb-6"
+              style={{ color: 'var(--secondary-text)' }}
+            >
               Are you sure you want to delete client "{client.name}"? This action cannot be undone.
             </p>
             <div className="flex space-x-4">
               <button
                 onClick={handleDeleteClient}
                 disabled={isLoading}
-                className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                className="flex-1 py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                style={{
+                  backgroundColor: 'var(--danger-button)',
+                  color: 'white'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isLoading) {
+                    e.currentTarget.style.backgroundColor = 'var(--danger-button-hover)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isLoading) {
+                    e.currentTarget.style.backgroundColor = 'var(--danger-button)';
+                  }
+                }}
               >
                 {isLoading ? 'Deleting...' : 'Delete'}
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={isLoading}
-                className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
+                className="flex-1 py-2 px-4 rounded-lg transition-colors"
+                style={{
+                  backgroundColor: 'var(--secondary-button)',
+                  color: 'white'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--secondary-button-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--secondary-button)';
+                }}
               >
                 Cancel
               </button>

@@ -5,7 +5,8 @@
 @tailwind utilities;
 
 :root {
-  /* Theme variables will be set by ThemeContext */
+  /* Theme variables will be dynamically set by ThemeContext */
+  /* Default light mode fallbacks */
   --page-background: #f8f9fa;
   --card-background: #ffffff;
   --card-background-hover: #f8f9fa;
@@ -14,14 +15,14 @@
   --muted-text: #adb5bd;
   --card-border: #dee2e6;
   --input-border: #ced4da;
+  --input-text: #212529;
+  --input-background: #ffffff;
   --primary-button: #0d6efd;
   --primary-button-hover: #0b5ed7;
-  --secondary-button: #6c757d;
-  --secondary-button-hover: #5c636a;
-  --danger-button: #dc3545;
-  --danger-button-hover: #bb2d3b;
-  --input-background: #ffffff;
-  --input-text: #212529;
+  --secondary-button: #6b7280;
+  --secondary-button-hover: #4b5563;
+  --danger-button: #dc2626;
+  --danger-button-hover: #b91c1c;
   --pending-color: #ffc107;
   --in-progress-color: #0dcaf0;
   --completed-color: #198754;
@@ -29,11 +30,18 @@
   --low-priority-bg: #d1ecf1;
   --medium-priority-bg: #fff3cd;
   --high-priority-bg: #f8d7da;
+  --success-button: #059669;
+  --success-button-hover: #047857;
+  --tag-background: #e5e7eb;
+  --tag-border: #d1d5db;
+  --tag-text: #374151;
 
   /* Legacy support */
   --background: var(--page-background);
   --foreground: var(--primary-text);
 }
+
+/* Dark mode will be handled by ThemeContext setting CSS variables dynamically */
 
 @theme inline {
   --color-background: var(--page-background);
@@ -49,29 +57,122 @@ body {
   transition: all 0.3s ease;
 }
 
-/* Card improvements */
-.card-base {
+/* Universal component styles */
+.card-base,
+.filter-bar,
+.modal-base,
+.sidebar-base,
+.dropdown-base,
+.button-base,
+.input-base {
   background: var(--card-background);
   border-color: var(--card-border);
+  color: var(--primary-text);
   transition: all 0.3s ease;
 }
 
-.card-base:hover {
+.card-base:hover,
+.filter-bar:hover,
+.modal-base:hover,
+.dropdown-base:hover {
   background: var(--card-background-hover);
   transform: translateY(-1px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Input styling consistency */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="date"],
+input[type="number"],
+select,
+textarea {
+  background: var(--input-background) !important;
+  border-color: var(--input-border) !important;
+  color: var(--input-text) !important;
+  transition: all 0.2s ease !important;
+}
+
+input[type="text"]:focus,
+input[type="search"]:focus,
+input[type="email"]:focus,
+input[type="date"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary-button) !important;
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.1) !important;
+  outline: none !important;
+}
+
+/* Button consistency */
+button,
+.btn {
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background-color: var(--primary-button);
+  border-color: var(--primary-button);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-button-hover);
+  border-color: var(--primary-button-hover);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: var(--secondary-button);
+  border-color: var(--secondary-button);
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: var(--secondary-button-hover);
+  border-color: var(--secondary-button-hover);
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background-color: var(--danger-button);
+  border-color: var(--danger-button);
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: var(--danger-button-hover);
+  border-color: var(--danger-button-hover);
+  transform: translateY(-1px);
+}
+
+/* Modal and overlay consistency */
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.modal-content {
+  background: var(--card-background);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
 }
 
 /* Text color improvements */
 .text-primary {
-  color: var(--foreground);
+  color: var(--primary-text);
 }
 
 .text-secondary {
-  color: var(--muted);
+  color: var(--secondary-text);
 }
 
 .text-muted {
-  color: var(--muted-foreground);
+  color: var(--muted-text);
 }
 
 /* Better contrast for light mode */
@@ -148,16 +249,16 @@ body {
 
 /* Task status styles */
 .task.pending {
-  background-color: red;
+  background-color: var(--pending-color);
 }
 .task.in-progress {
-  background-color: yellow;
+  background-color: var(--in-progress-color);
 }
 .task.awaiting-client {
-  background-color: blue;
+  background-color: var(--awaiting-client-color);
 }
 .task.completed {
-  background-color: green;
+  background-color: var(--completed-color);
 }
 
 /* Custom scrollbar styles */
@@ -197,6 +298,36 @@ body {
 
 .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background-color: #525252;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge-completed {
+  background-color: var(--status-completed-bg);
+  color: var(--status-completed-color);
+}
+
+.status-badge-in-progress {
+  background-color: var(--status-in-progress-bg);
+  color: var(--status-in-progress-color);
+}
+
+.status-badge-pending {
+  background-color: var(--status-pending-bg);
+  color: var(--status-pending-color);
+}
+
+.status-badge-awaiting-client {
+  background-color: var(--status-awaiting-client-bg);
+  color: var(--status-awaiting-client-color);
 }
 
 /* Smooth animations for notification items */

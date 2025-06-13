@@ -21,15 +21,17 @@ export default function KpiGroup({
     <div className={`${className} space-y-4`}>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className={`text-xl font-semibold ${
-            darkMode ? 'text-white' : 'text-gray-900'
-          }`}>
+          <h2 
+            className="text-xl font-semibold"
+            style={{ color: 'var(--primary-text)' }}
+          >
             {title}
           </h2>
           {description && (
-            <p className={`text-sm mt-1 ${
-              darkMode ? 'text-gray-400' : 'text-gray-600'
-            }`}>
+            <p 
+              className="text-sm mt-1"
+              style={{ color: 'var(--secondary-text)' }}
+            >
               {description}
             </p>
           )}

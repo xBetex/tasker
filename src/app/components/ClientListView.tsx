@@ -94,9 +94,16 @@ export default function ClientListView({
   }) => (
     <button
       onClick={() => handleSort(column)}
-      className={`flex items-center gap-1 text-left font-medium text-sm ${
-        darkMode ? 'text-gray-200 hover:text-white' : 'text-gray-700 hover:text-gray-900'
-      } transition-colors`}
+      className="flex items-center gap-1 text-left font-medium text-sm transition-colors"
+      style={{ 
+        color: 'var(--secondary-text)'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.color = 'var(--primary-text)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.color = 'var(--secondary-text)';
+      }}
     >
       {children}
       <span className="text-xs">
@@ -106,13 +113,21 @@ export default function ClientListView({
   );
 
   return (
-    <div className={`rounded-lg shadow-sm border ${
-      darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-    }`}>
+    <div 
+      className="card-base rounded-lg shadow-sm border"
+      style={{
+        backgroundColor: 'var(--card-background)',
+        borderColor: 'var(--card-border)'
+      }}
+    >
       {/* Header */}
-      <div className={`px-4 py-3 border-b ${
-        darkMode ? 'border-gray-700 bg-gray-750' : 'border-gray-200 bg-gray-50'
-      }`}>
+      <div 
+        className="px-4 py-3 border-b"
+        style={{
+          borderColor: 'var(--card-border)',
+          backgroundColor: 'var(--background-secondary)'
+        }}
+      >
         <div className="grid grid-cols-12 gap-4 items-center">
           <div className="col-span-3">
             <SortHeader column="name">Client</SortHeader>
@@ -127,9 +142,10 @@ export default function ClientListView({
             <SortHeader column="progress">Progress</SortHeader>
           </div>
           <div className="col-span-1 text-center">
-            <span className={`text-sm font-medium ${
-              darkMode ? 'text-gray-200' : 'text-gray-700'
-            }`}>
+            <span 
+              className="text-sm font-medium"
+              style={{ color: 'var(--secondary-text)' }}
+            >
               Urgent
             </span>
           </div>
@@ -138,7 +154,7 @@ export default function ClientListView({
       </div>
 
       {/* Body */}
-      <div className="divide-y divide-gray-200 dark:divide-gray-700">
+      <div style={{ borderColor: 'var(--card-border)' }} className="divide-y">
         {sortedClients.map((client) => {
           const stats = getTaskStats(client);
           const urgentCount = getUrgentTasks(client);
@@ -146,51 +162,70 @@ export default function ClientListView({
           return (
             <div
               key={client.id}
-              className={`px-4 py-3 transition-colors cursor-pointer ${
-                darkMode 
-                  ? 'hover:bg-gray-700 text-gray-100' 
-                  : 'hover:bg-gray-50 text-gray-900'
-              }`}
+              className="px-4 py-3 transition-colors cursor-pointer"
+              style={{ color: 'var(--primary-text)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
               onClick={() => onClientClick(client)}
             >
               <div className="grid grid-cols-12 gap-4 items-center">
                 {/* Client Name */}
                 <div className="col-span-3">
-                  <div className="font-medium text-sm">{client.name}</div>
-                  <div className={`text-xs ${
-                    darkMode ? 'text-gray-400' : 'text-gray-500'
-                  }`}>
+                  <div 
+                    className="font-medium text-sm"
+                    style={{ color: 'var(--primary-text)' }}
+                  >
+                    {client.name}
+                  </div>
+                  <div 
+                    className="text-xs"
+                    style={{ color: 'var(--muted-text)' }}
+                  >
                     {client.origin} • ID: {client.id}
                   </div>
                 </div>
 
                 {/* Company */}
                 <div className="col-span-3">
-                  <div className="text-sm font-medium">{client.company}</div>
+                  <div 
+                    className="text-sm font-medium"
+                    style={{ color: 'var(--primary-text)' }}
+                  >
+                    {client.company}
+                  </div>
                 </div>
 
                 {/* Tasks Count */}
                 <div className="col-span-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{stats.total}</span>
+                    <span 
+                      className="text-sm font-medium"
+                      style={{ color: 'var(--primary-text)' }}
+                    >
+                      {stats.total}
+                    </span>
                     <div className="flex gap-1">
                       {stats.completed > 0 && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <span className="status-badge status-badge-completed">
                           {stats.completed}
                         </span>
                       )}
                       {stats.inProgress > 0 && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <span className="status-badge status-badge-in-progress">
                           {stats.inProgress}
                         </span>
                       )}
                       {stats.pending > 0 && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <span className="status-badge status-badge-pending">
                           {stats.pending}
                         </span>
                       )}
                       {stats.awaitingClient > 0 && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <span className="status-badge status-badge-awaiting-client">
                           {stats.awaitingClient}
                         </span>
                       )}
@@ -201,15 +236,22 @@ export default function ClientListView({
                 {/* Progress */}
                 <div className="col-span-2">
                   <div className="flex items-center gap-2">
-                    <div className={`flex-1 h-2 rounded-full ${
-                      darkMode ? 'bg-gray-700' : 'bg-gray-200'
-                    }`}>
+                    <div 
+                      className="flex-1 h-2 rounded-full"
+                      style={{ backgroundColor: 'var(--background-secondary)' }}
+                    >
                       <div
-                        className="h-2 rounded-full bg-green-500 transition-all duration-300"
-                        style={{ width: `${stats.progress}%` }}
+                        className="h-2 rounded-full transition-all duration-300"
+                        style={{ 
+                          width: `${stats.progress}%`,
+                          backgroundColor: 'var(--status-completed-color)'
+                        }}
                       ></div>
                     </div>
-                    <span className="text-sm font-medium min-w-[3rem] text-right">
+                    <span 
+                      className="text-sm font-medium min-w-[3rem] text-right"
+                      style={{ color: 'var(--primary-text)' }}
+                    >
                       {stats.progress}%
                     </span>
                   </div>
@@ -222,9 +264,10 @@ export default function ClientListView({
                       {urgentCount}
                     </span>
                   ) : (
-                    <span className={`text-xs ${
-                      darkMode ? 'text-gray-500' : 'text-gray-400'
-                    }`}>
+                    <span 
+                      className="text-xs"
+                      style={{ color: 'var(--muted-text)' }}
+                    >
                       -
                     </span>
                   )}
@@ -237,11 +280,16 @@ export default function ClientListView({
                       e.stopPropagation();
                       onClientClick(client);
                     }}
-                    className={`p-1 rounded-md transition-colors ${
-                      darkMode 
-                        ? 'hover:bg-gray-600 text-gray-400 hover:text-gray-200' 
-                        : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
-                    }`}
+                    className="p-1 rounded-md transition-colors"
+                    style={{ color: 'var(--muted-text)' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                      e.currentTarget.style.color = 'var(--secondary-text)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = 'var(--muted-text)';
+                    }}
                     title="Ver detalhes"
                   >
                     <ExternalLinkIcon size={14} />
@@ -254,9 +302,10 @@ export default function ClientListView({
       </div>
 
       {sortedClients.length === 0 && (
-        <div className={`text-center py-8 ${
-          darkMode ? 'text-gray-400' : 'text-gray-500'
-        }`}>
+        <div 
+          className="text-center py-8"
+          style={{ color: 'var(--muted-text)' }}
+        >
           <p>Nenhum cliente encontrado</p>
         </div>
       )}

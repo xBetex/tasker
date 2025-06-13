@@ -55,23 +55,40 @@ export default function VirtualizedClientGrid({
 
   // Responsive items per row with preference for 3 columns
   const [itemsPerRow, setItemsPerRow] = useState(3);
+  const [optimalHeight, setOptimalHeight] = useState(containerHeight);
 
   useEffect(() => {
     const updateLayout = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
         
-        // Responsive logic: 3 columns on desktop, 2 on tablet, 1 on mobile
+        // Force 3x3 grid layout as requested by user
         let calculatedItemsPerRow = 3;
         if (containerWidth < 640) {
           calculatedItemsPerRow = 1; // Mobile: 1 column
-        } else if (containerWidth < 1024) {
-          calculatedItemsPerRow = 2; // Tablet: 2 columns  
+        } else if (containerWidth < 900) {
+          calculatedItemsPerRow = 2; // Small tablet: 2 columns  
         } else {
-          calculatedItemsPerRow = 3; // Desktop: 3 columns
+          calculatedItemsPerRow = 3; // Desktop and larger: 3 columns (3x3 grid)
         }
         
         setItemsPerRow(calculatedItemsPerRow);
+
+        // Calculate optimal height to show at least 9 cards
+        const baseItemHeight = 280;
+        const minRowsForNineCards = Math.ceil(9 / calculatedItemsPerRow);
+        const minHeightForNineCards = minRowsForNineCards * baseItemHeight;
+        
+        // Calculate available viewport height - use almost all screen space
+        const viewportHeight = window.innerHeight;
+        const headerHeight = 200; // Reduced header space estimate
+        const footerMargin = 20; // Minimal bottom margin
+        const maxAvailableHeight = viewportHeight - headerHeight - footerMargin;
+        
+        // Use maximum available space or minimum for 9 cards, whichever is larger
+        const finalHeight = Math.max(maxAvailableHeight, minHeightForNineCards);
+        
+        setOptimalHeight(finalHeight);
       }
     };
 
@@ -80,8 +97,8 @@ export default function VirtualizedClientGrid({
     return () => window.removeEventListener('resize', updateLayout);
   }, []);
 
-  // Base height for virtualization - fixed height for clean organization
-  const baseItemHeight = 280;  // Compact height - always collapsed in Infinity Pool
+  // Base height for virtualization - optimized for 3x3 grid
+  const baseItemHeight = 280;  // Reduced from 320px to 280px for more compact layout
 
   useEffect(() => {
     setOrderedClients(clients);
@@ -98,7 +115,7 @@ export default function VirtualizedClientGrid({
     orderedClients, 
     {
       itemHeight: baseItemHeight, // Fixed height - no expansion
-      containerHeight,
+      containerHeight: optimalHeight, // Use optimal height for 9+ cards visibility
       overscan: 3,
       itemsPerRow,
     }
@@ -177,9 +194,10 @@ export default function VirtualizedClientGrid({
             className="overflow-auto infinity-pool-container"
             style={{
               ...containerProps.style,
-              padding: '16px',
+              padding: '8px',
               backgroundColor: 'transparent', // Prevent black background
-              minHeight: containerHeight, // Ensure minimum height
+              height: optimalHeight, // Use optimal height for better visibility
+              maxHeight: optimalHeight, // Ensure it doesn't exceed optimal height
             }}
           >
             <div 
@@ -192,10 +210,10 @@ export default function VirtualizedClientGrid({
             >
               {visibleItems.map(({ item: client, virtualItem }) => {
                 const columnWidth = 100 / itemsPerRow;
-                const gapSize = 24;
+                const gapSize = 8;
                 const leftPosition = virtualItem.column * columnWidth;
-                const topMargin = 16;
-                const bottomMargin = 16;
+                const topMargin = 4;
+                const bottomMargin = 4;
                 
                 // Fixed height for clean layout - no expansion
                 const cardHeight = baseItemHeight - topMargin - bottomMargin;
@@ -274,10 +292,13 @@ export default function VirtualizedClientGrid({
               <span className="px-2 py-1 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
                 📋 Details Mode
               </span>
+              <span className="px-2 py-1 rounded-full bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200">
+                📐 9+ Cards View
+              </span>
             </div>
           </div>
           <div className="text-xs mt-1 opacity-75">
-            Compact layout - click cards to view details • Only visible items rendered
+            Full-screen view • Compact cards layout • Click cards to view details • Only visible items rendered
           </div>
         </div>
       )}

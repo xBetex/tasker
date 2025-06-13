@@ -3,7 +3,7 @@ import { Client, Task, TaskStatus, TaskPriority, Comment } from '@/types/types';
 import DateDisplay from './DateDisplay';
 import { getSLAStatus, getSLAStatusColor, getSLAStatusBadge, getDaysUntilSLA } from '@/utils/slaUtils';
 import CommentsSection from './CommentsSection';
-import { MoreVerticalIcon, EditIcon, TrashIcon } from './Icons';
+import { MoreVerticalIcon, EditIcon, TrashIcon, CopyIcon } from './Icons';
 import EditTaskModal from './EditTaskModal';
 import AddTaskForm from './client/AddTaskForm';
 import { api } from '@/services/api';
@@ -103,10 +103,10 @@ export default function ClientDetailModal({
 
   const getPriorityColor = (priority: TaskPriority): string => {
     switch (priority) {
-      case 'high': return darkMode ? 'text-red-400' : 'text-red-600';
-      case 'medium': return darkMode ? 'text-yellow-400' : 'text-yellow-600';
-      case 'low': return darkMode ? 'text-green-400' : 'text-green-600';
-      default: return darkMode ? 'text-gray-400' : 'text-gray-500';
+      case 'high': return 'text-red-600';
+      case 'medium': return 'text-yellow-600';
+      case 'low': return 'text-green-600';
+      default: return 'text-gray-500';
     }
   };
 
@@ -192,6 +192,14 @@ export default function ClientDetailModal({
     }
   };
 
+  const formatTaskForSharing = (task: Task, client: Client): string => {
+    const comments = task.comments && task.comments.length > 0 
+      ? task.comments.map(comment => `• ${comment.text}`).join('\n')
+      : 'Sem comentários';
+    
+    return `${client.name} - ${client.company} - ID: ${client.id} - ${client.origin} - ${task.description}\n\nComentários:\n${comments}`;
+  };
+
   const handleNewTaskChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setNewTask(prev => ({ ...prev, [name]: value }));
@@ -250,320 +258,461 @@ export default function ClientDetailModal({
     });
   };
 
-
-
   const stats = getTaskStats();
 
   if (!isOpen) return null;
 
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-      onClick={(e) => {
-        // Close modal when clicking on backdrop (outside the modal content)
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div
-        ref={modalRef}
-        className={`w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-lg shadow-xl ${
-          darkMode ? 'bg-gray-950 text-gray-100' : 'bg-white text-gray-900'
-        }`}
-        onClick={(e) => {
-          // Prevent click propagation to avoid closing when clicking inside modal
-          e.stopPropagation();
-        }}
-      >
-        {/* Header */}
-        <div className={`sticky top-0 px-6 py-4 border-b ${
-          darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-white'
-        }`}>
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-2xl font-bold">{client.name}</h2>
-                            <div className={`text-sm flex items-center gap-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                <span>{client.company} • {client.origin} • ID: {client.id}</span>
-                <CopyButton 
-                  text={client.id}
-                  successMessage="ID Copied!"
-                  title="Copy ID to clipboard"
-                  size={14}
-                />
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" 
+        onClick={onClose}
+      />
+      
+      {/* Modal Content */}
+      <div className="relative z-50 flex items-center justify-center min-h-screen p-4">
+        <div 
+          className="relative w-full max-w-6xl max-h-[90vh] overflow-hidden text-left align-middle transition-all transform shadow-2xl rounded-2xl border"
+          style={{
+            backgroundColor: 'var(--card-background)',
+            borderColor: 'var(--card-border)',
+            color: 'var(--primary-text)'
+          }}
+          ref={modalRef}
+        >
+          {/* Scrollable Content */}
+          <div className="max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div 
+              className="px-6 py-4 border-b"
+              style={{ borderColor: 'var(--card-border)' }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="flex-shrink-0">
+                    <div 
+                      className="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold border"
+                      style={{
+                        backgroundColor: 'var(--card-background-hover)',
+                        borderColor: 'var(--card-border)',
+                        color: 'var(--primary-text)'
+                      }}
+                    >
+                      {client.name.charAt(0).toUpperCase()}
+                    </div>
+                  </div>
+                  <div>
+                    <h2 
+                      className="text-2xl font-bold"
+                      style={{ color: 'var(--primary-text)' }}
+                    >
+                      {client.name}
+                    </h2>
+                    <div className="flex items-center space-x-4 mt-1">
+                      <p 
+                        className="text-sm"
+                        style={{ color: 'var(--secondary-text)' }}
+                      >
+                        🏢 {client.company}
+                      </p>
+                      <p 
+                        className="text-sm"
+                        style={{ color: 'var(--secondary-text)' }}
+                      >
+                        📍 {client.origin}
+                      </p>
+                      <CopyButton 
+                        text={client.id} 
+                        title="Copy Client ID"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setShowAddTaskForm(!showAddTaskForm)}
+                    className="px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 border"
+                    style={{
+                      backgroundColor: 'var(--primary-button)',
+                      borderColor: 'var(--primary-button)',
+                      color: 'white'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--primary-button-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--primary-button)';
+                    }}
+                  >
+                    ➕ Add Task
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="p-2 rounded-lg transition-all duration-200 hover:scale-105 border"
+                    style={{
+                      backgroundColor: 'var(--card-background)',
+                      borderColor: 'var(--card-border)',
+                      color: 'var(--secondary-text)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                      e.currentTarget.style.color = 'var(--primary-text)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--card-background)';
+                      e.currentTarget.style.color = 'var(--secondary-text)';
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className={`p-2 rounded-md transition-colors ${
-                darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-              }`}
-              title="Fechar"
+
+            {/* Stats Section */}
+            <div 
+              className="px-6 py-4 border-b"
+              style={{ borderColor: 'var(--card-border)' }}
             >
-              ✕
-            </button>
-          </div>
-
-          {/* Stats */}
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className={`p-3 rounded-lg ${
-              darkMode ? 'bg-gray-900' : 'bg-gray-100'
-            }`}>
-              <div className="text-xs font-medium text-gray-500">Total</div>
-              <div className="text-xl font-bold">{stats.total}</div>
-            </div>
-            <div className={`p-3 rounded-lg ${
-              darkMode ? 'bg-gray-900' : 'bg-gray-100'
-            }`}>
-              <div className="text-xs font-medium text-gray-500">Concluídas</div>
-              <div className="text-xl font-bold text-green-600">{stats.completed}</div>
-            </div>
-            <div className={`p-3 rounded-lg ${
-              darkMode ? 'bg-gray-900' : 'bg-gray-100'
-            }`}>
-              <div className="text-xs font-medium text-gray-500">Em Progresso</div>
-              <div className="text-xl font-bold text-yellow-600">{stats.inProgress}</div>
-            </div>
-            <div className={`p-3 rounded-lg ${
-              darkMode ? 'bg-gray-900' : 'bg-gray-100'
-            }`}>
-              <div className="text-xs font-medium text-gray-500">Progresso</div>
-              <div className="text-xl font-bold text-blue-600">{stats.progress}%</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tasks */}
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">
-              Tasks ({client.tasks.length})
-            </h3>
-            {!showAddTaskForm && (
-              <button
-                onClick={() => setShowAddTaskForm(true)}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
-                  darkMode
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-blue-500 hover:bg-blue-600 text-white'
-                } hover:scale-110 shadow-md hover:shadow-lg`}
-                title="Add New Task"
-              >
-                +
-              </button>
-            )}
-          </div>
-
-          {showAddTaskForm && (
-            <div className="mb-4">
-              <AddTaskForm
-                newTask={newTask}
-                darkMode={darkMode}
-                onNewTaskChange={handleNewTaskChange}
-                onAddTask={handleAddTask}
-                onCancel={handleCancelAddTask}
-              />
-            </div>
-          )}
-
-          {client.tasks.length === 0 ? (
-            <div className={`text-center py-8 ${
-              darkMode ? 'text-gray-400' : 'text-gray-500'
-            }`}>
-              <p>Nenhuma task encontrada para este cliente</p>
-            </div>
-          ) : (
-            <div className="space-y-4" key={refreshKey}>
-              {client.tasks.map((task, index) => {
-                const slaStatus = getSLAStatus(task);
-                const daysUntilSLA = getDaysUntilSLA(task);
-                
-                return (
-                  <div
-                    key={task.id}
-                    className={`border rounded-lg p-4 ${
-                      darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-gray-50'
-                    }`}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div 
+                  className="text-center p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: 'var(--card-background-hover)',
+                    borderColor: 'var(--card-border)'
+                  }}
+                >
+                  <div 
+                    className="text-2xl font-bold"
+                    style={{ color: 'var(--primary-text)' }}
                   >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${getStatusColor(task.status)} text-white`}>
-                          {task.status}
-                        </span>
-                        <span className={`text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                          {task.priority.toUpperCase()}
-                        </span>
-                        <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          <DateDisplay date={task.date} />
-                        </span>
-                      </div>
-                      <button
-                        onClick={(e) => handleMoreVerticalClick(e, task, index)}
-                        className={`p-1.5 rounded-md transition-colors ${
-                          darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-                        }`}
-                        title="Opções da task"
-                      >
-                        <MoreVerticalIcon size={16} />
-                      </button>
-                    </div>
+                    {stats.total}
+                  </div>
+                  <div 
+                    className="text-xs"
+                    style={{ color: 'var(--secondary-text)' }}
+                  >
+                    Total Tasks
+                  </div>
+                </div>
+                <div 
+                  className="text-center p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: 'var(--card-background-hover)',
+                    borderColor: 'var(--card-border)'
+                  }}
+                >
+                  <div 
+                    className="text-2xl font-bold text-green-600"
+                  >
+                    {stats.completed}
+                  </div>
+                  <div 
+                    className="text-xs"
+                    style={{ color: 'var(--secondary-text)' }}
+                  >
+                    Completed
+                  </div>
+                </div>
+                <div 
+                  className="text-center p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: 'var(--card-background-hover)',
+                    borderColor: 'var(--card-border)'
+                  }}
+                >
+                  <div 
+                    className="text-2xl font-bold text-yellow-600"
+                  >
+                    {stats.inProgress}
+                  </div>
+                  <div 
+                    className="text-xs"
+                    style={{ color: 'var(--secondary-text)' }}
+                  >
+                    In Progress
+                  </div>
+                </div>
+                <div 
+                  className="text-center p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: 'var(--card-background-hover)',
+                    borderColor: 'var(--card-border)'
+                  }}
+                >
+                  <div 
+                    className="text-2xl font-bold"
+                    style={{ color: 'var(--primary-text)' }}
+                  >
+                    {stats.progress}%
+                  </div>
+                  <div 
+                    className="text-xs"
+                    style={{ color: 'var(--secondary-text)' }}
+                  >
+                    Complete
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                    <h4 className={`font-medium mb-2 ${
-                      darkMode ? 'text-white' : 'text-gray-900'
-                    }`}>
-                      {task.description}
-                    </h4>
+            {/* Add Task Form */}
+            {showAddTaskForm && (
+              <div 
+                className="px-6 py-4 border-b"
+                style={{ 
+                  backgroundColor: 'var(--card-background-hover)',
+                  borderColor: 'var(--card-border)' 
+                }}
+              >
+                <AddTaskForm
+                  newTask={newTask}
+                  darkMode={darkMode}
+                  onNewTaskChange={handleNewTaskChange}
+                  onAddTask={handleAddTask}
+                  onCancel={handleCancelAddTask}
+                />
+              </div>
+            )}
 
-                    {task.completion_date && (
-                      <div className="mb-2 flex items-center gap-1 text-green-600">
-                        <span className="text-sm">✅</span>
-                        <span className="text-xs font-medium">
-                          Completed: <DateDisplay date={task.completion_date} />
-                        </span>
-                      </div>
-                    )}
-
-                    {/* SLA Info */}
-                    {task.sla_date && task.status !== 'completed' && (
-                      <div className="mb-3 flex items-center gap-2">
-                        <span className="text-lg">{getSLAStatusBadge(slaStatus)}</span>
-                        <div className="text-sm">
-                          <span className={getSLAStatusColor(slaStatus, darkMode)}>
-                            SLA: <DateDisplay date={task.sla_date} />
-                          </span>
-                          {daysUntilSLA !== null && (
-                            <span className={`ml-2 ${getSLAStatusColor(slaStatus, darkMode)}`}>
-                              ({daysUntilSLA > 0 ? `${daysUntilSLA} days left` : 
-                                daysUntilSLA === 0 ? 'Due today' : 
-                                `${Math.abs(daysUntilSLA)} days overdue`})
+            {/* Tasks List */}
+            <div className="px-6 py-4 max-h-96 overflow-y-auto">
+              <h3 
+                className="text-lg font-semibold mb-4"
+                style={{ color: 'var(--primary-text)' }}
+              >
+                📋 Tasks ({client.tasks.length})
+              </h3>
+              
+              {client.tasks.length === 0 ? (
+                <div 
+                  className="text-center py-8 text-gray-500"
+                  style={{ color: 'var(--muted-text)' }}
+                >
+                  No tasks found for this client
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {client.tasks.map((task, index) => (
+                    <div
+                      key={task.id || index}
+                      className="p-4 rounded-lg border transition-all duration-200 hover:shadow-md"
+                      style={{
+                        backgroundColor: 'var(--card-background)',
+                        borderColor: 'var(--card-border)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--card-background)';
+                      }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-2">
+                            <span 
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(task.status)} text-white`}
+                            >
+                              {task.status}
                             </span>
+                            <span className={`text-sm font-medium ${getPriorityColor(task.priority)}`}>
+                              {task.priority.toUpperCase()}
+                            </span>
+                            <div className="flex items-center space-x-2">
+                              <span>{getSLAStatusBadge(getSLAStatus(task))}</span>
+                              <span 
+                                className="text-xs"
+                                style={{ color: 'var(--muted-text)' }}
+                              >
+                                <DateDisplay 
+                                  date={task.date} 
+                                  showTime={false}
+                                />
+                              </span>
+                            </div>
+                          </div>
+                          <p 
+                            className="text-sm mb-2"
+                            style={{ color: 'var(--primary-text)' }}
+                          >
+                            {task.description}
+                          </p>
+                          {task.sla_date && (
+                            <p 
+                              className="text-xs"
+                              style={{ color: 'var(--secondary-text)' }}
+                            >
+                              📅 SLA: <DateDisplay date={task.sla_date} showTime={false} />
+                              {getDaysUntilSLA(task) !== null && (
+                                <span className={`ml-2 ${getSLAStatusColor(getSLAStatus(task), darkMode)}`}>
+                                  ({getDaysUntilSLA(task)} days)
+                                </span>
+                              )}
+                            </p>
                           )}
                         </div>
+                        <div className="flex items-start space-x-2">
+                          <CopyButton 
+                            text={formatTaskForSharing(task, client)}
+                            successMessage="Task Copied!"
+                            title="Copy task details for sharing"
+                            size={16}
+                            className="opacity-70 hover:opacity-100"
+                          />
+                          <button
+                            onClick={(e) => handleMoreVerticalClick(e, task, index)}
+                            className="p-1 rounded transition-all duration-200 hover:scale-110"
+                            style={{
+                              color: 'var(--secondary-text)'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                              e.currentTarget.style.color = 'var(--primary-text)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                              e.currentTarget.style.color = 'var(--secondary-text)';
+                            }}
+                          >
+                            <MoreVerticalIcon size={16} />
+                          </button>
+                        </div>
                       </div>
-                    )}
 
-                    {/* Comments */}
-                    <CommentsSection
-                      comments={task.comments || []}
-                      onAddComment={async (commentText) => {
-                        try {
-                          await api.addComment(task.id, commentText);
+                      {/* Comments Section */}
+                      <CommentsSection
+                        comments={task.comments || []}
+                        onAddComment={(text: string) => {
+                          // Handle adding comment logic here
+                          console.log('Adding comment:', text, 'to task:', task.id);
                           onUpdate();
-                          // Force refresh to show new comment
                           setRefreshKey(prev => prev + 1);
-                        } catch (error) {
-                          console.error('Error adding comment:', error);
-                          toast.error('Failed to add comment', 'Please try again');
-                        }
-                      }}
-                      darkMode={darkMode}
-                      autoScrollToNewComment={true}
-                    />
-                  </div>
-                );
-              })}
+                        }}
+                        darkMode={darkMode}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Context Menu */}
+            {contextMenu.visible && contextMenu.task && (
+              <div
+                ref={contextMenuRef}
+                className="fixed z-50 rounded-lg shadow-2xl border py-2 min-w-52"
+                style={{
+                  backgroundColor: 'var(--card-background)',
+                  borderColor: 'var(--card-border)',
+                  left: `${contextMenu.x}px`,
+                  top: `${contextMenu.y}px`
+                }}
+              >
+                <div 
+                  className="px-4 py-2 text-sm font-medium border-b"
+                  style={{ 
+                    color: 'var(--secondary-text)',
+                    borderColor: 'var(--card-border)'
+                  }}
+                >
+                  Task Actions
+                </div>
+                
+                {/* Status Change Options */}
+                <div 
+                  className="px-4 py-2 text-xs font-medium"
+                  style={{ color: 'var(--muted-text)' }}
+                >
+                  Change Status
+                </div>
+                {(['pending', 'in progress', 'completed', 'awaiting client'] as TaskStatus[]).map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => handleStatusChange(status)}
+                    disabled={isLoading}
+                    className="w-full text-left px-4 py-2 text-sm transition-all duration-200 disabled:opacity-50"
+                    style={{ color: 'var(--primary-text)' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <span className={`inline-block w-3 h-3 rounded-full mr-2 ${getStatusColor(status)}`}></span>
+                    {status}
+                  </button>
+                ))}
+                
+                <hr className="my-2" style={{ borderColor: 'var(--card-border)' }} />
+                
+                {/* Copy Task Details */}
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const taskText = formatTaskForSharing(contextMenu.task!, client);
+                    try {
+                      await navigator.clipboard.writeText(taskText);
+                      toast.success('Task Details Copied!', 'Task details copied to clipboard for sharing');
+                      setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
+                    } catch (error) {
+                      toast.error('Copy Failed', 'Failed to copy task details');
+                    }
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm transition-all duration-200 flex items-center"
+                  style={{ color: 'var(--primary-text)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <CopyIcon size={16} className="mr-2" />
+                  Copy Task Details
+                </button>
+                
+                {/* Edit Task */}
+                <button
+                  onClick={handleEditTask}
+                  className="w-full text-left px-4 py-2 text-sm transition-all duration-200 flex items-center"
+                  style={{ color: 'var(--primary-text)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <EditIcon size={16} className="mr-2" />
+                  Edit Task
+                </button>
+                
+                {/* Delete Task */}
+                <button
+                  onClick={() => contextMenu.task && handleDeleteTask(contextMenu.task.id)}
+                  disabled={isLoading}
+                  className="w-full text-left px-4 py-2 text-sm transition-all duration-200 flex items-center disabled:opacity-50"
+                  style={{ color: '#ef4444' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = darkMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <TrashIcon size={16} className="mr-2" />
+                  Delete Task
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Context Menu */}
-      {contextMenu.visible && (
-        <div
-          ref={contextMenuRef}
-          className={`fixed py-1 rounded-md shadow-lg w-52 context-menu-enter ${
-            darkMode ? 'bg-gray-900' : 'bg-white'
-          } border ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}
-          style={{
-            top: `${contextMenu.y}px`,
-            left: `${contextMenu.x}px`,
-            maxHeight: 'calc(100vh - 20px)',
-            overflowY: 'auto',
-            zIndex: 9999, // Force high z-index
-          }}
-        >
-          <div className={`px-3 py-2 text-xs font-medium ${
-            darkMode ? 'text-gray-400' : 'text-gray-500'
-          }`}>
-            Task Actions
-          </div>
-          
-          <button
-            onClick={handleEditTask}
-            disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${
-              darkMode ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-900'
-            } disabled:opacity-50 transition-colors`}
-          >
-            <EditIcon size={16} className="mr-3" />
-            Edit Task
-          </button>
-          
-          <button
-            onClick={() => contextMenu.task && handleDeleteTask(contextMenu.task.id)}
-            disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${
-              darkMode ? 'hover:bg-gray-600 text-red-400' : 'hover:bg-gray-100 text-red-600'
-            } disabled:opacity-50 transition-colors`}
-          >
-            <TrashIcon size={16} className="mr-3" />
-            Delete Task
-          </button>
-
-          <div className={`border-t my-1 ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}></div>
-
-          <div className={`px-3 py-2 text-xs font-medium ${
-            darkMode ? 'text-gray-400' : 'text-gray-500'
-          }`}>
-            Change Status
-          </div>
-          
-          <button
-            onClick={() => handleStatusChange('pending')}
-            disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${
-              darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'
-            } ${contextMenu.task?.status === 'pending' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
-          >
-            <span className="inline-block w-2 h-2 rounded-full bg-gray-500 mr-3"></span>
-            Pending
-          </button>
-          
-          <button
-            onClick={() => handleStatusChange('in progress')}
-            disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${
-              darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'
-            } ${contextMenu.task?.status === 'in progress' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
-          >
-            <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 mr-3"></span>
-            In Progress
-          </button>
-          
-          <button
-            onClick={() => handleStatusChange('completed')}
-            disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${
-              darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'
-            } ${contextMenu.task?.status === 'completed' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
-          >
-            <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-3"></span>
-            Completed
-          </button>
-          
-          <button
-            onClick={() => handleStatusChange('awaiting client')}
-            disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm ${
-              darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'
-            } ${contextMenu.task?.status === 'awaiting client' ? (darkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} disabled:opacity-50 transition-colors`}
-          >
-            <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-3"></span>
-            Awaiting Client
-          </button>
-        </div>
-      )}
-
+      {/* Edit Task Modal */}
       {editingTask && (
         <EditTaskModal
           task={editingTask}
