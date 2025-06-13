@@ -9,6 +9,7 @@ import {
   isValidStorageDate,
   getDefaultSLADate
 } from '@/utils/dateUtils';
+import { useTimezone } from '../contexts/TimezoneContext';
 
 interface AddClientModalProps {
   isOpen: boolean;
@@ -29,33 +30,35 @@ interface FormData {
   taskSlaDate: string;
 }
 
-const initialFormData: FormData = {
-  id: '',
-  name: '',
-  company: '',
-  origin: '',
-  taskDescription: '',
-  taskDate: getCurrentDateForInput(),
-  taskStatus: 'pending',
-  taskPriority: 'medium',
-  taskSlaDate: getDefaultSLADate()
-};
-
-const isDateValid = (dateString: string): boolean => {
-  return isValidStorageDate(dateString);
-};
-
 export default function AddClientModal({
   isOpen,
   onClose,
   onAddClient,
   darkMode
 }: AddClientModalProps) {
+  const { getTimezoneOffset } = useTimezone();
+  
+  const initialFormData: FormData = {
+    id: '',
+    name: '',
+    company: '',
+    origin: '',
+    taskDescription: '',
+    taskDate: getCurrentDateForInput(getTimezoneOffset()),
+    taskStatus: 'pending',
+    taskPriority: 'medium',
+    taskSlaDate: getDefaultSLADate(getTimezoneOffset())
+  };
+
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<'client' | 'task'>('client');
+
+  const isDateValid = (dateString: string): boolean => {
+    return isValidStorageDate(dateString);
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Partial<FormData> = {};
@@ -132,7 +135,18 @@ export default function AddClientModal({
   };
 
   const resetForm = () => {
-    setFormData(initialFormData);
+    const newInitialData = {
+      id: '',
+      name: '',
+      company: '',
+      origin: '',
+      taskDescription: '',
+      taskDate: getCurrentDateForInput(getTimezoneOffset()),
+      taskStatus: 'pending' as TaskStatus,
+      taskPriority: 'medium' as TaskPriority,
+      taskSlaDate: getDefaultSLADate(getTimezoneOffset())
+    };
+    setFormData(newInitialData);
     setErrors({});
     setApiError(null);
     setCurrentStep('client');

@@ -10,6 +10,7 @@ import { api } from '@/services/api';
 import { useToast } from '../hooks/useToast';
 import CopyButton from './CopyButton';
 import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
+import { useTimezone } from '../contexts/TimezoneContext';
 
 interface ClientDetailModalProps {
   client: Client;
@@ -26,6 +27,8 @@ export default function ClientDetailModal({
   onUpdate,
   darkMode
 }: ClientDetailModalProps) {
+  const { getTimezoneOffset } = useTimezone();
+  
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
     x: number;
@@ -39,8 +42,8 @@ export default function ClientDetailModal({
   const [refreshKey, setRefreshKey] = useState(0);
   const [newTask, setNewTask] = useState<Omit<Task, 'id'>>({
     description: '',
-    date: getCurrentDateForInput(),
-    sla_date: getDefaultSLADate(),
+    date: getCurrentDateForInput(getTimezoneOffset()),
+    sla_date: getDefaultSLADate(getTimezoneOffset()),
     priority: 'medium',
     status: 'pending',
     client_id: client.id,
@@ -228,8 +231,8 @@ export default function ClientDetailModal({
       
       setNewTask({
         description: '',
-        date: getCurrentDateForInput(),
-        sla_date: getDefaultSLADate(),
+        date: getCurrentDateForInput(getTimezoneOffset()),
+        sla_date: getDefaultSLADate(getTimezoneOffset()),
         priority: 'medium',
         status: 'pending',  
         client_id: client.id,
@@ -249,8 +252,8 @@ export default function ClientDetailModal({
     setShowAddTaskForm(false);
     setNewTask({
       description: '',
-      date: getCurrentDateForInput(),
-      sla_date: getDefaultSLADate(),
+      date: getCurrentDateForInput(getTimezoneOffset()),
+      sla_date: getDefaultSLADate(getTimezoneOffset()),
       priority: 'medium',
       status: 'pending',
       client_id: client.id,

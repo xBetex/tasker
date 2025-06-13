@@ -22,6 +22,8 @@ class TaskBase(BaseModel):
     priority: str
     sla_date: Optional[str] = None
     completion_date: Optional[str] = None
+    creation_timestamp: Optional[str] = None
+    completion_timestamp: Optional[str] = None
 
 class TaskCreate(TaskBase):
     client_id: str
@@ -41,6 +43,8 @@ class TaskUpdate(BaseModel):
     client_id: Optional[str] = None
     sla_date: Optional[str] = None
     completion_date: Optional[str] = None
+    creation_timestamp: Optional[str] = None
+    completion_timestamp: Optional[str] = None
 
 class ClientBase(BaseModel):
     name: str

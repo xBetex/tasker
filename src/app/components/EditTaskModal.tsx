@@ -3,6 +3,7 @@ import { Task, TaskStatus, TaskPriority } from '@/types/types';
 import { api } from '@/services/api';
 import { isValidStorageDate, getDefaultSLADate } from '@/utils/dateUtils';
 import { useScroll } from '../contexts/ScrollContext';
+import { useTimezone } from '../contexts/TimezoneContext';
 
 interface EditTaskModalProps {
   isOpen: boolean;
@@ -14,12 +15,14 @@ interface EditTaskModalProps {
 
 export default function EditTaskModal({ isOpen, onClose, task, onUpdate, darkMode }: EditTaskModalProps) {
   const { setFocusedTaskId } = useScroll();
+  const { getTimezoneOffset } = useTimezone();
+  
   const [formData, setFormData] = useState({
     date: task.date,
     description: task.description,
     status: task.status,
     priority: task.priority,
-    sla_date: task.sla_date || getDefaultSLADate(),
+    sla_date: task.sla_date || getDefaultSLADate(getTimezoneOffset()),
     completion_date: task.completion_date || ''
   });
 

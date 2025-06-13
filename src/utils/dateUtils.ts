@@ -37,9 +37,22 @@ export function formatDateForStorage(dateString: string): string {
 
 /**
  * Obtém a data atual no formato yyyy-mm-dd (para inputs type="date")
+ * Agora considera o timezone configurado
  */
-export function getCurrentDateForInput(): string {
+export function getCurrentDateForInput(timezoneOffset?: number): string {
   const now = new Date();
+  
+  // Se um offset de timezone foi fornecido, ajusta a data
+  if (timezoneOffset !== undefined) {
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const adjustedDate = new Date(utc + (timezoneOffset * 3600000));
+    const year = adjustedDate.getFullYear();
+    const month = String(adjustedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(adjustedDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  
+  // Comportamento padrão (mantém compatibilidade)
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
@@ -55,6 +68,14 @@ export function getCurrentDateForDisplay(): string {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${day}/${month}/${year}`;
+}
+
+/**
+ * Obtém a data atual de conclusão no timezone do usuário (formato yyyy-mm-dd)
+ * Para ser usado quando uma tarefa é marcada como concluída
+ */
+export function getCurrentCompletionDate(timezoneOffset?: number): string {
+  return getCurrentDateForInput(timezoneOffset);
 }
 
 /**
@@ -133,9 +154,20 @@ export function dateToDisplayFormat(date: Date): string {
 
 /**
  * Obtém a data SLA padrão (24 horas a partir de agora) no formato yyyy-mm-dd
+ * Agora considera o timezone configurado
  */
-export function getDefaultSLADate(): string {
+export function getDefaultSLADate(timezoneOffset?: number): string {
   const now = new Date();
+  
+  // Se um offset de timezone foi fornecido, ajusta a data
+  if (timezoneOffset !== undefined) {
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const adjustedNow = new Date(utc + (timezoneOffset * 3600000));
+    const slaDate = new Date(adjustedNow.getTime() + (24 * 60 * 60 * 1000)); // Adiciona 24 horas
+    return dateToInputFormat(slaDate);
+  }
+  
+  // Comportamento padrão (mantém compatibilidade)
   const slaDate = new Date(now.getTime() + (24 * 60 * 60 * 1000)); // Adiciona 24 horas
   return dateToInputFormat(slaDate);
 } 

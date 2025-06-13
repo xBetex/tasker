@@ -8,6 +8,7 @@ import { useSLANotifications, SLANotification } from '../hooks/useSLANotificatio
 import DateDisplay from '../components/DateDisplay';
 import EditTaskModal from '../components/EditTaskModal';
 import { MoreVerticalIcon, EditIcon, CheckIcon, AlertTriangleIcon, ClockIcon, XCircleIcon, FilterIcon, SortIcon } from '../components/Icons';
+import { useTimezone } from '../contexts/TimezoneContext';
 
 interface SLAStats {
   total: number;
@@ -30,6 +31,7 @@ export default function SLAPage() {
   const [customFilters, setCustomFilters] = useState({
     client: '',
     priority: '',
+    description: '',
     dateRange: {
       start: '',
       end: ''
@@ -37,6 +39,7 @@ export default function SLAPage() {
   });
   
   const { darkMode } = useDarkMode();
+  const { getTimezoneOffset } = useTimezone();
   const slaNotifications = useSLANotifications(clients);
 
   const fetchClients = async () => {
@@ -125,7 +128,7 @@ export default function SLAPage() {
       await Promise.all(taskIds.map(id => {
         const notification = sortedNotifications.find(n => n.id === id);
         if (notification) {
-          return api.updateTaskStatus(notification.taskId, 'completed');
+          return api.updateTaskStatus(notification.taskId, 'completed', getTimezoneOffset());
         }
       }));
       await fetchClients();
@@ -147,11 +150,14 @@ export default function SLAPage() {
       const matchesPriority = !customFilters.priority || 
         notification.type === customFilters.priority;
       
+      const matchesDescription = !customFilters.description || 
+        notification.taskDescription.toLowerCase().includes(customFilters.description.toLowerCase());
+      
       const matchesDateRange = (!customFilters.dateRange.start || !customFilters.dateRange.end) || 
         (new Date(notification.slaDate) >= new Date(customFilters.dateRange.start) && 
          new Date(notification.slaDate) <= new Date(customFilters.dateRange.end));
       
-      return matchesClient && matchesPriority && matchesDateRange;
+      return matchesClient && matchesPriority && matchesDescription && matchesDateRange;
     });
   };
 
@@ -179,7 +185,7 @@ export default function SLAPage() {
   const handleMarkAsResolved = async (notification: SLANotification) => {
     setIsUpdating(notification.id);
     try {
-      await api.updateTaskStatus(notification.taskId, 'completed');
+      await api.updateTaskStatus(notification.taskId, 'completed', getTimezoneOffset());
       await fetchClients();
     } catch (error) {
       console.error('Error marking task as resolved:', error);
@@ -490,7 +496,7 @@ export default function SLAPage() {
         </div>
 
         {showFilters && (
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border-t" style={{ borderColor: 'var(--card-border)' }}>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 border-t" style={{ borderColor: 'var(--card-border)' }}>
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--primary-text)' }}>
                 Client Filter
@@ -527,6 +533,23 @@ export default function SLAPage() {
                 <option value="due_today">Due Today</option>
                 <option value="due_soon">Due Soon</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--primary-text)' }}>
+                Task Description
+              </label>
+              <input
+                type="text"
+                value={customFilters.description}
+                onChange={(e) => setCustomFilters(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Search task content..."
+                className="w-full px-3 py-2 rounded-md text-sm border focus:ring-2 focus:ring-blue-500"
+                style={{
+                  backgroundColor: 'var(--input-background)',
+                  borderColor: 'var(--input-border)',
+                  color: 'var(--input-text)'
+                }}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--primary-text)' }}>

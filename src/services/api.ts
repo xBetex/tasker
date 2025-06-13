@@ -1,4 +1,5 @@
 import { Client, Task, TaskStatus, TaskPriority, Comment } from '@/types/types';
+import { getCurrentCompletionDate } from '@/utils/dateUtils';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -236,8 +237,19 @@ export const api = {
     }
   },
 
-  async updateTaskStatus(taskId: number, status: TaskStatus): Promise<Task> {
-    return this.updateTask(taskId, { status });
+  async updateTaskStatus(taskId: number, status: TaskStatus, timezoneOffset?: number): Promise<Task> {
+    const updates: Partial<TaskPayload> = { status };
+    
+    // If marking as completed, set completion date in user's timezone
+    if (status === 'completed') {
+      updates.completion_date = getCurrentCompletionDate(timezoneOffset);
+    }
+    // If changing from completed to another status, clear completion date
+    else {
+      updates.completion_date = '';
+    }
+    
+    return this.updateTask(taskId, updates);
   },
 
   async deleteTask(taskId: number): Promise<Task> {

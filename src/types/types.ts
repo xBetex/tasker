@@ -17,6 +17,8 @@ export interface Task {
   client_id: string;
   sla_date?: string;
   completion_date?: string;
+  creation_timestamp?: string;
+  completion_timestamp?: string;
   comments?: Comment[];
 }
 

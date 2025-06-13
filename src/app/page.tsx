@@ -19,6 +19,7 @@ import { useToast } from './hooks/useToast';
 import ScrollToTop from './components/ScrollToTop';
 import VirtualizedClientGrid from './components/VirtualizedClientGrid';
 import { useContainerHeight } from './hooks/useContainerHeight';
+import { useTimezone } from './contexts/TimezoneContext';
 
 
 
@@ -27,6 +28,7 @@ export default function Home() {
   const { darkMode } = useDarkMode();
   const { clients, refreshClients, isLoading } = useClients();
   const { pinnedClients, reorderClients } = useDragDrop();
+  const { getTimezoneOffset } = useTimezone();
   
   const [error, setError] = useState<string | null>(null);
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
@@ -192,11 +194,11 @@ export default function Home() {
               if (validTasks.length === 0) {
                 // Create a default task if no valid tasks exist
                 validTasks.push({
-                  date: getCurrentDateForInput(),
+                  date: getCurrentDateForInput(getTimezoneOffset()),
                   description: 'Initial task',
                   status: 'pending',
                   priority: 'medium',
-                  sla_date: getDefaultSLADate()
+                  sla_date: getDefaultSLADate(getTimezoneOffset())
                 });
               }
 
@@ -361,16 +363,19 @@ export default function Home() {
     setFilteredClients(result);
   }, [orderedClients, searchTerm, taskFilter, statusFilter, priorityFilter, slaFilter, dateRangeFilter]);
 
-  // Calculate statistics
-  const totalTasks = clients.reduce((sum, client) => sum + client.tasks.length, 0);
-  const completedTasks = clients.reduce((sum, client) => 
+  // Calculate statistics based on filtered clients
+  const totalTasks = filteredClients.reduce((sum, client) => sum + client.tasks.length, 0);
+  const completedTasks = filteredClients.reduce((sum, client) => 
     sum + client.tasks.filter(task => task.status === 'completed').length, 0
   );
-  const inProgressTasks = clients.reduce((sum, client) => 
+  const inProgressTasks = filteredClients.reduce((sum, client) => 
     sum + client.tasks.filter(task => task.status === 'in progress').length, 0
   );
-  const pendingTasks = clients.reduce((sum, client) => 
+  const pendingTasks = filteredClients.reduce((sum, client) => 
     sum + client.tasks.filter(task => task.status === 'pending').length, 0
+  );
+  const awaitingClientTasks = filteredClients.reduce((sum, client) => 
+    sum + client.tasks.filter(task => task.status === 'awaiting client').length, 0
   );
 
   const handleExportJson = async () => {
@@ -616,7 +621,22 @@ export default function Home() {
             e.currentTarget.style.backgroundColor = 'var(--card-background)';
           }}
         >
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="mb-4">
+            <h2 
+              className="text-lg font-semibold"
+              style={{ color: 'var(--primary-text)' }}
+            >
+              📊 Task Statistics {totalTasks > 0 && (
+                <span 
+                  className="text-sm font-normal ml-2"
+                  style={{ color: 'var(--secondary-text)' }}
+                >
+                  (Based on current filters)
+                </span>
+              )}
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
             <button 
               onClick={() => {
                 setStatusFilter('all');
@@ -752,6 +772,74 @@ export default function Home() {
                 style={{ color: 'var(--primary-text)' }}
               >
                 {completedTasks}
+              </p>
+            </button>
+            <button 
+              onClick={() => {
+                setStatusFilter('pending');
+                setPriorityFilter('all');
+                setTaskFilter('');
+              }}
+              className="p-4 rounded-lg text-left transition-all duration-200 hover:scale-105 border"
+              style={{
+                backgroundColor: 'var(--card-background)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--primary-text)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = darkMode ? 'rgba(156, 163, 175, 0.1)' : 'rgba(156, 163, 175, 0.05)';
+                e.currentTarget.style.borderColor = darkMode ? 'rgba(156, 163, 175, 0.3)' : 'rgba(156, 163, 175, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--card-background)';
+                e.currentTarget.style.borderColor = 'var(--card-border)';
+              }}
+            >
+              <h3 
+                className="font-semibold mb-2"
+                style={{ color: 'var(--secondary-text)' }}
+              >
+                ⏳ Pending
+              </h3>
+              <p 
+                className="text-2xl font-bold"
+                style={{ color: 'var(--primary-text)' }}
+              >
+                {pendingTasks}
+              </p>
+            </button>
+            <button 
+              onClick={() => {
+                setStatusFilter('awaiting client');
+                setPriorityFilter('all');
+                setTaskFilter('');
+              }}
+              className="p-4 rounded-lg text-left transition-all duration-200 hover:scale-105 border"
+              style={{
+                backgroundColor: 'var(--card-background)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--primary-text)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = darkMode ? 'rgba(147, 51, 234, 0.1)' : 'rgba(147, 51, 234, 0.05)';
+                e.currentTarget.style.borderColor = darkMode ? 'rgba(147, 51, 234, 0.3)' : 'rgba(147, 51, 234, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--card-background)';
+                e.currentTarget.style.borderColor = 'var(--card-border)';
+              }}
+            >
+              <h3 
+                className="font-semibold mb-2"
+                style={{ color: 'var(--secondary-text)' }}
+              >
+                👤 Awaiting Client
+              </h3>
+              <p 
+                className="text-2xl font-bold"
+                style={{ color: 'var(--primary-text)' }}
+              >
+                {awaitingClientTasks}
               </p>
             </button>
           </div>

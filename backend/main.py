@@ -5,7 +5,7 @@ import json
 from typing import List
 import os
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from models import Base, Client, Task, Comment
@@ -35,7 +35,7 @@ async def health_check():
     """Health check endpoint for Docker health checks"""
     return {
         "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": "1.0.0"
     }
 
@@ -162,10 +162,14 @@ async def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
     if client is None:
         raise HTTPException(status_code=404, detail="Client not found")
     
-    # Set completion_date if status is 'completed'
+    # Set completion_date and timestamps if status is 'completed'
     completion_date = None
+    completion_timestamp = None
+    creation_timestamp = datetime.now(timezone.utc).isoformat()
+    
     if task.status == 'completed':
-        completion_date = datetime.now().strftime('%Y-%m-%d')
+        completion_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        completion_timestamp = creation_timestamp
     
     db_task = Task(
         date=task.date,
@@ -174,7 +178,9 @@ async def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
         priority=task.priority,
         client_id=task.client_id,
         sla_date=task.sla_date,
-        completion_date=completion_date if task.completion_date is None else task.completion_date
+        completion_date=completion_date if task.completion_date is None else task.completion_date,
+        creation_timestamp=creation_timestamp,
+        completion_timestamp=completion_timestamp
     )
     db.add(db_task)
     
@@ -200,12 +206,14 @@ async def update_task(task_id: int, task_update: schemas.TaskUpdate, db: Session
         if value is not None:  # Only update fields that are provided
             setattr(db_task, field, value)
     
-    # Auto-set completion_date when status changes to 'completed'
+    # Auto-set completion_date and completion_timestamp when status changes to 'completed'
     if task_update.status == 'completed' and original_status != 'completed':
-        db_task.completion_date = datetime.now().strftime('%Y-%m-%d')
-    # Clear completion_date if status changes from 'completed' to something else
+        db_task.completion_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        db_task.completion_timestamp = datetime.now(timezone.utc).isoformat()
+    # Clear completion_date and completion_timestamp if status changes from 'completed' to something else
     elif original_status == 'completed' and task_update.status != 'completed' and task_update.completion_date is None:
         db_task.completion_date = None
+        db_task.completion_timestamp = None
     
     try:
         db.commit()
@@ -243,7 +251,7 @@ async def create_comment(task_id: int, comment: schemas.CommentCreate, db: Sessi
         id=comment_id,
         task_id=task_id,
         text=comment.text,
-        timestamp=datetime.now().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
         author=comment.author or "User"
     )
     db.add(db_comment)

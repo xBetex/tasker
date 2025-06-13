@@ -226,6 +226,13 @@ export default function TaskItem({
           )}
         </div>
         
+        {task.creation_timestamp && (
+          <div className="flex items-center">
+            <span className="font-medium mr-1">Created:</span>
+            <DateDisplay date={task.creation_timestamp} fullTimestamp />
+          </div>
+        )}
+        
         {task.sla_date && (
           <div className="flex items-center">
             <span className="font-medium mr-1">SLA:</span>
@@ -250,7 +257,11 @@ export default function TaskItem({
         {task.completion_date && (
           <div className="flex items-center">
             <span className="font-medium mr-1">Completed:</span>
-            <DateDisplay date={task.completion_date} />
+            {task.completion_timestamp ? (
+              <DateDisplay date={task.completion_timestamp} fullTimestamp />
+            ) : (
+              <DateDisplay date={task.completion_date} />
+            )}
           </div>
         )}
       </div>

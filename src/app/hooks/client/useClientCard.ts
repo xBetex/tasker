@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Client, Task, TaskStatus } from '@/types/types';
+import { Client, Task, TaskStatus, TaskPriority } from '@/types/types';
 import { api } from '@/services/api';
 import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
 import { useToast } from '../useToast';
 import { useScroll } from '../../contexts/ScrollContext';
+import { useTimezone } from '../../contexts/TimezoneContext';
 
 export function useClientCard(client: Client, onUpdate: () => void, onDeleteTask: (clientId: string, taskIndex: number) => void) {
   const { setFocusedTaskId } = useScroll();
+  const { getTimezoneOffset } = useTimezone();
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [editData, setEditData] = useState<Client>({ ...client });
@@ -258,7 +260,7 @@ export function useClientCard(client: Client, onUpdate: () => void, onDeleteTask
 
     try {
       const updatedTask = { ...contextMenu.task, status: newStatus };
-      await api.updateTask(contextMenu.task.id, updatedTask);
+      await api.updateTaskStatus(contextMenu.task.id, newStatus, getTimezoneOffset());
       
       // Definir a tarefa como focada antes de atualizar para trigger enhanced scroll
       setFocusedTaskId(contextMenu.task.id);

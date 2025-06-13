@@ -30,12 +30,14 @@ class Task(Base):
 
     id = Column(Integer, primary_key=True)
     client_id = Column(String, ForeignKey("clients.id"))
-    date = Column(String, nullable=False)
+    date = Column(String, nullable=False)  # Task date (for display/organization)
     description = Column(String, nullable=False)
     status = Column(String, nullable=False)
     priority = Column(String, nullable=False)
     sla_date = Column(String, nullable=True)  # Data limite do SLA
-    completion_date = Column(String, nullable=True)  # Data de conclusão real
+    completion_date = Column(String, nullable=True)  # Data de conclusão real (date only)
+    creation_timestamp = Column(String, nullable=True)  # Full timestamp when task was created
+    completion_timestamp = Column(String, nullable=True)  # Full timestamp when task was completed
     
     client = relationship("Client", back_populates="tasks")
     comments = relationship("Comment", back_populates="task", cascade="all, delete-orphan")

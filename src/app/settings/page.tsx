@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useTheme, ThemeColors } from '../contexts/ThemeContext';
+import { useTimezone, TIMEZONE_OPTIONS } from '../contexts/TimezoneContext';
 
 interface ColorInputProps {
   label: string;
@@ -83,6 +84,8 @@ export default function SettingsPage() {
     importTheme
   } = useTheme();
 
+  const { timezone, setTimezone } = useTimezone();
+
   const [activeTab, setActiveTab] = useState<'light' | 'dark'>('light');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -126,19 +129,87 @@ export default function SettingsPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--primary-text)' }}>
-            Configurações de Tema
+            ⚙️ Configurações
           </h1>
           <p style={{ color: 'var(--secondary-text)' }}>
-            Personalize as cores da aplicação para cada modo (claro e escuro)
+            Personalize as configurações da aplicação, incluindo tema e timezone
           </p>
         </div>
 
-        {/* Controls */}
+        {/* Timezone Settings */}
         <div className="mb-6 p-4 rounded-lg border" 
              style={{ 
                backgroundColor: 'var(--card-background)', 
                borderColor: 'var(--card-border)' 
              }}>
+          <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--primary-text)' }}>
+            🌍 Configurações de Timezone
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--primary-text)' }}>
+                Timezone
+              </label>
+              <select
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                className="w-full px-3 py-2 rounded-md border text-sm"
+                style={{
+                  backgroundColor: 'var(--input-background)',
+                  borderColor: 'var(--input-border)',
+                  color: 'var(--input-text)'
+                }}
+              >
+                {TIMEZONE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs mt-1" style={{ color: 'var(--secondary-text)' }}>
+                Todas as datas e horários serão exibidos neste timezone
+              </p>
+            </div>
+            <div className="flex items-center justify-center">
+              <div className="text-center p-4 rounded-lg border" 
+                   style={{ 
+                     backgroundColor: 'var(--card-background-hover)', 
+                     borderColor: 'var(--card-border)' 
+                   }}>
+                <div className="text-2xl mb-2">🕐</div>
+                <div className="text-sm font-medium" style={{ color: 'var(--primary-text)' }}>
+                  Horário Atual
+                </div>
+                <div className="text-lg font-bold" style={{ color: 'var(--primary-text)' }}>
+                  {new Date().toLocaleString('pt-BR', { 
+                    timeZone: timezone,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                  })}
+                </div>
+                <div className="text-xs" style={{ color: 'var(--secondary-text)' }}>
+                  {new Date().toLocaleDateString('pt-BR', { 
+                    timeZone: timezone,
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Theme Controls */}
+        <div className="mb-6 p-4 rounded-lg border" 
+             style={{ 
+               backgroundColor: 'var(--card-background)', 
+               borderColor: 'var(--card-border)' 
+             }}>
+          <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--primary-text)' }}>
+            🎨 Configurações de Tema
+          </h2>
           <div className="flex flex-wrap gap-4 items-center justify-between">
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2">

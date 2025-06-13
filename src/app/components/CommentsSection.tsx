@@ -168,7 +168,7 @@ export default function CommentsSection({
                       {comment.author || 'User'}
                     </span>
                     <span className="text-xs" style={{ color: 'var(--muted-text)' }}>
-                      <DateDisplay date={comment.timestamp} showTime />
+                      <DateDisplay date={comment.timestamp} fullTimestamp />
                     </span>
                   </div>
                   <p className="text-sm leading-relaxed" style={{ color: 'var(--primary-text)' }}>
