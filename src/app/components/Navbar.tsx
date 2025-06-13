@@ -105,6 +105,16 @@ export default function Navbar({ darkMode, onToggleDarkMode, clients = [], onUpd
               SLA
             </Link>
             <Link 
+              href="/comments-search"
+              className={`text-lg font-semibold transition-colors ${
+                isActive('/comments-search') 
+                  ? 'text-blue-400' 
+                  : 'hover:text-blue-300'
+              }`}
+            >
+              Comments
+            </Link>
+            <Link 
               href="/settings"
               className={`text-lg font-semibold transition-colors ${
                 isActive('/settings') 
@@ -219,6 +229,17 @@ export default function Navbar({ darkMode, onToggleDarkMode, clients = [], onUpd
               onClick={handleLinkClick}
             >
               🎯 SLA
+            </Link>
+            <Link
+              href="/comments-search"
+              className={`block px-4 py-2 rounded-lg transition-colors ${
+                isActive('/comments-search') 
+                  ? 'bg-blue-600 text-white' 
+                  : darkMode ? 'hover:bg-gray-900' : 'hover:bg-gray-700'
+              }`}
+              onClick={handleLinkClick}
+            >
+              💬 Comments Search
             </Link>
             <Link
               href="/settings"

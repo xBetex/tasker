@@ -30,6 +30,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ======================================================================
+# SYSTEM ENDPOINTS
+# ======================================================================
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint for Docker health checks"""
@@ -39,8 +43,56 @@ async def health_check():
         "version": "1.0.0"
     }
 
+@app.post("/import-data/")
+async def import_data(db: Session = Depends(get_db)):
+    """Import data from JSON file"""
+    try:
+        # Get the absolute path to data.json
+        current_dir = Path(__file__).parent
+        json_path = current_dir / "data.json"
+        
+        # Read the JSON file
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        # Import each client and their tasks
+        for client_data in data:
+            # Check if client already exists
+            existing_client = db.query(Client).filter(Client.id == client_data["id"]).first()
+            if existing_client:
+                continue
+                
+            db_client = Client(
+                id=client_data["id"],
+                name=client_data["name"],
+                company=client_data["company"],
+                origin=client_data["origin"]
+            )
+            db.add(db_client)
+            
+            for task_data in client_data["tasks"]:
+                db_task = Task(
+                    date=task_data["date"],
+                    description=task_data["description"],
+                    status=task_data["status"],
+                    priority=task_data["priority"],
+                    client_id=client_data["id"]
+                )
+                db.add(db_task)
+        
+        db.commit()
+        return {"message": "Data imported successfully"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ======================================================================
+# CLIENT ENDPOINTS
+# ======================================================================
+
 @app.post("/clients/", response_model=schemas.Client)
 async def create_client(client: schemas.ClientCreate, db: Session = Depends(get_db)):
+    """Create a new client with optional tasks (legacy support)"""
     # Check if this is a client with tasks (legacy) or just client data
     if hasattr(client, 'tasks') and client.tasks:
         # Legacy mode: create client with tasks
@@ -81,6 +133,7 @@ async def create_client(client: schemas.ClientCreate, db: Session = Depends(get_
 
 @app.post("/clients-only/", response_model=schemas.ClientOnly)
 async def create_client_only(client: schemas.ClientOnly, db: Session = Depends(get_db)):
+    """Create a new client without tasks"""
     # Check if client ID already exists
     existing_client = db.query(Client).filter(Client.id == client.id).first()
     if existing_client:
@@ -104,16 +157,19 @@ async def create_client_only(client: schemas.ClientOnly, db: Session = Depends(g
 
 @app.get("/clients/", response_model=List[schemas.Client])
 async def get_clients(skip: int = 0, limit: int = 1000, db: Session = Depends(get_db)):
+    """Get clients with pagination"""
     clients = db.query(Client).offset(skip).limit(limit).all()
     return clients
 
 @app.get("/clients/all", response_model=List[schemas.Client])
 async def get_all_clients(db: Session = Depends(get_db)):
+    """Get all clients without pagination"""
     clients = db.query(Client).all()
     return clients
 
 @app.get("/clients/{client_id}", response_model=schemas.Client)
 async def get_client(client_id: str, db: Session = Depends(get_db)):
+    """Get a specific client by ID"""
     client = db.query(Client).filter(Client.id == client_id).first()
     if client is None:
         raise HTTPException(status_code=404, detail="Client not found")
@@ -121,6 +177,7 @@ async def get_client(client_id: str, db: Session = Depends(get_db)):
 
 @app.put("/clients/{client_id}", response_model=schemas.Client)
 async def update_client(client_id: str, client_update: schemas.ClientUpdate, db: Session = Depends(get_db)):
+    """Update a client's information"""
     db_client = db.query(Client).filter(Client.id == client_id).first()
     if db_client is None:
         raise HTTPException(status_code=404, detail="Client not found")
@@ -140,6 +197,7 @@ async def update_client(client_id: str, client_update: schemas.ClientUpdate, db:
 
 @app.delete("/clients/{client_id}", response_model=schemas.ClientOnly)
 async def delete_client(client_id: str, db: Session = Depends(get_db)):
+    """Delete a client and all associated tasks"""
     client = db.query(Client).filter(Client.id == client_id).first()
     if client is None:
         raise HTTPException(status_code=404, detail="Client not found")
@@ -155,8 +213,13 @@ async def delete_client(client_id: str, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
+# ======================================================================
+# TASK ENDPOINTS
+# ======================================================================
+
 @app.post("/tasks/", response_model=schemas.Task)
 async def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
+    """Create a new task for a client"""
     # Verify client exists
     client = db.query(Client).filter(Client.id == task.client_id).first()
     if client is None:
@@ -194,6 +257,7 @@ async def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
 
 @app.put("/tasks/{task_id}", response_model=schemas.Task)
 async def update_task(task_id: int, task_update: schemas.TaskUpdate, db: Session = Depends(get_db)):
+    """Update a task's information"""
     db_task = db.query(Task).filter(Task.id == task_id).first()
     if db_task is None:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -225,6 +289,7 @@ async def update_task(task_id: int, task_update: schemas.TaskUpdate, db: Session
 
 @app.delete("/tasks/{task_id}", response_model=schemas.Task)
 async def delete_task(task_id: int, db: Session = Depends(get_db)):
+    """Delete a task"""
     db_task = db.query(Task).filter(Task.id == task_id).first()
     if db_task is None:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -237,8 +302,13 @@ async def delete_task(task_id: int, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
+# ======================================================================
+# COMMENT ENDPOINTS
+# ======================================================================
+
 @app.post("/tasks/{task_id}/comments/", response_model=schemas.Comment)
 async def create_comment(task_id: int, comment: schemas.CommentCreate, db: Session = Depends(get_db)):
+    """Create a new comment for a task"""
     # Verify task exists
     task = db.query(Task).filter(Task.id == task_id).first()
     if task is None:
@@ -266,6 +336,7 @@ async def create_comment(task_id: int, comment: schemas.CommentCreate, db: Sessi
 
 @app.get("/tasks/{task_id}/comments/", response_model=List[schemas.Comment])
 async def get_task_comments(task_id: int, db: Session = Depends(get_db)):
+    """Get all comments for a specific task"""
     # Verify task exists
     task = db.query(Task).filter(Task.id == task_id).first()
     if task is None:
@@ -274,8 +345,47 @@ async def get_task_comments(task_id: int, db: Session = Depends(get_db)):
     comments = db.query(Comment).filter(Comment.task_id == task_id).all()
     return comments
 
+@app.get("/comments/search")
+async def search_all_comments(q: str = "", db: Session = Depends(get_db)):
+    """Search across all comments globally"""
+    if not q or len(q.strip()) < 2:
+        return {"results": [], "total": 0, "query": q}
+    
+    search_term = f"%{q.strip()}%"
+    
+    # Search in comment text and author fields
+    comments = db.query(Comment, Task, Client).join(
+        Task, Comment.task_id == Task.id
+    ).join(
+        Client, Task.client_id == Client.id
+    ).filter(
+        (Comment.text.ilike(search_term)) | 
+        (Comment.author.ilike(search_term))
+    ).order_by(Comment.timestamp.desc()).all()
+    
+    results = []
+    for comment, task, client in comments:
+        results.append({
+            "id": comment.id,
+            "text": comment.text,
+            "author": comment.author,
+            "timestamp": comment.timestamp,
+            "task_id": comment.task_id,
+            "task_description": task.description,
+            "client_id": client.id,
+            "client_name": client.name,
+            "client_company": client.company
+        })
+    
+    return {
+        "results": results,
+        "total": len(results),
+        "query": q
+    }
+
 @app.delete("/comments/{comment_id}", response_model=schemas.Comment)
 async def delete_comment(comment_id: str, db: Session = Depends(get_db)):
+    """Delete a comment"""
     comment = db.query(Comment).filter(Comment.id == comment_id).first()
     if comment is None:
         raise HTTPException(status_code=404, detail="Comment not found")
@@ -288,47 +398,9 @@ async def delete_comment(comment_id: str, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/import-data/")
-async def import_data(db: Session = Depends(get_db)):
-    try:
-        # Get the absolute path to data.json
-        current_dir = Path(__file__).parent
-        json_path = current_dir / "data.json"
-        
-        # Read the JSON file
-        with open(json_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        
-        # Import each client and their tasks
-        for client_data in data:
-            # Check if client already exists
-            existing_client = db.query(Client).filter(Client.id == client_data["id"]).first()
-            if existing_client:
-                continue
-                
-            db_client = Client(
-                id=client_data["id"],
-                name=client_data["name"],
-                company=client_data["company"],
-                origin=client_data["origin"]
-            )
-            db.add(db_client)
-            
-            for task_data in client_data["tasks"]:
-                db_task = Task(
-                    date=task_data["date"],
-                    description=task_data["description"],
-                    status=task_data["status"],
-                    priority=task_data["priority"],
-                    client_id=client_data["id"]
-                )
-                db.add(db_task)
-        
-        db.commit()
-        return {"message": "Data imported successfully"}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+# ======================================================================
+# APPLICATION STARTUP
+# ======================================================================
 
 if __name__ == "__main__":
     import uvicorn

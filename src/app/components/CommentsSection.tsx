@@ -21,6 +21,7 @@ export default function CommentsSection({
 }: CommentsSectionProps) {
   const [newComment, setNewComment] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [searchFilter, setSearchFilter] = useState('');
   const [previousCommentsLength, setPreviousCommentsLength] = useState(comments.length);
   const commentsListRef = useRef<HTMLDivElement>(null);
   const latestCommentRef = useRef<HTMLDivElement>(null);
@@ -58,9 +59,40 @@ export default function CommentsSection({
     }
   };
 
-  const sortedComments = [...comments].sort((a, b) => 
-    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  );
+  // Filter and sort comments
+  const filteredAndSortedComments = [...comments]
+    .filter(comment => {
+      if (!searchFilter.trim()) return true;
+      const searchLower = searchFilter.toLowerCase();
+      return (
+        comment.text.toLowerCase().includes(searchLower) ||
+        (comment.author || 'User').toLowerCase().includes(searchLower)
+      );
+    })
+    .sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+  // Helper function to highlight search terms
+  const highlightText = (text: string, searchTerm: string): (string | JSX.Element)[] | string => {
+    if (!searchTerm.trim()) return text;
+    
+    const parts = text.split(new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+    return parts.map((part: string, index: number) => 
+      part.toLowerCase() === searchTerm.toLowerCase() ? (
+        <mark 
+          key={index}
+          className="px-1 rounded"
+          style={{
+            backgroundColor: darkMode ? 'rgba(250, 204, 21, 0.3)' : 'rgba(250, 204, 21, 0.2)',
+            color: darkMode ? '#fbbf24' : '#d97706'
+          }}
+        >
+          {part}
+        </mark>
+      ) : part
+    );
+  };
 
   return (
     <div className="comments-section border-t mt-3" style={{ borderColor: 'var(--card-border)' }}>
@@ -89,7 +121,15 @@ export default function CommentsSection({
                 color: darkMode ? '#93c5fd' : '#1e40af'
               }}
             >
-              {comments.length}
+              {searchFilter.trim() 
+                ? `${filteredAndSortedComments.length}/${comments.length}` 
+                : comments.length
+              }
+            </span>
+          )}
+          {searchFilter.trim() && (
+            <span className="text-xs" style={{ color: 'var(--muted-text)' }}>
+              🔍 Filtered
             </span>
           )}
         </div>
@@ -101,6 +141,52 @@ export default function CommentsSection({
       {/* Comments Content */}
       {isExpanded && (
         <div className="px-3 pb-3">
+          {/* Search Filter */}
+          {comments.length > 0 && (
+            <div className="mb-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  placeholder="Search comments by text or author..."
+                  className="w-full pl-8 pr-10 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{
+                    backgroundColor: 'var(--input-background)',
+                    borderColor: 'var(--input-border)',
+                    color: 'var(--input-text)'
+                  }}
+                />
+                <div className="absolute left-2.5 top-1/2 transform -translate-y-1/2">
+                  <span className="text-sm" style={{ color: 'var(--muted-text)' }}>🔍</span>
+                </div>
+                {searchFilter.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchFilter('')}
+                    className="absolute right-2.5 top-1/2 transform -translate-y-1/2 p-1 rounded-full transition-colors"
+                    style={{ color: 'var(--muted-text)' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                      e.currentTarget.style.color = 'var(--primary-text)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = 'var(--muted-text)';
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {searchFilter.trim() && (
+                <div className="mt-2 text-xs" style={{ color: 'var(--muted-text)' }}>
+                  Showing {filteredAndSortedComments.length} of {comments.length} comments
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Add Comment Form */}
           <form onSubmit={handleSubmit} className="mb-4">
             <div className="relative">
@@ -148,13 +234,27 @@ export default function CommentsSection({
 
           {/* Comments List */}
           <div className="space-y-3" ref={commentsListRef}>
-            {sortedComments.length === 0 ? (
+            {filteredAndSortedComments.length === 0 ? (
               <div className="text-center py-4" style={{ color: 'var(--muted-text)' }}>
-                <div className="text-2xl mb-2">💭</div>
-                <p className="text-sm">No comments yet. Be the first to add one!</p>
+                <div className="text-2xl mb-2">{searchFilter.trim() ? '🔍' : '💭'}</div>
+                <p className="text-sm">
+                  {searchFilter.trim() 
+                    ? `No comments found matching "${searchFilter}"`
+                    : 'No comments yet. Be the first to add one!'
+                  }
+                </p>
+                {searchFilter.trim() && (
+                  <button
+                    onClick={() => setSearchFilter('')}
+                    className="mt-2 text-xs underline hover:no-underline"
+                    style={{ color: 'var(--primary-button)' }}
+                  >
+                    Clear search to show all comments
+                  </button>
+                )}
               </div>
             ) : (
-              sortedComments.map((comment, index) => (
+              filteredAndSortedComments.map((comment, index) => (
                 <div
                   key={comment.id}
                   ref={index === 0 ? latestCommentRef : null} // First comment is the most recent due to sorting
@@ -165,14 +265,14 @@ export default function CommentsSection({
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-blue-500">
-                      {comment.author || 'User'}
+                      {highlightText(comment.author || 'User', searchFilter)}
                     </span>
                     <span className="text-xs" style={{ color: 'var(--muted-text)' }}>
                       <DateDisplay date={comment.timestamp} fullTimestamp />
                     </span>
                   </div>
                   <p className="text-sm leading-relaxed" style={{ color: 'var(--primary-text)' }}>
-                    {comment.text}
+                    {highlightText(comment.text, searchFilter)}
                   </p>
                 </div>
               ))
