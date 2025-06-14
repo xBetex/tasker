@@ -115,9 +115,9 @@ export default function SettingsPage() {
     reader.onload = (e) => {
       const content = e.target?.result as string;
       if (importTheme(content)) {
-        alert('Tema importado com sucesso!');
+        alert('Theme imported successfully!');
       } else {
-        alert('Erro ao importar tema. Verifique o arquivo.');
+        alert('Error importing theme. Please check the file.');
       }
     };
     reader.readAsText(file);
@@ -129,10 +129,10 @@ export default function SettingsPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--primary-text)' }}>
-            ⚙️ Configurações
+            ⚙️ Settings
           </h1>
           <p style={{ color: 'var(--secondary-text)' }}>
-            Personalize as configurações da aplicação, incluindo tema e timezone
+            Customize application settings, including theme and timezone
           </p>
         </div>
 
@@ -143,7 +143,7 @@ export default function SettingsPage() {
                borderColor: 'var(--card-border)' 
              }}>
           <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--primary-text)' }}>
-            🌍 Configurações de Timezone
+            🌍 Timezone Settings
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -167,7 +167,7 @@ export default function SettingsPage() {
                 ))}
               </select>
               <p className="text-xs mt-1" style={{ color: 'var(--secondary-text)' }}>
-                Todas as datas e horários serão exibidos neste timezone
+                All dates and times will be displayed in this timezone
               </p>
             </div>
             <div className="flex items-center justify-center">
@@ -178,10 +178,10 @@ export default function SettingsPage() {
                    }}>
                 <div className="text-2xl mb-2">🕐</div>
                 <div className="text-sm font-medium" style={{ color: 'var(--primary-text)' }}>
-                  Horário Atual
+                  Current Time
                 </div>
                 <div className="text-lg font-bold" style={{ color: 'var(--primary-text)' }}>
-                  {new Date().toLocaleString('pt-BR', { 
+                  {new Date().toLocaleString('en-US', { 
                     timeZone: timezone,
                     hour: '2-digit',
                     minute: '2-digit',
@@ -189,7 +189,7 @@ export default function SettingsPage() {
                   })}
                 </div>
                 <div className="text-xs" style={{ color: 'var(--secondary-text)' }}>
-                  {new Date().toLocaleDateString('pt-BR', { 
+                  {new Date().toLocaleDateString('en-US', { 
                     timeZone: timezone,
                     day: '2-digit',
                     month: '2-digit',
@@ -208,7 +208,7 @@ export default function SettingsPage() {
                borderColor: 'var(--card-border)' 
              }}>
           <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--primary-text)' }}>
-            🎨 Configurações de Tema
+            🎨 Theme Settings
           </h2>
           <div className="flex flex-wrap gap-4 items-center justify-between">
             <div className="flex items-center gap-4">
@@ -220,7 +220,7 @@ export default function SettingsPage() {
                   className="w-4 h-4"
                 />
                 <span style={{ color: 'var(--primary-text)' }}>
-                  Modo Escuro Ativo
+                  Dark Mode Active
                 </span>
               </label>
 
@@ -233,7 +233,7 @@ export default function SettingsPage() {
                     color: activeTab === 'light' ? 'white' : 'var(--primary-text)'
                   }}
                 >
-                  Tema Claro
+                  Light Theme
                 </button>
                 <button
                   onClick={() => setActiveTab('dark')}
@@ -243,7 +243,7 @@ export default function SettingsPage() {
                     color: activeTab === 'dark' ? 'white' : 'var(--primary-text)'
                   }}
                 >
-                  Tema Escuro
+                  Dark Theme
                 </button>
               </div>
             </div>
@@ -254,7 +254,7 @@ export default function SettingsPage() {
                 className="px-4 py-2 text-white rounded transition-colors text-sm"
                 style={{ backgroundColor: 'var(--primary-button)' }}
               >
-                Exportar
+                Export
               </button>
               
               <input
@@ -272,7 +272,7 @@ export default function SettingsPage() {
                   color: 'white'
                 }}
               >
-                Importar
+                Import
               </button>
               
               <button
@@ -280,7 +280,7 @@ export default function SettingsPage() {
                 className="px-4 py-2 text-white rounded transition-colors text-sm"
                 style={{ backgroundColor: 'var(--danger-button)' }}
               >
-                Resetar
+                Reset
               </button>
             </div>
           </div>
@@ -288,162 +288,162 @@ export default function SettingsPage() {
 
         {/* Color Settings */}
         <div className="space-y-8">
-          <ColorSection title="Cores de Fundo">
+          <ColorSection title="Background Colors">
             <ColorInput
-              label="Fundo da Página"
+              label="Page Background"
               value={currentTheme.pageBackground}
               onChange={(value) => handleColorChange('pageBackground', value)}
-              description="Cor de fundo principal da aplicação"
+              description="Main application background color"
             />
             <ColorInput
-              label="Fundo dos Cards"
+              label="Card Background"
               value={currentTheme.cardBackground}
               onChange={(value) => handleColorChange('cardBackground', value)}
-              description="Cor de fundo dos cards e painéis"
+              description="Background color for cards and panels"
             />
             <ColorInput
-              label="Fundo dos Cards (Hover)"
+              label="Card Background (Hover)"
               value={currentTheme.cardBackgroundHover}
               onChange={(value) => handleColorChange('cardBackgroundHover', value)}
-              description="Cor de fundo dos cards ao passar o mouse"
+              description="Card background color on hover"
             />
           </ColorSection>
 
-          <ColorSection title="Cores de Texto">
+          <ColorSection title="Text Colors">
             <ColorInput
-              label="Texto Principal"
+              label="Primary Text"
               value={currentTheme.primaryText}
               onChange={(value) => handleColorChange('primaryText', value)}
-              description="Cor do texto principal (títulos, labels)"
+              description="Primary text color (titles, labels)"
             />
             <ColorInput
-              label="Texto Secundário"
+              label="Secondary Text"
               value={currentTheme.secondaryText}
               onChange={(value) => handleColorChange('secondaryText', value)}
-              description="Cor do texto secundário (descrições, info)"
+              description="Secondary text color (descriptions, info)"
             />
             <ColorInput
-              label="Texto Esmaecido"
+              label="Muted Text"
               value={currentTheme.mutedText}
               onChange={(value) => handleColorChange('mutedText', value)}
-              description="Cor do texto menos importante"
+              description="Less important text color"
             />
           </ColorSection>
 
-          <ColorSection title="Bordas">
+          <ColorSection title="Borders">
             <ColorInput
-              label="Borda dos Cards"
+              label="Card Border"
               value={currentTheme.cardBorder}
               onChange={(value) => handleColorChange('cardBorder', value)}
-              description="Cor das bordas dos cards e elementos"
+              description="Border color for cards and elements"
             />
             <ColorInput
-              label="Borda dos Inputs"
+              label="Input Border"
               value={currentTheme.inputBorder}
               onChange={(value) => handleColorChange('inputBorder', value)}
-              description="Cor das bordas dos campos de entrada"
+              description="Border color for input fields"
             />
           </ColorSection>
 
-          <ColorSection title="Botões">
+          <ColorSection title="Buttons">
             <ColorInput
-              label="Botão Primário"
+              label="Primary Button"
               value={currentTheme.primaryButton}
               onChange={(value) => handleColorChange('primaryButton', value)}
-              description="Cor dos botões principais"
+              description="Primary button color"
             />
             <ColorInput
-              label="Botão Primário (Hover)"
+              label="Primary Button (Hover)"
               value={currentTheme.primaryButtonHover}
               onChange={(value) => handleColorChange('primaryButtonHover', value)}
-              description="Cor dos botões principais ao passar o mouse"
+              description="Primary button color on hover"
             />
             <ColorInput
-              label="Botão Secundário"
+              label="Secondary Button"
               value={currentTheme.secondaryButton}
               onChange={(value) => handleColorChange('secondaryButton', value)}
-              description="Cor dos botões secundários"
+              description="Secondary button color"
             />
             <ColorInput
-              label="Botão Secundário (Hover)"
+              label="Secondary Button (Hover)"
               value={currentTheme.secondaryButtonHover}
               onChange={(value) => handleColorChange('secondaryButtonHover', value)}
-              description="Cor dos botões secundários ao passar o mouse"
+              description="Secondary button color on hover"
             />
             <ColorInput
-              label="Botão de Perigo"
+              label="Danger Button"
               value={currentTheme.dangerButton}
               onChange={(value) => handleColorChange('dangerButton', value)}
-              description="Cor dos botões de ação perigosa (deletar)"
+              description="Dangerous action button color (delete)"
             />
             <ColorInput
-              label="Botão de Perigo (Hover)"
+              label="Danger Button (Hover)"
               value={currentTheme.dangerButtonHover}
               onChange={(value) => handleColorChange('dangerButtonHover', value)}
-              description="Cor dos botões de perigo ao passar o mouse"
+              description="Danger button color on hover"
             />
           </ColorSection>
 
-          <ColorSection title="Campos de Entrada">
+          <ColorSection title="Input Fields">
             <ColorInput
-              label="Fundo dos Inputs"
+              label="Input Background"
               value={currentTheme.inputBackground}
               onChange={(value) => handleColorChange('inputBackground', value)}
-              description="Cor de fundo dos campos de entrada"
+              description="Background color for input fields"
             />
             <ColorInput
-              label="Texto dos Inputs"
+              label="Input Text"
               value={currentTheme.inputText}
               onChange={(value) => handleColorChange('inputText', value)}
-              description="Cor do texto dentro dos campos"
+              description="Text color inside input fields"
             />
           </ColorSection>
 
-          <ColorSection title="Status das Tarefas">
+          <ColorSection title="Task Status">
             <ColorInput
-              label="Pendente"
+              label="Pending"
               value={currentTheme.pendingColor}
               onChange={(value) => handleColorChange('pendingColor', value)}
-              description="Cor para tarefas pendentes"
+              description="Color for pending tasks"
             />
             <ColorInput
-              label="Em Progresso"
+              label="In Progress"
               value={currentTheme.inProgressColor}
               onChange={(value) => handleColorChange('inProgressColor', value)}
-              description="Cor para tarefas em progresso"
+              description="Color for tasks in progress"
             />
             <ColorInput
-              label="Concluída"
+              label="Completed"
               value={currentTheme.completedColor}
               onChange={(value) => handleColorChange('completedColor', value)}
-              description="Cor para tarefas concluídas"
+              description="Color for completed tasks"
             />
             <ColorInput
-              label="Aguardando Cliente"
+              label="Awaiting Client"
               value={currentTheme.awaitingClientColor}
               onChange={(value) => handleColorChange('awaitingClientColor', value)}
-              description="Cor para tarefas aguardando cliente"
+              description="Color for tasks awaiting client"
             />
           </ColorSection>
 
-          <ColorSection title="Prioridades">
+          <ColorSection title="Priorities">
             <ColorInput
-              label="Baixa Prioridade"
+              label="Low Priority"
               value={currentTheme.lowPriorityBg}
               onChange={(value) => handleColorChange('lowPriorityBg', value)}
-              description="Cor de fundo para baixa prioridade"
+              description="Background color for low priority"
             />
             <ColorInput
-              label="Média Prioridade"
+              label="Medium Priority"
               value={currentTheme.mediumPriorityBg}
               onChange={(value) => handleColorChange('mediumPriorityBg', value)}
-              description="Cor de fundo para média prioridade"
+              description="Background color for medium priority"
             />
             <ColorInput
-              label="Alta Prioridade"
+              label="High Priority"
               value={currentTheme.highPriorityBg}
               onChange={(value) => handleColorChange('highPriorityBg', value)}
-              description="Cor de fundo para alta prioridade"
+              description="Background color for high priority"
             />
           </ColorSection>
         </div>
@@ -455,7 +455,7 @@ export default function SettingsPage() {
                borderColor: 'var(--card-border)' 
              }}>
           <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--primary-text)' }}>
-            Prévia do Tema
+            Theme Preview
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 rounded border" 
@@ -464,23 +464,23 @@ export default function SettingsPage() {
                    borderColor: 'var(--card-border)' 
                  }}>
               <h4 className="font-semibold mb-2" style={{ color: 'var(--primary-text)' }}>
-                Card de Exemplo
+                Sample Card
               </h4>
               <p className="text-sm mb-3" style={{ color: 'var(--secondary-text)' }}>
-                Este é um exemplo de como os cards ficam com as cores atuais.
+                This is an example of how cards look with current colors.
               </p>
               <div className="flex gap-2">
                 <button 
                   className="px-3 py-1 rounded text-white text-sm"
                   style={{ backgroundColor: 'var(--primary-button)' }}
                 >
-                  Primário
+                  Primary
                 </button>
                 <button 
                   className="px-3 py-1 rounded text-white text-sm"
                   style={{ backgroundColor: 'var(--secondary-button)' }}
                 >
-                  Secundário
+                  Secondary
                 </button>
               </div>
             </div>
@@ -489,26 +489,26 @@ export default function SettingsPage() {
               <div className="flex gap-2">
                 <span className="px-2 py-1 rounded text-xs text-white" 
                       style={{ backgroundColor: 'var(--pending-color)' }}>
-                  Pendente
+                  Pending
                 </span>
                 <span className="px-2 py-1 rounded text-xs text-white" 
                       style={{ backgroundColor: 'var(--in-progress-color)' }}>
-                  Em Progresso
+                  In Progress
                 </span>
               </div>
               <div className="flex gap-2">
                 <span className="px-2 py-1 rounded text-xs text-white" 
                       style={{ backgroundColor: 'var(--completed-color)' }}>
-                  Concluída
+                  Completed
                 </span>
                 <span className="px-2 py-1 rounded text-xs text-white" 
                       style={{ backgroundColor: 'var(--awaiting-client-color)' }}>
-                  Aguardando
+                  Awaiting
                 </span>
               </div>
               <input 
                 type="text" 
-                placeholder="Campo de exemplo" 
+                placeholder="Sample input field" 
                 className="w-full px-3 py-2 rounded border text-sm"
                 style={{ 
                   backgroundColor: 'var(--input-background)',

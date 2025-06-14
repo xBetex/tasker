@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TaskStatus, TaskPriority } from '@/types/types';
 import { api } from '@/services/api';
 import DatePicker from 'react-datepicker';
@@ -54,7 +54,18 @@ export default function AddClientModal({
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState<'client' | 'task'>('client');
+  // Auto-focus on client ID when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        const clientIdInput = document.querySelector('input[placeholder="e.g., client-123"]') as HTMLInputElement;
+        if (clientIdInput) {
+          clientIdInput.focus();
+        }
+      }, 100);
+    }
+  }, [isOpen]);
 
   const isDateValid = (dateString: string): boolean => {
     return isValidStorageDate(dateString);
@@ -125,7 +136,6 @@ export default function AddClientModal({
       onAddClient();
       onClose();
       setFormData(initialFormData);
-      setCurrentStep('client');
     } catch (error) {
       console.error('Error creating client with tasks:', error);
       setApiError(error instanceof Error ? error.message : 'Failed to create client and tasks');
@@ -149,7 +159,6 @@ export default function AddClientModal({
     setFormData(newInitialData);
     setErrors({});
     setApiError(null);
-    setCurrentStep('client');
   };
 
   const handleClose = () => {
@@ -157,10 +166,52 @@ export default function AddClientModal({
     onClose();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleClose();
+    }
+  };
+
+  const focusTaskDescription = () => {
+    // Multiple attempts to ensure focus works reliably
+    const focusAttempt = () => {
+      const taskDescriptionInput = document.querySelector('textarea[placeholder="Describe the initial task..."]') as HTMLTextAreaElement;
+      if (taskDescriptionInput) {
+        taskDescriptionInput.focus();
+        taskDescriptionInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return true;
+      }
+      return false;
+    };
+
+    // Try immediately
+    if (!focusAttempt()) {
+      // Try after a short delay
+      setTimeout(() => {
+        if (!focusAttempt()) {
+          // Try one more time after a longer delay
+          setTimeout(focusAttempt, 200);
+        }
+      }, 50);
+    }
+  };
+
+
+
+  const handleTaskDescriptionKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Tab' && !e.shiftKey) {
+      // Let default tab behavior work, but ensure proper focus order
+      return;
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      onKeyDown={handleKeyDown}
+    >
       <div 
         className="rounded-lg p-6 w-full max-w-2xl shadow-2xl border"
         style={{
@@ -176,10 +227,15 @@ export default function AddClientModal({
           >
             Add New Client
           </h2>
-          <div className="flex items-center space-x-2">
-            <div className={`h-2 w-2 rounded-full ${currentStep === 'client' ? 'bg-blue-500' : 'bg-gray-300'}`} />
-            <div className={`h-2 w-2 rounded-full ${currentStep === 'task' ? 'bg-blue-500' : 'bg-gray-300'}`} />
-          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            tabIndex={-1}
+            aria-label="Close modal"
+          >
+            ✕
+          </button>
         </div>
 
         {apiError && (
@@ -196,7 +252,8 @@ export default function AddClientModal({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${currentStep === 'task' ? 'hidden' : ''}`}>
+                      {/* Client fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label 
                 className="block text-sm font-medium mb-1"
@@ -226,7 +283,9 @@ export default function AddClientModal({
                   borderColor: errors.id ? '#ef4444' : 'var(--input-border)',
                   color: 'var(--input-text)'
                 }}
-                placeholder="e.g., client-123"
+                                    placeholder="e.g., client-123"
+                    tabIndex={1}
+                    autoFocus
               />
               {errors.id && (
                 <p className="mt-1 text-sm text-red-500">{errors.id}</p>
@@ -251,7 +310,8 @@ export default function AddClientModal({
                   borderColor: errors.name ? '#ef4444' : 'var(--input-border)',
                   color: 'var(--input-text)'
                 }}
-                placeholder="Client's full name"
+                                    placeholder="Client's full name"
+                    tabIndex={2}
               />
               {errors.name && (
                 <p className="mt-1 text-sm text-red-500">{errors.name}</p>
@@ -276,7 +336,8 @@ export default function AddClientModal({
                   borderColor: errors.company ? '#ef4444' : 'var(--input-border)',
                   color: 'var(--input-text)'
                 }}
-                placeholder="Company name"
+                                    placeholder="Company name"
+                    tabIndex={3}
               />
               {errors.company && (
                 <p className="mt-1 text-sm text-red-500">{errors.company}</p>
@@ -301,7 +362,8 @@ export default function AddClientModal({
                   borderColor: errors.origin ? '#ef4444' : 'var(--input-border)',
                   color: 'var(--input-text)'
                 }}
-                placeholder="How did you find this client?"
+                                    placeholder="How did you find this client?"
+                    tabIndex={4}
               />
               {errors.origin && (
                 <p className="mt-1 text-sm text-red-500">{errors.origin}</p>
@@ -309,7 +371,8 @@ export default function AddClientModal({
             </div>
           </div>
 
-          <div className={`space-y-4 ${currentStep === 'client' ? 'hidden' : ''}`}>
+          {/* Task fields - always visible and focused */}
+          <div className="space-y-4">
             <div className="border-t pt-4" style={{ borderColor: 'var(--card-border)' }}>
               <h3 
                 className="text-lg font-semibold mb-4"
@@ -330,6 +393,7 @@ export default function AddClientModal({
                   <textarea
                     value={formData.taskDescription}
                     onChange={(e) => setFormData(prev => ({ ...prev, taskDescription: e.target.value }))}
+                    onKeyDown={handleTaskDescriptionKeyDown}
                     className={`w-full p-2 rounded border transition-all duration-200 ${errors.taskDescription ? 'border-red-500' : ''}`}
                     style={{
                       backgroundColor: 'var(--input-background)',
@@ -338,6 +402,7 @@ export default function AddClientModal({
                     }}
                     rows={3}
                     placeholder="Describe the initial task..."
+                    tabIndex={5}
                   />
                   {errors.taskDescription && (
                     <p className="mt-1 text-sm text-red-500">{errors.taskDescription}</p>
@@ -362,6 +427,7 @@ export default function AddClientModal({
                       borderColor: errors.taskDate ? '#ef4444' : 'var(--input-border)',
                       color: 'var(--input-text)'
                     }}
+                    tabIndex={6}
                   />
                   {errors.taskDate && (
                     <p className="mt-1 text-sm text-red-500">{errors.taskDate}</p>
@@ -385,6 +451,7 @@ export default function AddClientModal({
                       borderColor: 'var(--input-border)',
                       color: 'var(--input-text)'
                     }}
+                    tabIndex={7}
                   />
                 </div>
 
@@ -404,6 +471,7 @@ export default function AddClientModal({
                       borderColor: 'var(--input-border)',
                       color: 'var(--input-text)'
                     }}
+                    tabIndex={9}
                   >
                     <option value="pending">Pending</option>
                     <option value="in progress">In Progress</option>
@@ -428,6 +496,7 @@ export default function AddClientModal({
                       borderColor: 'var(--input-border)',
                       color: 'var(--input-text)'
                     }}
+                    tabIndex={8}
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -460,85 +529,28 @@ export default function AddClientModal({
               Cancel
             </button>
             
-            {currentStep === 'client' ? (
-              <button
-                type="button"
-                onClick={() => {
-                  const clientErrors: Partial<FormData> = {};
-                  if (!formData.id.trim()) clientErrors.id = 'Client ID is required';
-                  if (!formData.name.trim()) clientErrors.name = 'Name is required';
-                  if (!formData.company.trim()) clientErrors.company = 'Company is required';
-                  if (!formData.origin.trim()) clientErrors.origin = 'Origin is required';
-                  
-                  if (Object.keys(clientErrors).length === 0) {
-                    setCurrentStep('task');
-                    setErrors({});
-                  } else {
-                    setErrors(clientErrors);
-                  }
-                }}
-                className="px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
-                style={{
-                  backgroundColor: 'var(--primary-button)',
-                  color: 'white'
-                }}
-                onMouseEnter={(e) => {
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: 'var(--primary-button)',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => {
+                if (!isSubmitting) {
                   e.currentTarget.style.backgroundColor = 'var(--primary-button-hover)';
-                }}
-                onMouseLeave={(e) => {
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isSubmitting) {
                   e.currentTarget.style.backgroundColor = 'var(--primary-button)';
-                }}
-              >
-                Next: Add Task
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentStep('client');
-                    setErrors({});
-                  }}
-                  className="px-4 py-2 rounded-lg border transition-all duration-200 hover:scale-105"
-                  style={{
-                    backgroundColor: 'var(--card-background)',
-                    borderColor: 'var(--card-border)',
-                    color: 'var(--secondary-text)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
-                    e.currentTarget.style.color = 'var(--primary-text)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--card-background)';
-                    e.currentTarget.style.color = 'var(--secondary-text)';
-                  }}
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    backgroundColor: 'var(--primary-button)',
-                    color: 'white'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSubmitting) {
-                      e.currentTarget.style.backgroundColor = 'var(--primary-button-hover)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSubmitting) {
-                      e.currentTarget.style.backgroundColor = 'var(--primary-button)';
-                    }
-                  }}
-                >
-                  {isSubmitting ? 'Creating...' : 'Create Client'}
-                </button>
-              </>
-            )}
+                }
+              }}
+              tabIndex={10}
+            >
+              {isSubmitting ? 'Creating...' : 'Create Client'}
+            </button>
           </div>
         </form>
       </div>

@@ -35,7 +35,7 @@ export default function EditTaskModal({ isOpen, onClose, task, onUpdate, darkMod
     setError(null);
 
     if (!isValidStorageDate(formData.date)) {
-      setError('Data inválida. Use o formato correto.');
+      setError('Invalid date. Use the correct format.');
       setIsSubmitting(false);
       return;
     }
@@ -50,7 +50,7 @@ export default function EditTaskModal({ isOpen, onClose, task, onUpdate, darkMod
         completion_date: formData.completion_date || undefined
       });
       
-      // Definir a tarefa como focada antes de atualizar
+      // Set task as focused before updating
       setFocusedTaskId(task.id);
       onUpdate();
       onClose();

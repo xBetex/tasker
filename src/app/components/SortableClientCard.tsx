@@ -14,7 +14,7 @@ interface SortableClientCardProps {
   darkMode: boolean;
   onShowDetails?: (client: Client) => void;
   isPinned?: boolean;
-  disableDrag?: boolean; // Nova prop para desabilitar drag
+  disableDrag?: boolean; // New prop to disable drag
 }
 
 // Pin icon component

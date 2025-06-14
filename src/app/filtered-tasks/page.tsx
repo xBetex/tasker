@@ -37,6 +37,9 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
   const [isLoading, setIsLoading] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [editingData, setEditingData] = useState<Partial<Task>>({});
+  const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState<TaskStatus>('pending');
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
 
@@ -50,6 +53,12 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Reset selection when tasks change
+  useEffect(() => {
+    setSelectedTasks(new Set());
+    setShowBulkActions(false);
+  }, [tasks]);
 
   const getClientName = (clientId: string) => {
     const client = clients.find(c => c.id === clientId);
@@ -67,48 +76,79 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return darkMode ? 'bg-green-600' : 'bg-green-500';
-      case 'in progress': return darkMode ? 'bg-blue-600' : 'bg-blue-500';
-      case 'pending': return darkMode ? 'bg-yellow-600' : 'bg-yellow-500';
-      case 'awaiting client': return darkMode ? 'bg-orange-600' : 'bg-orange-500';
-      default: return darkMode ? 'bg-gray-600' : 'bg-gray-500';
+      case 'completed': return 'bg-green-500';
+      case 'in progress': return 'bg-yellow-500';
+      case 'pending': return 'bg-gray-500';
+      case 'awaiting client': return 'bg-blue-500';
+      default: return 'bg-gray-500';
     }
   };
 
-  // Context menu handlers
+  const handleTaskSelection = (taskId: number, selected: boolean) => {
+    const newSelected = new Set(selectedTasks);
+    if (selected) {
+      newSelected.add(taskId);
+    } else {
+      newSelected.delete(taskId);
+    }
+    setSelectedTasks(newSelected);
+    setShowBulkActions(newSelected.size > 0);
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      const allTaskIds = new Set(tasks.map(task => task.id));
+      setSelectedTasks(allTaskIds);
+      setShowBulkActions(true);
+    } else {
+      setSelectedTasks(new Set());
+      setShowBulkActions(false);
+    }
+  };
+
+  const handleBulkStatusChange = async () => {
+    if (selectedTasks.size === 0) return;
+    
+    setIsLoading(true);
+    try {
+      const promises = Array.from(selectedTasks).map(taskId => 
+        api.updateTaskStatus(taskId, bulkStatus)
+      );
+      
+      await Promise.all(promises);
+      
+      toast.success(
+        'Bulk Update Complete', 
+        `Updated ${selectedTasks.size} task${selectedTasks.size > 1 ? 's' : ''} to "${bulkStatus}"`
+      );
+      
+      setSelectedTasks(new Set());
+      setShowBulkActions(false);
+      onUpdate();
+    } catch (error) {
+      console.error('Error updating tasks:', error);
+      toast.error('Bulk Update Failed', 'Failed to update some tasks');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleContextMenu = (e: React.MouseEvent, task: Task) => {
     e.preventDefault();
-    e.stopPropagation();
-
-    const { clientX, clientY } = e;
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
-    const menuWidth = 208; // w-52 = 208px
-    const menuHeight = 320;
-
-    let x = clientX;
-    let y = clientY;
-
-    // Ajustar posição horizontal
-    if (x + menuWidth > windowWidth) {
-      x = windowWidth - menuWidth - 10; // 10px de margem
-    }
-    if (x < 10) {
-      x = 10; // Margem mínima da esquerda
-    }
-
-    // Ajustar posição vertical
-    if (y + menuHeight > windowHeight) {
-      y = windowHeight - menuHeight - 10; // 10px de margem
-    }
-    if (y < 10) {
-      y = 10; // Margem mínima do topo
-    }
-
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    // Ensure menu doesn't go off screen
+    const menuWidth = 208;
+    const menuHeight = 300;
+    const adjustedX = x + menuWidth > window.innerWidth ? x - menuWidth : x;
+    const adjustedY = y + menuHeight > window.innerHeight ? y - menuHeight : y;
+    
     setContextMenu({
       visible: true,
-      x,
-      y,
+      x: adjustedX,
+      y: adjustedY,
       task
     });
   };
@@ -118,34 +158,19 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
     e.stopPropagation();
     
     const rect = e.currentTarget.getBoundingClientRect();
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
-    const menuWidth = 208; // w-52 = 208px
-    const menuHeight = 320;
+    const x = rect.right + 5;
+    const y = rect.top;
     
-    let x = rect.right + 5; // 5px de margem do botão
-    let y = rect.top;
-    
-    // Ajustar posição horizontal
-    if (x + menuWidth > windowWidth) {
-      x = rect.left - menuWidth - 5; // Posicionar à esquerda do botão
-    }
-    if (x < 10) {
-      x = 10; // Margem mínima da esquerda
-    }
-    
-    // Ajustar posição vertical
-    if (y + menuHeight > windowHeight) {
-      y = windowHeight - menuHeight - 10; // 10px de margem do bottom
-    }
-    if (y < 10) {
-      y = 10; // Margem mínima do topo
-    }
+    // Ensure menu doesn't go off screen
+    const menuWidth = 208;
+    const menuHeight = 300;
+    const adjustedX = x + menuWidth > window.innerWidth ? rect.left - menuWidth - 5 : x;
+    const adjustedY = y + menuHeight > window.innerHeight ? y - menuHeight + rect.height : y;
     
     setContextMenu({
       visible: true,
-      x,
-      y,
+      x: adjustedX,
+      y: adjustedY,
       task
     });
   };
@@ -153,54 +178,50 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
   const handleEditTask = () => {
     if (contextMenu.task) {
       setEditingTask(contextMenu.task);
+      setContextMenu({ visible: false, x: 0, y: 0, task: null });
     }
-    setContextMenu({ visible: false, x: 0, y: 0, task: null });
   };
 
   const handleDeleteTask = async () => {
-    if (contextMenu.task) {
-      try {
-        setIsLoading(true);
-        await api.deleteTask(contextMenu.task.id);
-        onUpdate();
-        toast.success('Task Deleted', 'Task has been deleted successfully!');
-      } catch (error) {
-        console.error('Error deleting task:', error);
-        toast.error('Failed to Delete Task', 'Please try again later.');
-      } finally {
-        setIsLoading(false);
-        setContextMenu({ visible: false, x: 0, y: 0, task: null });
-      }
+    if (!contextMenu.task) return;
+    
+    setIsLoading(true);
+    try {
+      await api.deleteTask(contextMenu.task.id);
+      toast.success('Task Deleted', 'Task has been deleted successfully');
+      setContextMenu({ visible: false, x: 0, y: 0, task: null });
+      onUpdate();
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast.error('Delete Failed', 'Failed to delete task');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleStatusChange = async (newStatus: TaskStatus) => {
-    if (contextMenu.task) {
-      try {
-        setIsLoading(true);
-        await api.updateTaskStatus(contextMenu.task.id, newStatus);
-        onUpdate();
-        toast.success('Status Updated', `Task status changed to "${newStatus}"!`);
-      } catch (error) {
-        console.error('Error updating task status:', error);
-        toast.error('Failed to Update Status', 'Please try again later.');
-      } finally {
-        setIsLoading(false);
-        setContextMenu({ visible: false, x: 0, y: 0, task: null });
-      }
+    if (!contextMenu.task) return;
+    
+    setIsLoading(true);
+    try {
+      await api.updateTaskStatus(contextMenu.task.id, newStatus);
+      toast.success('Status Updated', `Task status changed to "${newStatus}"`);
+      setContextMenu({ visible: false, x: 0, y: 0, task: null });
+      onUpdate();
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      toast.error('Update Failed', 'Failed to update task status');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Inline editing handlers
   const handleStartEdit = (task: Task) => {
     setEditingTaskId(task.id);
     setEditingData({
       description: task.description,
-      status: task.status,
       priority: task.priority,
-      date: task.date,
-      sla_date: task.sla_date,
-      completion_date: task.completion_date
+      status: task.status
     });
   };
 
@@ -210,18 +231,18 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
   };
 
   const handleSaveEdit = async () => {
-    if (!editingTaskId || !editingData) return;
+    if (!editingTaskId || !editingData.description?.trim()) return;
     
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       await api.updateTask(editingTaskId, editingData);
-      onUpdate();
-      toast.success('Task Updated', 'Task has been updated successfully!');
+      toast.success('Task Updated', 'Task has been updated successfully');
       setEditingTaskId(null);
       setEditingData({});
+      onUpdate();
     } catch (error) {
       console.error('Error updating task:', error);
-      toast.error('Failed to Update Task', 'Please try again later.');
+      toast.error('Update Failed', 'Failed to update task');
     } finally {
       setIsLoading(false);
     }
@@ -250,403 +271,377 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
     return sortOrder === 'asc' ? comparison : -comparison;
   });
 
+  // Bulk Actions Bar
+  const BulkActionsBar = () => (
+    <div 
+      className="mb-4 p-4 rounded-lg border-2 border-dashed"
+      style={{
+        backgroundColor: 'var(--card-background-hover)',
+        borderColor: 'var(--primary-button)'
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <span 
+            className="font-medium"
+            style={{ color: 'var(--primary-text)' }}
+          >
+            {selectedTasks.size} task{selectedTasks.size > 1 ? 's' : ''} selected
+          </span>
+          <select
+            value={bulkStatus}
+            onChange={(e) => setBulkStatus(e.target.value as TaskStatus)}
+            className="px-3 py-1 rounded border"
+            style={{
+              backgroundColor: 'var(--card-background)',
+              borderColor: 'var(--card-border)',
+              color: 'var(--primary-text)'
+            }}
+          >
+            <option value="pending">Pending</option>
+            <option value="in progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="awaiting client">Awaiting Client</option>
+          </select>
+        </div>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleBulkStatusChange}
+            disabled={isLoading}
+            className="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+            style={{
+              backgroundColor: 'var(--primary-button)',
+              color: 'white'
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.backgroundColor = 'var(--primary-button-hover)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.backgroundColor = 'var(--primary-button)';
+              }
+            }}
+          >
+            {isLoading ? 'Updating...' : 'Update Status'}
+          </button>
+          <button
+            onClick={() => {
+              setSelectedTasks(new Set());
+              setShowBulkActions(false);
+            }}
+            className="px-4 py-2 rounded-lg font-medium transition-colors"
+            style={{
+              backgroundColor: 'var(--secondary-button)',
+              color: 'white'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--secondary-button-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--secondary-button)';
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (viewMode === 'table') {
     return (
-      <div 
-        className="rounded-xl border shadow-lg overflow-hidden"
-        style={{
-          backgroundColor: 'var(--card-background)',
-          borderColor: 'var(--card-border)'
-        }}
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead 
-              style={{
-                backgroundColor: 'var(--card-background-hover)'
-              }}
-            >
-              <tr>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-                  style={{ color: 'var(--secondary-text)' }}
-                >
-                  <button 
-                    onClick={() => {
-                      if (sortBy === 'date') {
-                        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                      } else {
-                        setSortBy('date');
-                        setSortOrder('desc');
+      <>
+        {showBulkActions && <BulkActionsBar />}
+        <div 
+          className="rounded-xl border shadow-lg overflow-hidden"
+          style={{
+            backgroundColor: 'var(--card-background)',
+            borderColor: 'var(--card-border)'
+          }}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead 
+                style={{
+                  backgroundColor: 'var(--card-background-hover)'
+                }}
+              >
+                <tr>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                    style={{ color: 'var(--secondary-text)' }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedTasks.size === tasks.length && tasks.length > 0}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                      className="rounded"
+                    />
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                    style={{ color: 'var(--secondary-text)' }}
+                  >
+                    <button 
+                      onClick={() => {
+                        if (sortBy === 'date') {
+                          setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortBy('date');
+                          setSortOrder('desc');
+                        }
+                      }}
+                      className="flex items-center gap-1 hover:text-blue-500"
+                    >
+                      Date
+                      {sortBy === 'date' && (
+                        <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </button>
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                    style={{ color: 'var(--secondary-text)' }}
+                  >
+                    Description
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                    style={{ color: 'var(--secondary-text)' }}
+                  >
+                    Client
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                    style={{ color: 'var(--secondary-text)' }}
+                  >
+                    <button 
+                      onClick={() => {
+                        if (sortBy === 'status') {
+                          setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortBy('status');
+                          setSortOrder('asc');
+                        }
+                      }}
+                      className="flex items-center gap-1 hover:text-blue-500"
+                    >
+                      Status
+                      {sortBy === 'status' && (
+                        <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </button>
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                    style={{ color: 'var(--secondary-text)' }}
+                  >
+                    <button 
+                      onClick={() => {
+                        if (sortBy === 'priority') {
+                          setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortBy('priority');
+                          setSortOrder('desc');
+                        }
+                      }}
+                      className="flex items-center gap-1 hover:text-blue-500"
+                    >
+                      Priority
+                      {sortBy === 'priority' && (
+                        <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </button>
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                    style={{ color: 'var(--secondary-text)' }}
+                  >
+                    SLA
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                    style={{ color: 'var(--secondary-text)' }}
+                  >
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
+                {sortedTasks.map((task) => (
+                  <tr 
+                    key={task.id}
+                    className={`transition-colors ${
+                      selectedTasks.has(task.id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                    }`}
+                    style={{
+                      backgroundColor: highlightTaskId && task.id.toString() === highlightTaskId
+                        ? darkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
+                        : selectedTasks.has(task.id)
+                        ? darkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)'
+                        : 'transparent'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!selectedTasks.has(task.id) && !(highlightTaskId && task.id.toString() === highlightTaskId)) {
+                        e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
                       }
                     }}
-                    className="flex items-center gap-1 hover:text-blue-500"
-                  >
-                    Date
-                    {sortBy === 'date' && (
-                      <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                    )}
-                  </button>
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-                  style={{ color: 'var(--secondary-text)' }}
-                >
-                  Description
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-                  style={{ color: 'var(--secondary-text)' }}
-                >
-                  <button 
-                    onClick={() => {
-                      if (sortBy === 'status') {
-                        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                      } else {
-                        setSortBy('status');
-                        setSortOrder('asc');
+                    onMouseLeave={(e) => {
+                      if (!selectedTasks.has(task.id) && !(highlightTaskId && task.id.toString() === highlightTaskId)) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
                       }
                     }}
-                    className="flex items-center gap-1 hover:text-blue-500"
                   >
-                    Status
-                    {sortBy === 'status' && (
-                      <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                    )}
-                  </button>
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-                  style={{ color: 'var(--secondary-text)' }}
-                >
-                  <button 
-                    onClick={() => {
-                      if (sortBy === 'priority') {
-                        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                      } else {
-                        setSortBy('priority');
-                        setSortOrder('desc');
-                      }
-                    }}
-                    className="flex items-center gap-1 hover:text-blue-500"
-                  >
-                    Priority
-                    {sortBy === 'priority' && (
-                      <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                    )}
-                  </button>
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-                  style={{ color: 'var(--secondary-text)' }}
-                >
-                  SLA Due
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-                  style={{ color: 'var(--secondary-text)' }}
-                >
-                  Client
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-                  style={{ color: 'var(--secondary-text)' }}
-                >
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody 
-              className="divide-y"
-              style={{
-                backgroundColor: 'var(--card-background)',
-                borderColor: 'var(--card-border)'
-              }}
-            >
-              {sortedTasks.map((task) => (
-                <tr 
-                  key={task.id} 
-                  className="table-row-transition"
-                  style={{
-                    backgroundColor: highlightTaskId && task.id.toString() === highlightTaskId 
-                      ? darkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
-                      : editingTaskId === task.id 
-                      ? 'var(--card-background-hover)'
-                      : 'var(--card-background)',
-                    borderColor: editingTaskId === task.id 
-                      ? 'rgba(59, 130, 246, 0.5)'
-                      : 'var(--card-border)'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!(highlightTaskId && task.id.toString() === highlightTaskId) && editingTaskId !== task.id) {
-                      e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!(highlightTaskId && task.id.toString() === highlightTaskId) && editingTaskId !== task.id) {
-                      e.currentTarget.style.backgroundColor = 'var(--card-background)';
-                    }
-                  }}
-                  onContextMenu={(e) => handleContextMenu(e, task)}
-                >
-                  <td 
-                    className="px-6 py-4 whitespace-nowrap text-sm"
-                    style={{ color: 'var(--primary-text)' }}
-                  >
-                    {editingTaskId === task.id ? (
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <input
-                        type="date"
-                        value={editingData.date || task.date}
-                        onChange={(e) => handleEditChange('date', e.target.value)}
-                        className="w-full px-2 py-1 text-xs rounded border"
-                        style={{
-                          backgroundColor: 'var(--input-background)',
-                          borderColor: 'var(--input-border)',
-                          color: 'var(--input-text)'
-                        }}
+                        type="checkbox"
+                        checked={selectedTasks.has(task.id)}
+                        onChange={(e) => handleTaskSelection(task.id, e.target.checked)}
+                        className="rounded"
                       />
-                    ) : (
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: 'var(--secondary-text)' }}>
                       <DateDisplay date={task.date} />
-                    )}
-                  </td>
-                  <td 
-                    className="px-6 py-4 text-sm"
-                    style={{ color: 'var(--primary-text)' }}
-                  >
-                    {editingTaskId === task.id ? (
-                      <textarea
-                        value={editingData.description || task.description}
-                        onChange={(e) => handleEditChange('description', e.target.value)}
-                        className="w-full px-2 py-1 text-xs rounded border resize-none"
-                        style={{
-                          backgroundColor: 'var(--input-background)',
-                          borderColor: 'var(--input-border)',
-                          color: 'var(--input-text)'
-                        }}
-                        rows={2}
-                      />
-                    ) : (
-                      <div className="max-w-xs break-words">{task.description}</div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {editingTaskId === task.id ? (
-                      <select
-                        value={editingData.status || task.status}
-                        onChange={(e) => handleEditChange('status', e.target.value)}
-                        className="px-2 py-1 text-xs rounded border"
-                        style={{
-                          backgroundColor: 'var(--input-background)',
-                          borderColor: 'var(--input-border)',
-                          color: 'var(--input-text)'
-                        }}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="in progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="awaiting client">Awaiting Client</option>
-                      </select>
-                    ) : (
+                    </td>
+                    <td className="px-6 py-4">
+                      {editingTaskId === task.id ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={editingData.description || ''}
+                            onChange={(e) => handleEditChange('description', e.target.value)}
+                            className="flex-1 px-2 py-1 text-sm border rounded"
+                            style={{
+                              backgroundColor: 'var(--card-background)',
+                              borderColor: 'var(--card-border)',
+                              color: 'var(--primary-text)'
+                            }}
+                            autoFocus
+                          />
+                          <button
+                            onClick={handleSaveEdit}
+                            disabled={isLoading}
+                            className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div 
+                          className="text-sm font-medium break-words-enhanced cursor-pointer hover:text-blue-600"
+                          style={{ color: 'var(--primary-text)' }}
+                          onClick={() => handleStartEdit(task)}
+                          title="Click to edit"
+                        >
+                          {task.description}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: 'var(--secondary-text)' }}>
+                      {getClientName(task.client_id)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-white ${getStatusColor(task.status)}`}>
                         {task.status}
                       </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {editingTaskId === task.id ? (
-                      <select
-                        value={editingData.priority || task.priority}
-                        onChange={(e) => handleEditChange('priority', e.target.value)}
-                        className="px-2 py-1 text-xs rounded border"
-                        style={{
-                          backgroundColor: 'var(--input-background)',
-                          borderColor: 'var(--input-border)',
-                          color: 'var(--input-text)'
-                        }}
-                      >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                      </select>
-                    ) : (
-                      <span className={getPriorityColor(task.priority)}>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`text-sm font-medium ${getPriorityColor(task.priority)}`}>
                         {task.priority.toUpperCase()}
                       </span>
-                    )}
-                  </td>
-                  <td 
-                    className="px-6 py-4 whitespace-nowrap text-sm"
-                    style={{ color: 'var(--primary-text)' }}
-                  >
-                    {editingTaskId === task.id ? (
-                      <input
-                        type="date"
-                        value={editingData.sla_date || task.sla_date || ''}
-                        onChange={(e) => handleEditChange('sla_date', e.target.value)}
-                        className="w-full px-2 py-1 text-xs rounded border"
-                        style={{
-                          backgroundColor: 'var(--input-background)',
-                          borderColor: 'var(--input-border)',
-                          color: 'var(--input-text)'
-                        }}
-                      />
-                    ) : (
-                      task.sla_date ? (
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {task.sla_date && task.status !== 'completed' ? (
                         <div className="flex flex-col">
                           <DateDisplay date={task.sla_date} />
-                          {task.status !== 'completed' && (
-                            <span className={`text-xs font-medium mt-1 ${
-                              task.sla_date && new Date(task.sla_date) < new Date()
-                                ? 'text-red-600'
-                                : task.sla_date && new Date(task.sla_date).toDateString() === new Date().toDateString()
-                                ? 'text-orange-600'
-                                : 'text-green-600'
-                            }`}>
-                              {task.sla_date && new Date(task.sla_date) < new Date() && '⚠️ Overdue'}
-                              {task.sla_date && new Date(task.sla_date).toDateString() === new Date().toDateString() && '⚠️ Due Today'}
-                              {task.sla_date && new Date(task.sla_date) > new Date() && '✅ On Track'}
-                            </span>
-                          )}
+                          <span className={`text-xs font-medium ${getSLAStatusColor(getSLAStatus(task), darkMode)}`}>
+                            {getSLAStatusBadge(getSLAStatus(task))}
+                          </span>
                         </div>
                       ) : (
-                        <span 
-                          className="text-xs"
-                          style={{ color: 'var(--muted-text)' }}
-                        >
-                          No SLA
-                        </span>
-                      )
-                    )}
-                  </td>
-                  <td 
-                    className="px-6 py-4 whitespace-nowrap text-sm"
-                    style={{ color: 'var(--primary-text)' }}
-                  >
-                    <span>{getClientName(task.client_id)}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {editingTaskId === task.id ? (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleSaveEdit}
-                          disabled={isLoading}
-                          className="px-3 py-1 text-xs rounded text-white disabled:opacity-50 transition-colors"
-                          style={{
-                            backgroundColor: 'var(--success-button)'
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!isLoading) {
-                              e.currentTarget.style.backgroundColor = 'var(--success-button-hover)';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!isLoading) {
-                              e.currentTarget.style.backgroundColor = 'var(--success-button)';
-                            }
-                          }}
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={handleCancelEdit}
-                          className="px-3 py-1 text-xs rounded text-white transition-colors"
-                          style={{
-                            backgroundColor: 'var(--secondary-button)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'var(--secondary-button-hover)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'var(--secondary-button)';
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleStartEdit(task)}
-                          className="p-1 rounded transition-colors"
-                          style={{ color: 'var(--secondary-text)' }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
-                            e.currentTarget.style.color = 'var(--primary-text)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = 'var(--secondary-text)';
-                          }}
-                          title="Edit task"
-                          aria-label="Edit task"
-                        >
-                          <EditIcon size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => handleMoreVerticalClick(e, task)}
-                          className="p-1 rounded transition-colors"
-                          style={{ color: 'var(--secondary-text)' }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
-                            e.currentTarget.style.color = 'var(--primary-text)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = 'var(--secondary-text)';
-                          }}
-                          title="More options"
-                          aria-label="More options"
-                        >
-                          <MoreVerticalIcon size={16} />
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        <span style={{ color: 'var(--muted-text)' }}>No SLA</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={(e) => handleMoreVerticalClick(e, task)}
+                        className="p-1 rounded transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                        style={{ color: 'var(--secondary-text)' }}
+                        title="More actions"
+                      >
+                        <MoreVerticalIcon size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   // Cards view
   return (
     <>
+      {showBulkActions && <BulkActionsBar />}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sortedTasks.map((task) => (
           <div 
             key={task.id} 
-            className={`p-4 rounded-lg border shadow task-card-hover ${
+            className={`p-4 rounded-lg border shadow task-card-hover relative ${
               task.sla_date && task.status !== 'completed' && getSLAStatus(task) === 'overdue'
                 ? 'border-l-4 border-l-red-500'
                 : task.sla_date && task.status !== 'completed' && getSLAStatus(task) === 'due_today'
                 ? 'border-l-4 border-l-orange-500'
                 : ''
-            }`}
+            } ${selectedTasks.has(task.id) ? 'ring-2 ring-blue-500' : ''}`}
             style={{
               backgroundColor: highlightTaskId && task.id.toString() === highlightTaskId
                 ? darkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
+                : selectedTasks.has(task.id)
+                ? darkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)'
                 : 'var(--card-background)',
               borderColor: highlightTaskId && task.id.toString() === highlightTaskId
                 ? darkMode ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)'
+                : selectedTasks.has(task.id)
+                ? darkMode ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.3)'
                 : 'var(--card-border)',
               color: 'var(--primary-text)'
             }}
             onMouseEnter={(e) => {
-              if (!(highlightTaskId && task.id.toString() === highlightTaskId)) {
+              if (!selectedTasks.has(task.id) && !(highlightTaskId && task.id.toString() === highlightTaskId)) {
                 e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
               }
             }}
             onMouseLeave={(e) => {
-              if (!(highlightTaskId && task.id.toString() === highlightTaskId)) {
+              if (!selectedTasks.has(task.id) && !(highlightTaskId && task.id.toString() === highlightTaskId)) {
                 e.currentTarget.style.backgroundColor = 'var(--card-background)';
               }
             }}
             onContextMenu={(e) => handleContextMenu(e, task)}
           >
-            <div className="flex items-start justify-between mb-2">
+            {/* Selection Checkbox */}
+            <div className="absolute top-2 left-2">
+              <input
+                type="checkbox"
+                checked={selectedTasks.has(task.id)}
+                onChange={(e) => handleTaskSelection(task.id, e.target.checked)}
+                className="rounded"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+
+            <div className="flex items-start justify-between mb-2 ml-6">
               <div 
                 className="text-sm"
                 style={{ color: 'var(--secondary-text)' }}
@@ -669,8 +664,8 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                     e.currentTarget.style.backgroundColor = 'transparent';
                     e.currentTarget.style.color = 'var(--secondary-text)';
                   }}
-                  title="Task options"
-                  aria-label="Task options"
+                  title="Quick actions"
+                  aria-label="Quick actions"
                 >
                   <MoreVerticalIcon size={16} />
                 </button>
@@ -678,13 +673,13 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
             </div>
             
             <h3 
-              className="font-medium mb-3 break-words-enhanced leading-tight"
+              className="font-medium mb-3 break-words-enhanced leading-tight ml-6"
               style={{ color: 'var(--primary-text)' }}
             >
               {task.description}
             </h3>
             
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 ml-6">
               <span className={`text-sm font-medium ${getPriorityColor(task.priority)}`}>
                 {task.priority.toUpperCase()} Priority
               </span>
@@ -699,7 +694,7 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
             {/* SLA Footer */}
             {task.sla_date && task.status !== 'completed' && (
               <div 
-                className="mt-3 pt-2 border-t flex items-center justify-between"
+                className="mt-3 pt-2 border-t flex items-center justify-between ml-6"
                 style={{ borderColor: 'var(--card-border)' }}
               >
                 <span className={`text-xs font-medium ${
@@ -747,12 +742,12 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
             overflowY: 'auto',
           }}
         >
-          {/* Seção de Ações Principais */}
+          {/* Quick Actions Section */}
           <div 
             className="px-3 py-2 text-xs font-medium"
             style={{ color: 'var(--muted-text)' }}
           >
-            Task Actions
+            Quick Actions
           </div>
           
           <button
@@ -786,13 +781,13 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
             Delete Task
           </button>
 
-          {/* Separador */}
+          {/* Separator */}
           <div 
             className="border-t my-1"
             style={{ borderColor: 'var(--card-border)' }}
           ></div>
 
-          {/* Seção de Status */}
+          {/* Status Change Section */}
           <div 
             className="px-3 py-2 text-xs font-medium"
             style={{ color: 'var(--muted-text)' }}
@@ -800,89 +795,28 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
             Change Status
           </div>
           
-          <button
-            onClick={() => handleStatusChange('pending')}
-            disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors ${
-              contextMenu.task?.status === 'pending' ? 'font-semibold' : ''
-            }`}
-            style={{ 
-              color: 'var(--primary-text)',
-              backgroundColor: contextMenu.task?.status === 'pending' ? 'var(--card-background-hover)' : 'transparent'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = contextMenu.task?.status === 'pending' ? 'var(--card-background-hover)' : 'transparent';
-            }}
-          >
-            <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-3"></span>
-            Pending
-          </button>
-          
-          <button
-            onClick={() => handleStatusChange('in progress')}
-            disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors ${
-              contextMenu.task?.status === 'in progress' ? 'font-semibold' : ''
-            }`}
-            style={{ 
-              color: 'var(--primary-text)',
-              backgroundColor: contextMenu.task?.status === 'in progress' ? 'var(--card-background-hover)' : 'transparent'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = contextMenu.task?.status === 'in progress' ? 'var(--card-background-hover)' : 'transparent';
-            }}
-          >
-            <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 mr-3"></span>
-            In Progress
-          </button>
-          
-          <button
-            onClick={() => handleStatusChange('completed')}
-            disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors ${
-              contextMenu.task?.status === 'completed' ? 'font-semibold' : ''
-            }`}
-            style={{ 
-              color: 'var(--primary-text)',
-              backgroundColor: contextMenu.task?.status === 'completed' ? 'var(--card-background-hover)' : 'transparent'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = contextMenu.task?.status === 'completed' ? 'var(--card-background-hover)' : 'transparent';
-            }}
-          >
-            <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-3"></span>
-            Completed
-          </button>
-          
-          <button
-            onClick={() => handleStatusChange('awaiting client')}
-            disabled={isLoading}
-            className={`flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors ${
-              contextMenu.task?.status === 'awaiting client' ? 'font-semibold' : ''
-            }`}
-            style={{ 
-              color: 'var(--primary-text)',
-              backgroundColor: contextMenu.task?.status === 'awaiting client' ? 'var(--card-background-hover)' : 'transparent'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = contextMenu.task?.status === 'awaiting client' ? 'var(--card-background-hover)' : 'transparent';
-            }}
-          >
-            <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-3"></span>
-            Awaiting Client
-          </button>
+          {(['pending', 'in progress', 'completed', 'awaiting client'] as TaskStatus[]).map((status) => (
+            <button
+              key={status}
+              onClick={() => handleStatusChange(status)}
+              disabled={isLoading || contextMenu.task?.status === status}
+              className="flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors"
+              style={{ 
+                color: contextMenu.task?.status === status ? 'var(--muted-text)' : 'var(--primary-text)'
+              }}
+              onMouseEnter={(e) => {
+                if (contextMenu.task?.status !== status) {
+                  e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <span className={`inline-block w-3 h-3 rounded-full mr-3 ${getStatusColor(status)}`}></span>
+              {status} {contextMenu.task?.status === status && '(current)'}
+            </button>
+          ))}
         </div>
       )}
 
@@ -890,7 +824,7 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
       {editingTask && (
         <EditTaskModal
           task={editingTask}
-          isOpen={!!editingTask}
+          isOpen={true}
           onClose={() => setEditingTask(null)}
           onUpdate={onUpdate}
           darkMode={darkMode}

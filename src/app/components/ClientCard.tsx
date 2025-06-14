@@ -31,7 +31,7 @@ export default function ClientCard({
   onShowDetails,
 }: ClientCardProps) {
   
-  // Estado para as tabs das tarefas
+  // State for task tabs
   const [activeTab, setActiveTab] = useState<ClientTabType>('active');
   const toast = useToast();
   
@@ -69,7 +69,7 @@ export default function ClientCard({
     handleTouchCancel,
   } = useClientCard(client, onUpdate, onDeleteTask);
 
-  // Função para apenas expandir/recolher (mostrar tarefas)
+  // Function to only expand/collapse (show tasks)
   const handleToggleExpand = () => {
     if (isExpanded) {
       setIsEditing(false);
@@ -83,13 +83,13 @@ export default function ClientCard({
     setIsEditing(true);
   };
 
-  // Função para salvar e sair do modo de edição
+  // Function to save and exit edit mode
   const handleSaveAndExitEdit = async () => {
     await handleSave();
     setIsEditing(false);
   };
 
-  // Função para cancelar edição
+  // Function to cancel editing
   const handleCancelEdit = () => {
     setIsEditing(false);
     setIsAddingTask(false);
@@ -172,7 +172,7 @@ export default function ClientCard({
 
 
 
-  // Filtra tarefas por tab
+  // Filter tasks by tab
   const allTasks = isEditing ? editData.tasks : client.tasks;
   const activeTasks = allTasks.filter(task => task.status !== 'completed');
   const completedTasks = allTasks.filter(task => task.status === 'completed');
@@ -246,7 +246,7 @@ export default function ClientCard({
           {displayTasks.length > 0 && (
             <div className="mb-4">
               <h4 className="font-medium mb-3 text-white dark:text-gray-800">
-                {activeTab === 'active' ? 'Tarefas Ativas' : 'Tarefas Concluídas'} ({displayTasks.length})
+                {activeTab === 'active' ? 'Active Tasks' : 'Completed Tasks'} ({displayTasks.length})
               </h4>
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {displayTasks.map((task, index) => (
@@ -310,7 +310,7 @@ export default function ClientCard({
             </div>
           )}
 
-          {/* Mensagem quando não há tarefas */}
+          {/* Message when there are no tasks */}
           {displayTasks.length === 0 && (
             <div 
               className="text-center py-8"
@@ -318,13 +318,13 @@ export default function ClientCard({
             >
               {activeTab === 'active' ? (
                 <div>
-                  <p className="mb-2">📝 Nenhuma tarefa ativa</p>
-                  <p className="text-sm">Adicione uma nova tarefa para começar!</p>
+                  <p className="mb-2">📝 No active tasks</p>
+                  <p className="text-sm">Add a new task to get started!</p>
                 </div>
               ) : (
                 <div>
-                  <p className="mb-2">🎉 Nenhuma tarefa concluída ainda</p>
-                  <p className="text-sm">Complete algumas tarefas para vê-las aqui!</p>
+                  <p className="mb-2">🎉 No completed tasks yet</p>
+                  <p className="text-sm">Complete some tasks to see them here!</p>
                 </div>
               )}
             </div>

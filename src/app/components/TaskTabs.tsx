@@ -50,7 +50,7 @@ const TaskTabs: React.FC<TaskTabsProps> = ({
             }`}
           >
             <span className="text-lg">🔥</span>
-            <span>Tarefas Ativas</span>
+                            <span>Active Tasks</span>
             <span className={`
               ml-2 px-2 py-1 text-xs rounded-full font-bold
               ${activeTab === 'active' 
@@ -70,7 +70,7 @@ const TaskTabs: React.FC<TaskTabsProps> = ({
             }`}
           >
             <span className="text-lg">✅</span>
-            <span>Concluídas</span>
+                            <span>Completed</span>
             <span className={`
               ml-2 px-2 py-1 text-xs rounded-full font-bold
               ${activeTab === 'completed' 
@@ -96,7 +96,7 @@ const TaskTabs: React.FC<TaskTabsProps> = ({
               }
               shadow-lg hover:shadow-xl
             `}
-            title="Concluir todas as tarefas de mais de 1 semana"
+                          title="Complete all tasks older than 1 week"
           >
             <span className="text-lg">⚡</span>
             <span>Concluir Antigas</span>
@@ -121,18 +121,18 @@ const TaskTabs: React.FC<TaskTabsProps> = ({
       <div className={`p-4 pt-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
         {activeTab === 'active' ? (
           <div className="flex items-center gap-4">
-            <span>📋 Tarefas que precisam de atenção</span>
+                          <span>📋 Tasks requiring attention</span>
             {showBulkComplete && (
               <span className="text-xs opacity-75">
-                💡 Use "Concluir Antigas" para finalizar tarefas de mais de 1 semana
+                💡 Use "Complete Old" to finish tasks older than 1 week
               </span>
             )}
           </div>
         ) : (
           <div className="flex items-center gap-4">
-            <span>🎉 Tarefas finalizadas e arquivadas</span>
+                          <span>🎉 Tasks completed and archived</span>
             <span className="text-xs opacity-75">
-              📊 Histórico completo de trabalhos realizados
+                              📊 Complete history of completed work
             </span>
           </div>
         )}

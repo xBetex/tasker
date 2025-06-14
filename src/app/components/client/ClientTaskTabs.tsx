@@ -53,7 +53,7 @@ const ClientTaskTabs: React.FC<ClientTaskTabsProps> = ({
           }}
         >
           <span className="text-sm">🔥</span>
-          <span className="font-semibold">Ativas</span>
+                      <span className="font-semibold">Active</span>
           <span className={`
             px-2 py-1 text-xs rounded-full font-bold min-w-[24px] text-center
             ${activeTab === 'active' 
@@ -85,7 +85,7 @@ const ClientTaskTabs: React.FC<ClientTaskTabsProps> = ({
           }}
         >
           <span className="text-sm">✅</span>
-          <span className="font-semibold">Concluídas</span>
+                      <span className="font-semibold">Completed</span>
           <span className={`
             px-2 py-1 text-xs rounded-full font-bold min-w-[24px] text-center
             ${activeTab === 'completed' 
@@ -123,11 +123,11 @@ const ClientTaskTabs: React.FC<ClientTaskTabsProps> = ({
       }}>
         {activeTab === 'active' ? (
           <span className="flex items-center justify-center gap-1">
-            📋 <span>Tarefas que precisam de atenção</span>
+            📋 <span>Tasks requiring attention</span>
           </span>
         ) : (
           <span className="flex items-center justify-center gap-1">
-            🎉 <span>Trabalhos finalizados</span>
+            🎉 <span>Completed Tasks</span>
           </span>
         )}
       </div>
