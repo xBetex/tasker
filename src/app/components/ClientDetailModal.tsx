@@ -18,6 +18,9 @@ interface ClientDetailModalProps {
   onClose: () => void;
   onUpdate: () => void;
   darkMode: boolean;
+  allClients?: Client[];
+  onNavigateToClient?: (client: Client) => void;
+  highlightTaskId?: number | null;
 }
 
 export default function ClientDetailModal({
@@ -25,7 +28,10 @@ export default function ClientDetailModal({
   isOpen,
   onClose,
   onUpdate,
-  darkMode
+  darkMode,
+  allClients = [],
+  onNavigateToClient,
+  highlightTaskId
 }: ClientDetailModalProps) {
   const { getTimezoneOffset } = useTimezone();
   
@@ -46,6 +52,8 @@ export default function ClientDetailModal({
   const [priorityFilter, setPriorityFilter] = useState<'all' | TaskPriority>('all');
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
+  const [showExportPreview, setShowExportPreview] = useState(false);
+  const [exportText, setExportText] = useState('');
   const [newTask, setNewTask] = useState<Omit<Task, 'id'>>({
     description: '',
     date: getCurrentDateForInput(getTimezoneOffset()),
@@ -59,6 +67,25 @@ export default function ClientDetailModal({
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
 
+  // Navigation logic
+  const currentIndex = allClients.findIndex(c => c.id === client.id);
+  const canGoToPrevious = currentIndex > 0;
+  const canGoToNext = currentIndex < allClients.length - 1;
+
+  const handlePreviousClient = () => {
+    if (canGoToPrevious && onNavigateToClient) {
+      const previousClient = allClients[currentIndex - 1];
+      onNavigateToClient(previousClient);
+    }
+  };
+
+  const handleNextClient = () => {
+    if (canGoToNext && onNavigateToClient) {
+      const nextClient = allClients[currentIndex + 1];
+      onNavigateToClient(nextClient);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
@@ -71,6 +98,42 @@ export default function ClientDetailModal({
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [contextMenu.visible]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isOpen) return;
+
+      // Only handle keyboard navigation if not focused on input elements
+      const activeElement = document.activeElement;
+      const isInputFocused = activeElement?.tagName === 'INPUT' || 
+                           activeElement?.tagName === 'TEXTAREA' || 
+                           activeElement?.tagName === 'SELECT' ||
+                           (activeElement as HTMLElement)?.contentEditable === 'true';
+
+      if (isInputFocused) return;
+
+      switch (event.key) {
+        case 'ArrowLeft':
+          event.preventDefault();
+          handlePreviousClient();
+          break;
+        case 'ArrowRight':
+          event.preventDefault();
+          handleNextClient();
+          break;
+        case 'Escape':
+          event.preventDefault();
+          onClose();
+          break;
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, handlePreviousClient, handleNextClient, onClose]);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -88,6 +151,24 @@ export default function ClientDetailModal({
       };
     }
   }, [isOpen, onClose]);
+
+  // Auto-scroll to highlighted task
+  useEffect(() => {
+    if (isOpen && highlightTaskId) {
+      // Small delay to ensure the modal has fully rendered
+      const timer = setTimeout(() => {
+        const taskElement = document.querySelector(`[data-task-id="${highlightTaskId}"]`);
+        if (taskElement) {
+          taskElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, highlightTaskId]);
 
   const getTaskStats = () => {
     const total = client.tasks.length;
@@ -161,7 +242,7 @@ export default function ClientDetailModal({
   };
 
   const handleStatusChange = async (newStatus: TaskStatus) => {
-    if (contextMenu.taskIndex !== null && contextMenu.task) {
+    if (contextMenu.taskIndex !== null && contextMenu.task && contextMenu.task.id) {
       try {
         setIsLoading(true);
         await api.updateTaskStatus(contextMenu.task.id, newStatus);
@@ -175,6 +256,8 @@ export default function ClientDetailModal({
         setIsLoading(false);
         setContextMenu({ visible: false, x: 0, y: 0, taskIndex: null });
       }
+    } else {
+      toast.error('Failed to Update Status', 'Invalid task selected. Please try again.');
     }
   };
 
@@ -301,6 +384,46 @@ export default function ClientDetailModal({
     handleMoreVerticalClick(e, task, index);
   };
 
+  const generateExportText = () => {
+    if (client.tasks.length === 0) {
+      return 'No tasks available to export';
+    }
+
+    let exportText = `Client - ${client.name}\n`;
+    exportText += `Company - ${client.company}\n`;
+    exportText += `ID - ${client.id}\n`;
+    exportText += `Origin - ${client.origin}\n`;
+    exportText += `Export Date - ${new Date().toLocaleDateString()}\n\n`;
+    exportText += `${'='.repeat(80)}\n\n`;
+
+    client.tasks.forEach((task, index) => {
+      exportText += `${index + 1}/${client.tasks.length}\n`;
+      exportText += `${task.description}\n`;
+      exportText += `📅 Date: ${task.date}`;
+      if (task.sla_date) {
+        exportText += ` • ⏰ SLA: ${task.sla_date}`;
+      }
+      if (task.completion_date) {
+        exportText += ` • ✅ Completed: ${task.completion_date}`;
+      }
+      exportText += `\n`;
+      exportText += `📊 Status: ${task.status} • 🎯 Priority: ${task.priority}\n`;
+      
+      exportText += `\nComments:\n`;
+      if (task.comments && task.comments.length > 0) {
+        task.comments.forEach(comment => {
+          exportText += `• ${comment.text}\n`;
+        });
+      } else {
+        exportText += `• No comments\n`;
+      }
+      
+      exportText += `\n${'-'.repeat(60)}\n\n`;
+    });
+
+    return exportText;
+  };
+
   const handleExportAllTasks = async () => {
     if (client.tasks.length === 0) {
       toast.error('No Tasks', 'No tasks available to export');
@@ -311,44 +434,12 @@ export default function ClientDetailModal({
       setIsExporting(true);
       setExportProgress(0);
       
-      let exportText = `📋 All Tasks Export - ${client.name}\n`;
-      exportText += `🏢 ${client.company} • 📍 ${client.origin} • 🆔 ${client.id}\n`;
-      exportText += `📊 Total Tasks: ${client.tasks.length} • Export Date: ${new Date().toLocaleDateString()}\n`;
-      exportText += `${'='.repeat(80)}\n\n`;
-
-      // Process tasks with progress updates
-      for (let i = 0; i < client.tasks.length; i++) {
-        const task = client.tasks[i];
-        
-        // Update progress
-        const progress = Math.round(((i + 1) / client.tasks.length) * 100);
-        setExportProgress(progress);
-        
-        // Add a small delay to show progress
+      const exportText = generateExportText();
+      
+      // Simulate progress with a small delay
+      for (let i = 0; i <= 100; i += 20) {
+        setExportProgress(i);
         await new Promise(resolve => setTimeout(resolve, 50));
-        
-        exportText += `📋 Task ${i + 1}/${client.tasks.length}\n`;
-        exportText += `${client.name} - ${client.company} - ID: ${client.id} - ${client.origin} - ${task.description}\n`;
-        exportText += `📅 Date: ${task.date}`;
-        if (task.sla_date) {
-          exportText += ` • ⏰ SLA: ${task.sla_date}`;
-        }
-        if (task.completion_date) {
-          exportText += ` • ✅ Completed: ${task.completion_date}`;
-        }
-        exportText += `\n`;
-        exportText += `📊 Status: ${task.status} • 🎯 Priority: ${task.priority}\n`;
-        
-        exportText += `\nComments:\n`;
-        if (task.comments && task.comments.length > 0) {
-          task.comments.forEach(comment => {
-            exportText += `• ${comment.text}\n`;
-          });
-        } else {
-          exportText += `• No comments\n`;
-        }
-        
-        exportText += `\n${'-'.repeat(60)}\n\n`;
       }
 
       // Copy to clipboard
@@ -359,12 +450,23 @@ export default function ClientDetailModal({
         `Successfully exported ${client.tasks.length} tasks to clipboard`
       );
       
-         } catch {
-       toast.error('Export Failed', 'Failed to export tasks to clipboard');
+      // Close preview modal if it's open
+      if (showExportPreview) {
+        setShowExportPreview(false);
+      }
+      
+    } catch {
+      toast.error('Export Failed', 'Failed to export tasks to clipboard');
     } finally {
       setIsExporting(false);
       setExportProgress(0);
     }
+  };
+
+  const handleViewExport = () => {
+    const text = generateExportText();
+    setExportText(text);
+    setShowExportPreview(true);
   };
 
   const handleStatsCardClick = (statType: string) => {
@@ -475,24 +577,79 @@ export default function ClientDetailModal({
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-6">
-                <button
-                  onClick={onClose}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm"
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: 'white'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
-                  }}
-                >
-                  <span>←</span>
-                  <span>Back</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={onClose}
+                    className="flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm"
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      color: 'white'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                    }}
+                  >
+                    <span>←</span>
+                    <span>Back</span>
+                  </button>
+
+                  {/* Navigation Arrows */}
+                  {allClients.length > 1 && (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={handlePreviousClient}
+                        disabled={!canGoToPrevious}
+                        className="p-3 rounded-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          color: 'white'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                        }}
+                        title="Previous client"
+                      >
+                        <span className="text-lg">‹</span>
+                      </button>
+                      
+                      <span className="text-sm text-white/80 px-2">
+                        {currentIndex + 1} of {allClients.length}
+                      </span>
+                      
+                      <button
+                        onClick={handleNextClient}
+                        disabled={!canGoToNext}
+                        className="p-3 rounded-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          color: 'white'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                        }}
+                        title="Next client"
+                      >
+                        <span className="text-lg">›</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
                 
                 <div className="flex items-center space-x-4">
                   <div 
@@ -599,6 +756,30 @@ export default function ClientDetailModal({
                   {expandAllComments ? '📝 Collapse All' : '📝 Expand All'}
                 </button>
                 
+                <button
+                  onClick={handleViewExport}
+                  disabled={client.tasks.length === 0}
+                  className="px-6 py-3 rounded-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    color: 'white'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (client.tasks.length > 0) {
+                      e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.3)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (client.tasks.length > 0) {
+                      e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+                    }
+                  }}
+                  title="View Export Preview"
+                >
+                  👁️ View Export
+                </button>
+
                 <button
                   onClick={handleExportAllTasks}
                   disabled={isExporting || client.tasks.length === 0}
@@ -799,15 +980,18 @@ export default function ClientDetailModal({
                     <div key={task.id || index}>
                       {/* Screen Version */}
                       <div
+                        data-task-id={task.id}
                         className={`group p-6 rounded-2xl no-print card-hover-effect ${
                           layoutMode === 'masonry' ? 'masonry-item' : 
                           layoutMode === 'columns' ? 'h-fit' : 
                           ''
-                        }`}
+                        } ${highlightTaskId === task.id ? 'ring-2 ring-blue-500 ring-opacity-75' : ''}`}
                         style={{
-                          backgroundColor: 'var(--card-background)',
-                          border: '1px solid var(--card-border)',
-                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                          backgroundColor: highlightTaskId === task.id ? 'var(--card-background-hover)' : 'var(--card-background)',
+                          border: `1px solid ${highlightTaskId === task.id ? '#3b82f6' : 'var(--card-border)'}`,
+                          boxShadow: highlightTaskId === task.id 
+                            ? '0 10px 15px -3px rgba(59, 130, 246, 0.3), 0 4px 6px -2px rgba(59, 130, 246, 0.05)'
+                            : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
@@ -891,13 +1075,32 @@ export default function ClientDetailModal({
                         {/* Comments Section */}
                         <CommentsSection
                           comments={task.comments || []}
-                          onAddComment={(text: string) => {
-                            console.log('Adding comment:', text, 'to task:', task.id);
-                            onUpdate();
-                            setRefreshKey(prev => prev + 1);
+                          onAddComment={async (text: string) => {
+                            try {
+                              console.log('Adding comment:', text, 'to task:', task.id);
+                              setIsLoading(true);
+                              await api.addComment(task.id, text);
+                              onUpdate();
+                              setRefreshKey(prev => prev + 1);
+                              toast.success('Comment Added', 'Your comment has been added successfully!');
+                            } catch (error) {
+                              console.error('Error adding comment:', error);
+                              const errorMessage = error instanceof Error ? error.message : 'Failed to add comment';
+                              toast.error('Failed to Add Comment', errorMessage);
+                            } finally {
+                              setIsLoading(false);
+                            }
                           }}
                           darkMode={darkMode}
-                          forceExpanded={expandAllComments}
+                          forceExpanded={expandAllComments || (highlightTaskId === task.id)}
+                          isLoading={isLoading}
+                          taskId={task.id}
+                          clientId={client.id}
+                          onNavigateToTask={(taskId, clientId) => {
+                            // Since we're already in the detail modal, just scroll to the task
+                            // or highlight it somehow
+                            toast.info('Already Viewing', 'You are already viewing this task in detail mode');
+                          }}
                         />
                       </div>
                     </div>
@@ -1014,6 +1217,63 @@ export default function ClientDetailModal({
             )}
           </div>
         </div>
+
+        {/* Export Preview Modal */}
+        {showExportPreview && (
+          <div className="fixed inset-0 z-60 overflow-hidden">
+            <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" onClick={() => setShowExportPreview(false)}></div>
+            <div className="fixed inset-4 z-70 flex items-center justify-center">
+              <div 
+                className="w-full max-w-4xl max-h-full rounded-2xl shadow-2xl overflow-hidden"
+                style={{
+                  backgroundColor: 'var(--card-background)',
+                  border: '1px solid var(--card-border)'
+                }}
+              >
+                {/* Header */}
+                <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-semibold" style={{ color: 'var(--primary-text)' }}>
+                      Export Preview - {client.name}
+                    </h3>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={handleExportAllTasks}
+                        disabled={isExporting}
+                        className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                      >
+                        {isExporting ? 'Copying...' : 'Copy to Clipboard'}
+                      </button>
+                      <button
+                        onClick={() => setShowExportPreview(false)}
+                        className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        style={{ color: 'var(--secondary-text)' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Content */}
+                <div className="p-6 overflow-y-auto max-h-96">
+                  <pre 
+                    className="whitespace-pre-wrap font-mono text-sm leading-relaxed"
+                    style={{ 
+                      color: 'var(--primary-text)',
+                      backgroundColor: darkMode ? '#1a1a1a' : '#f8f9fa',
+                      padding: '1rem',
+                      borderRadius: '0.5rem',
+                      border: '1px solid var(--card-border)'
+                    }}
+                  >
+                    {exportText}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Edit Task Modal */}
         {editingTask && (

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Client, Task, TaskStatus } from '@/types/types';
 import { api } from '@/services/api';
 import { useDarkMode } from '../layout';
+import AuthGuard from '../components/auth/AuthGuard';
 import { useSLANotifications, SLANotification } from '../hooks/useSLANotifications';
 import DateDisplay from '../components/DateDisplay';
 import EditTaskModal from '../components/EditTaskModal';
@@ -286,14 +287,15 @@ export default function SLAPage() {
   }
 
   return (
-    <div 
-      className="p-6 max-w-7xl mx-auto"
-      style={{
-        backgroundColor: 'var(--page-background)',
-        color: 'var(--primary-text)',
-        minHeight: '100vh'
-      }}
-    >
+    <AuthGuard darkMode={darkMode}>
+      <div 
+        className="p-6 max-w-7xl mx-auto"
+        style={{
+          backgroundColor: 'var(--page-background)',
+          color: 'var(--primary-text)',
+          minHeight: '100vh'
+        }}
+      >
       {/* Header */}
       <div className="mb-8">
         <h1 
@@ -843,5 +845,6 @@ export default function SLAPage() {
         />
       )}
     </div>
+    </AuthGuard>
   );
 }

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Client } from '@/types/types';
 import { useSLANotifications } from '@/app/hooks/useSLANotifications';
+import { useAuth } from '@/app/contexts/AuthContext';
 import SLANotifications from './SLANotifications';
 
 interface NavbarProps {
@@ -17,6 +18,7 @@ interface NavbarProps {
 export default function Navbar({ darkMode, onToggleDarkMode, clients = [], onUpdate }: NavbarProps) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, logout, isAuthenticated } = useAuth();
   
   // SLA Notifications
   const slaNotifications = useSLANotifications(clients);
@@ -132,6 +134,30 @@ export default function Navbar({ darkMode, onToggleDarkMode, clients = [], onUpd
               onUpdate={onUpdate}
             />
             
+            {/* User Info & Logout - Desktop */}
+            {isAuthenticated && user && (
+              <div className="flex items-center space-x-3">
+                <div className="text-sm">
+                  <span className="text-gray-300">Welcome, </span>
+                  <span className="font-semibold text-white">{user.username}</span>
+                  <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
+                    user.role === 'admin' 
+                      ? 'bg-red-600 text-white' 
+                      : 'bg-blue-600 text-white'
+                  }`}>
+                    {user.role.toUpperCase()}
+                  </span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  title="Logout"
+                >
+                  🚪 Logout
+                </button>
+              </div>
+            )}
+
             {/* Dark Mode Toggle - Desktop */}
             <div className="flex items-center">
               <span className="mr-2 text-sm">
@@ -253,6 +279,30 @@ export default function Navbar({ darkMode, onToggleDarkMode, clients = [], onUpd
               ⚙️ Configurações
             </Link>
             
+            {/* User Info & Logout - Mobile */}
+            {isAuthenticated && user && (
+              <div className="px-4 py-2 border-t border-gray-700">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-sm">
+                    <div className="text-gray-300">Welcome, <span className="font-semibold text-white">{user.username}</span></div>
+                    <span className={`inline-block mt-1 px-2 py-1 rounded-full text-xs ${
+                      user.role === 'admin' 
+                        ? 'bg-red-600 text-white' 
+                        : 'bg-blue-600 text-white'
+                    }`}>
+                      {user.role.toUpperCase()}
+                    </span>
+                  </div>
+                  <button
+                    onClick={logout}
+                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    🚪 Logout
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Dark Mode Toggle - Mobile */}
             <div className="px-4 py-2">
               <div className="flex items-center justify-between">

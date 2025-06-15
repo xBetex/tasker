@@ -2,6 +2,7 @@ import React from 'react';
 import { Client } from '@/types/types';
 import { EditIcon, TrashIcon } from '../Icons';
 import CopyButton from '../CopyButton';
+import UserInfo from '../UserInfo';
 
 interface ClientCardHeaderProps {
   client: Client;
@@ -164,6 +165,18 @@ export default function ClientCardHeader({
                   </span>
                 </div>
               </div>
+              
+              {/* User Information */}
+              {client.createdBy && (
+                <div className="mt-2 pt-2 border-t border-opacity-20" style={{ borderColor: 'var(--card-border)' }}>
+                  <UserInfo 
+                    user={client.createdBy} 
+                    label="Created by" 
+                    size="sm" 
+                    darkMode={darkMode} 
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -1,0 +1,205 @@
+'use client'
+import React, { useState } from 'react';
+import { useAuth } from '@/app/contexts/AuthContext';
+
+interface RegisterFormProps {
+  darkMode: boolean;
+  onToggleForm: () => void;
+}
+
+export default function RegisterForm({ darkMode, onToggleForm }: RegisterFormProps) {
+  const { register, isLoading } = useAuth();
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    try {
+      await register(formData.username, formData.email, formData.password);
+    } catch (err: any) {
+      setError(err.message || 'Registration failed');
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  return (
+    <div className="w-full max-w-md mx-auto">
+      <div 
+        className="p-8 rounded-xl shadow-2xl border"
+        style={{
+          backgroundColor: 'var(--card-background)',
+          borderColor: 'var(--card-border)'
+        }}
+      >
+        <h2 
+          className="text-3xl font-bold text-center mb-8"
+          style={{ color: 'var(--primary-text)' }}
+        >
+          Create Account
+        </h2>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+
+          <div>
+            <label 
+              htmlFor="username" 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--secondary-text)' }}
+            >
+              Username
+            </label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              className={`w-full px-4 py-3 rounded-lg border transition-colors ${
+                darkMode 
+                  ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500' 
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+              placeholder="Choose a username"
+            />
+          </div>
+
+          <div>
+            <label 
+              htmlFor="email" 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--secondary-text)' }}
+            >
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              className={`w-full px-4 py-3 rounded-lg border transition-colors ${
+                darkMode 
+                  ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500' 
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+              placeholder="Enter your email"
+            />
+          </div>
+
+          <div>
+            <label 
+              htmlFor="password" 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--secondary-text)' }}
+            >
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              className={`w-full px-4 py-3 rounded-lg border transition-colors ${
+                darkMode 
+                  ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500' 
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+              placeholder="Create a password"
+            />
+          </div>
+
+          <div>
+            <label 
+              htmlFor="confirmPassword" 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--secondary-text)' }}
+            >
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+              className={`w-full px-4 py-3 rounded-lg border transition-colors ${
+                darkMode 
+                  ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500' 
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+              placeholder="Confirm your password"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
+              isLoading
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:scale-105 hover:shadow-lg'
+            } ${
+              darkMode 
+                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                : 'bg-green-500 hover:bg-green-600 text-white'
+            }`}
+          >
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Creating Account...
+              </div>
+            ) : (
+              'Create Account'
+            )}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <p 
+            className="text-sm"
+            style={{ color: 'var(--secondary-text)' }}
+          >
+            Already have an account?{' '}
+            <button
+              onClick={onToggleForm}
+              className={`font-medium ${
+                darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-500'
+              } transition-colors`}
+            >
+              Sign in
+            </button>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+} 

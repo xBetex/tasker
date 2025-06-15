@@ -1,6 +1,24 @@
 import { Client, Task, TaskStatus, TaskPriority, Comment } from '@/types/types';
 import { getCurrentCompletionDate } from '@/utils/dateUtils';
 
+// Helper function to get current user info from localStorage
+const getCurrentUserInfo = () => {
+  try {
+    const userStr = localStorage.getItem('taskdashboard_user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      return {
+        id: user.id,
+        username: user.username,
+        role: user.role
+      };
+    }
+  } catch (error) {
+    console.error('Error getting current user:', error);
+  }
+  return null;
+};
+
 const API_BASE_URL = 'http://localhost:8000';
 
 interface CreateClientPayload {
@@ -18,11 +36,26 @@ interface TaskPayload {
   client_id?: string;
   sla_date?: string;
   completion_date?: string;
+  createdBy?: {
+    id: string;
+    username: string;
+    role: 'admin' | 'user';
+  };
+  lastModifiedBy?: {
+    id: string;
+    username: string;
+    role: 'admin' | 'user';
+  };
 }
 
 interface CommentPayload {
   text: string;
   author?: string;
+  createdBy?: {
+    id: string;
+    username: string;
+    role: 'admin' | 'user';
+  };
 }
 
 interface ApiError {
@@ -41,6 +74,8 @@ const formatErrorMessage = (error: unknown): string => {
   
   if (typeof error === 'object' && error !== null) {
     const apiError = error as ApiError;
+    
+    // Handle array detail messages
     if (apiError.detail && Array.isArray(apiError.detail)) {
       return apiError.detail.map(err => err.msg).join(', ');
     }
@@ -49,6 +84,24 @@ const formatErrorMessage = (error: unknown): string => {
     if (typeof (error as any).detail === 'string') {
       return (error as any).detail;
     }
+    
+    // Handle empty objects or objects without detail
+    const errorKeys = Object.keys(error);
+    if (errorKeys.length === 0) {
+      return 'Network error or server unavailable';
+    }
+    
+    // Try to extract meaningful error message from object
+    if ((error as any).message) {
+      return (error as any).message;
+    }
+    
+    // Return stringified object as last resort
+    return JSON.stringify(error);
+  }
+  
+  if (typeof error === 'string') {
+    return error;
   }
   
   return 'An unexpected error occurred';
@@ -121,12 +174,19 @@ export const api = {
 
   async createClient(client: CreateClientPayload): Promise<Client> {
     try {
+      const currentUser = getCurrentUserInfo();
+      const clientWithUser = {
+        ...client,
+        createdBy: currentUser,
+        createdAt: new Date().toISOString()
+      };
+
       const response = await fetch(`${API_BASE_URL}/clients/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(client),
+        body: JSON.stringify(clientWithUser),
       });
       
       if (!response.ok) {
@@ -180,12 +240,20 @@ export const api = {
 
   async createTask(task: TaskPayload): Promise<Task> {
     try {
+      const currentUser = getCurrentUserInfo();
+      const taskWithUser = {
+        ...task,
+        createdBy: currentUser,
+        lastModifiedBy: currentUser,
+        creation_timestamp: new Date().toISOString()
+      };
+
       const response = await fetch(`${API_BASE_URL}/tasks/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(task),
+        body: JSON.stringify(taskWithUser),
       });
       
       if (!response.ok) {
@@ -217,16 +285,32 @@ export const api = {
 
   async updateTask(taskId: number, updates: Partial<TaskPayload>): Promise<Task> {
     try {
+      if (!taskId || typeof taskId !== 'number') {
+        throw new Error('Invalid task ID provided');
+      }
+      
+      const currentUser = getCurrentUserInfo();
+      const updatesWithUser = {
+        ...updates,
+        lastModifiedBy: currentUser
+      };
+
       const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updates),
+        body: JSON.stringify(updatesWithUser),
       });
       
       if (!response.ok) {
-        const error = await response.json();
+        const errorText = await response.text();
+        let error;
+        try {
+          error = JSON.parse(errorText);
+        } catch (parseError) {
+          error = { detail: errorText || `HTTP ${response.status}: ${response.statusText}` };
+        }
         throw error;
       }
       
@@ -238,6 +322,10 @@ export const api = {
   },
 
   async updateTaskStatus(taskId: number, status: TaskStatus, timezoneOffset?: number): Promise<Task> {
+    if (!taskId || typeof taskId !== 'number') {
+      throw new Error('Invalid task ID provided');
+    }
+    
     const updates: Partial<TaskPayload> = { status };
     
     // If marking as completed, set completion date in user's timezone
@@ -254,12 +342,22 @@ export const api = {
 
   async deleteTask(taskId: number): Promise<Task> {
     try {
+      if (!taskId || typeof taskId !== 'number') {
+        throw new Error('Invalid task ID provided');
+      }
+      
       const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
         method: 'DELETE',
       });
       
       if (!response.ok) {
-        const error = await response.json();
+        const errorText = await response.text();
+        let error;
+        try {
+          error = JSON.parse(errorText);
+        } catch (parseError) {
+          error = { detail: errorText || `HTTP ${response.status}: ${response.statusText}` };
+        }
         throw error;
       }
       
@@ -329,16 +427,21 @@ export const api = {
   // Comment functions
   async createComment(taskId: number, comment: CommentPayload): Promise<Comment> {
     try {
+      const currentUser = getCurrentUserInfo();
+      const commentWithUser = {
+        task_id: taskId,
+        text: comment.text,
+        author: currentUser?.username || comment.author || 'User',
+        createdBy: currentUser,
+        timestamp: new Date().toISOString()
+      };
+
       const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/comments/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          task_id: taskId,
-          text: comment.text,
-          author: comment.author || 'User'
-        }),
+        body: JSON.stringify(commentWithUser),
       });
       
       if (!response.ok) {
@@ -389,9 +492,10 @@ export const api = {
 
   // Alias for createComment to maintain compatibility
   async addComment(taskId: number, commentText: string): Promise<Comment> {
+    const currentUser = getCurrentUserInfo();
     return this.createComment(taskId, {
       text: commentText,
-      author: 'User'
+      author: currentUser?.username || 'User'
     });
   },
 }; 

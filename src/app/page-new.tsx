@@ -1,10 +1,11 @@
 'use client'
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useAuth } from './contexts/AuthContext';
 import { useDashboard } from './hooks/useDashboard';
 import { useContainerHeight } from './hooks/useContainerHeight';
 
 // Components
-import AuthGuard from './components/auth/AuthGuard';
+import AuthPage from './components/auth/AuthPage';
 import DashboardHeader from './components/dashboard/DashboardHeader';
 import DashboardStats from './components/dashboard/DashboardStats';
 import DashboardActions from './components/dashboard/DashboardActions';
@@ -15,69 +16,33 @@ import SortableClientCard from './components/SortableClientCard';
 import AddClientModal from './components/AddClientModal';
 import ClientDetailModal from './components/ClientDetailModal';
 import ScrollToTop from './components/ScrollToTop';
-import ScrollToBottom from './components/ScrollToBottom';
 import { ClientCardsGridSkeleton } from './components/SkeletonLoaders';
 
 import { api } from '@/services/api';
 import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
 
-export default function Home() {
+export default function NewHomePage() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const dashboard = useDashboard();
   const containerHeight = useContainerHeight(280, 600);
 
-  // Handle highlight from URL parameters (from Global Comments Search)
-  const [highlightTaskId, setHighlightTaskId] = useState<number | null>(null);
-  const [pendingHighlight, setPendingHighlight] = useState<string | null>(null);
-  
-  // Check for highlight parameter on mount
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const highlight = urlParams.get('highlight');
-    
-    if (highlight && highlight.includes('-')) {
-      setPendingHighlight(highlight);
-      // Clean the URL immediately
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
+  // Show auth page if not authenticated
+  if (authLoading) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${
+        dashboard.darkMode ? 'bg-black text-gray-100' : 'bg-gray-100 text-gray-900'
+      }`}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Process highlight when clients are loaded
-  useEffect(() => {
-    if (pendingHighlight && dashboard.clients.length > 0 && !dashboard.isLoading) {
-      const [clientId, taskIdStr] = pendingHighlight.split('-');
-      const taskId = parseInt(taskIdStr);
-      
-      // Find the client
-      const client = dashboard.clients.find(c => c.id === clientId);
-      if (client) {
-        // Check if the task exists in the client
-        const task = client.tasks.find(t => t.id === taskId);
-        if (task) {
-          // Expand the client card
-          dashboard.setExpandedCards(prev => ({
-            ...prev,
-            [clientId]: true
-          }));
-          
-          // Set the highlight task ID
-          setHighlightTaskId(taskId);
-          
-          // Open the client detail modal
-          dashboard.setSelectedClient(client);
-          dashboard.setIsDetailModalOpen(true);
-          
-          dashboard.toast.success('Task Located', `Found task "${task.description}" for ${client.name}`);
-        } else {
-          dashboard.toast.error('Task Not Found', `Task #${taskId} not found in ${client.name}`);
-        }
-      } else {
-        dashboard.toast.error('Client Not Found', 'Could not locate the specified client');
-      }
-      
-      // Clear pending highlight
-      setPendingHighlight(null);
-    }
-  }, [dashboard.clients, dashboard.isLoading, pendingHighlight, dashboard.setExpandedCards, dashboard.setSelectedClient, dashboard.setIsDetailModalOpen, dashboard.toast]);
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
 
   // Import/Export handlers
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,19 +120,20 @@ export default function Home() {
           }
 
           dashboard.toast.success(
-            `Import completed! ✅ ${successCount} clients imported, ❌ ${errorCount} failed`
+            'Import completed!',
+            `✅ ${successCount} clients imported, ❌ ${errorCount} failed`
           );
           
           await dashboard.refreshClients();
 
         } catch (error: any) {
-          dashboard.toast.error(`Import failed: ${error.message}`);
+          dashboard.toast.error('Import failed', error.message);
         }
       };
 
       reader.readAsText(file);
     } catch (error: any) {
-      dashboard.toast.error(`Import failed: ${error.message}`);
+      dashboard.toast.error('Import failed', error.message);
     } finally {
       dashboard.setIsImporting(false);
       event.target.value = '';
@@ -186,9 +152,9 @@ export default function Home() {
       linkElement.setAttribute('download', exportFileDefaultName);
       linkElement.click();
 
-      dashboard.toast.success('Data exported successfully!');
+      dashboard.toast.success('Export completed', 'Data exported successfully!');
     } catch (error) {
-      dashboard.toast.error('Failed to export data');
+      dashboard.toast.error('Export failed', 'Failed to export data');
     }
   };
 
@@ -206,28 +172,13 @@ export default function Home() {
   };
 
   const handleStatusFilterClick = (status: any) => {
-    // Additive filtering - apply status filter on top of existing filters
     dashboard.setStatusFilter(status);
+    dashboard.setPriorityFilter('all');
+    dashboard.setTaskFilter('');
   };
 
   const clearDateFilter = () => {
     dashboard.setDateRangeFilter({ start: '', end: '' });
-  };
-
-  const handleNavigateToTask = (taskId: number, clientId: string) => {
-    // Find the client
-    const client = dashboard.clients.find(c => c.id === clientId);
-    if (client) {
-      // Set the selected client and open the detail modal
-      dashboard.setSelectedClient(client);
-      dashboard.setIsDetailModalOpen(true);
-      
-      // Optional: You could add logic here to scroll to the specific task
-      // or highlight it in the modal
-      dashboard.toast.success('Opening Task Details', `Navigating to task in ${client.name}`);
-    } else {
-      dashboard.toast.error('Client Not Found', 'Could not find the client for this task');
-    }
   };
 
   // Loading state
@@ -257,9 +208,8 @@ export default function Home() {
   }
 
   return (
-    <AuthGuard darkMode={dashboard.darkMode}>
-      <div className={`min-h-screen ${dashboard.darkMode ? 'bg-black text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-        <div className="container mx-auto px-4 py-8">
+    <div className={`min-h-screen ${dashboard.darkMode ? 'bg-black text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
+      <div className="container mx-auto px-4 py-8">
         <DashboardHeader darkMode={dashboard.darkMode} />
 
         <div className="mb-6">
@@ -300,8 +250,8 @@ export default function Home() {
         <DashboardStats
           activeTasks={dashboard.activeTasks}
           completedTasks={dashboard.completedTasks}
-          inProgressTasks={dashboard.inProgressTasks}
           pendingTasks={dashboard.pendingTasks}
+          inProgressTasks={dashboard.inProgressTasks}
           awaitingClientTasks={dashboard.awaitingClientTasks}
           darkMode={dashboard.darkMode}
           onStatusFilterClick={handleStatusFilterClick}
@@ -309,26 +259,7 @@ export default function Home() {
             dashboard.setStatusFilter('all');
             dashboard.setPriorityFilter('all');
             dashboard.setTaskFilter('');
-            dashboard.setSearchTerm('');
-            dashboard.setSlaFilter('all');
-            dashboard.setDateRangeFilter({ start: '', end: '' });
           }}
-          hasActiveFilters={
-            dashboard.searchTerm !== '' || 
-            dashboard.taskFilter !== '' || 
-            dashboard.statusFilter !== 'all' || 
-            dashboard.priorityFilter !== 'all' || 
-            dashboard.slaFilter !== 'all' || 
-            dashboard.dateRangeFilter.start !== '' || 
-            dashboard.dateRangeFilter.end !== ''
-          }
-          filteredClientsCount={dashboard.filteredClients.length}
-          totalClientsCount={dashboard.clients.length}
-          totalActiveTasks={dashboard.totalActiveTasks}
-          totalCompletedTasks={dashboard.totalCompletedTasks}
-          totalInProgressTasks={dashboard.totalInProgressTasks}
-          totalPendingTasks={dashboard.totalPendingTasks}
-          totalAwaitingClientTasks={dashboard.totalAwaitingClientTasks}
         />
 
         {/* Render different view modes */}
@@ -357,7 +288,6 @@ export default function Home() {
               dashboard.setSelectedClient(client);
               dashboard.setIsDetailModalOpen(true);
             }}
-            onNavigateToTask={handleNavigateToTask}
             darkMode={dashboard.darkMode}
             containerHeight={containerHeight}
           />
@@ -380,7 +310,6 @@ export default function Home() {
                   dashboard.setSelectedClient(client);
                   dashboard.setIsDetailModalOpen(true);
                 }}
-                onNavigateToTask={handleNavigateToTask}
                 darkMode={dashboard.darkMode}
                 isPinned={dashboard.pinnedClients.includes(client.id)}
                 disableDrag={true}
@@ -419,10 +348,7 @@ export default function Home() {
       {dashboard.selectedClient && (
         <ClientDetailModal
           isOpen={dashboard.isDetailModalOpen}
-          onClose={() => {
-            dashboard.setIsDetailModalOpen(false);
-            setHighlightTaskId(null); // Clear highlight when modal closes
-          }}
+          onClose={() => dashboard.setIsDetailModalOpen(false)}
           client={dashboard.selectedClient}
           onUpdate={dashboard.refreshClientsAndModal}
           darkMode={dashboard.darkMode}
@@ -430,13 +356,10 @@ export default function Home() {
           onNavigateToClient={(client) => {
             dashboard.setSelectedClient(client);
           }}
-          highlightTaskId={highlightTaskId}
         />
       )}
 
-        <ScrollToTop darkMode={dashboard.darkMode} />
-        <ScrollToBottom darkMode={dashboard.darkMode} />
-      </div>
-    </AuthGuard>
+      <ScrollToTop darkMode={dashboard.darkMode} />
+    </div>
   );
-}
+} 

@@ -256,7 +256,10 @@ export function useClientCard(client: Client, onUpdate: () => void, onDeleteTask
   };
 
   const handleStatusChange = async (newStatus: TaskStatus) => {
-    if (!contextMenu.task) return;
+    if (!contextMenu.task || !contextMenu.task.id) {
+      toast.error('Error', 'Invalid task selected. Please try again.');
+      return;
+    }
 
     try {
       const updatedTask = { ...contextMenu.task, status: newStatus };
@@ -275,7 +278,8 @@ export function useClientCard(client: Client, onUpdate: () => void, onDeleteTask
       toast.success('Status updated', `Task status changed to "${newStatus}"!`);
     } catch (error) {
       console.error('Error updating task status:', error);
-      toast.error('Error', 'Error updating status. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Error updating status. Please try again.';
+      toast.error('Error', errorMessage);
     }
   };
 

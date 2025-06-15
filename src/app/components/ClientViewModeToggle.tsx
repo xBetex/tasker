@@ -18,13 +18,13 @@ export default function ClientViewModeToggle({
       key: 'compact' as ViewMode, 
       icon: GridIcon, 
       label: 'Cards',
-      description: 'Cards expandíveis com todas as funcionalidades'
+      description: 'Expandable cards with all features'
     },
     { 
       key: 'list' as ViewMode, 
       icon: ListIcon, 
-      label: 'Lista',
-      description: 'Lista compacta ordenável'
+      label: 'List',
+      description: 'Compact sortable list'
     }
   ];
 

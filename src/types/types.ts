@@ -6,6 +6,11 @@ export interface Comment {
   text: string;
   timestamp: string;
   author?: string;
+  createdBy?: {
+    id: string;
+    username: string;
+    role: 'admin' | 'user';
+  };
 }
 
 export interface Task {
@@ -20,6 +25,16 @@ export interface Task {
   creation_timestamp?: string;
   completion_timestamp?: string;
   comments?: Comment[];
+  createdBy?: {
+    id: string;
+    username: string;
+    role: 'admin' | 'user';
+  };
+  lastModifiedBy?: {
+    id: string;
+    username: string;
+    role: 'admin' | 'user';
+  };
 }
 
 export interface Client {
@@ -28,6 +43,12 @@ export interface Client {
   company: string;
   origin: string;
   tasks: Task[];
+  createdBy?: {
+    id: string;
+    username: string;
+    role: 'admin' | 'user';
+  };
+  createdAt?: string;
 }
 
 export interface NotificationData {

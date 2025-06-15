@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Client, Task } from '@/types/types';
 import { api } from '@/services/api';
 import { useDarkMode } from '../layout';
+import AuthGuard from '../components/auth/AuthGuard';
 import { usePersistedFilters } from '../hooks/usePersistedFilters';
 import { useTaskFilters } from '../hooks/useTaskFilters';
 import { getSLAStatus, getSLAStatusColor, getSLAStatusBadge, getDaysUntilSLA } from '@/utils/slaUtils';
@@ -285,13 +286,14 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div 
-      className="min-h-screen"
-      style={{ 
-        backgroundColor: 'var(--page-background)', 
-        color: 'var(--primary-text)' 
-      }}
-    >
+    <AuthGuard darkMode={darkMode}>
+      <div 
+        className="min-h-screen"
+        style={{ 
+          backgroundColor: 'var(--page-background)', 
+          color: 'var(--primary-text)' 
+        }}
+      >
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -904,5 +906,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
     </div>
+    </AuthGuard>
   );
 } 

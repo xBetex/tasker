@@ -33,6 +33,7 @@ interface VirtualizedClientGridProps {
   onUpdate: () => void;
   onDeleteTask: (clientId: string, taskIndex: number) => void;
   onShowDetails: (client: Client) => void;
+  onNavigateToTask?: (taskId: number, clientId: string) => void;
   darkMode: boolean;
   containerHeight: number;
 }
@@ -44,6 +45,7 @@ export default function VirtualizedClientGrid({
   onUpdate,
   onDeleteTask,
   onShowDetails,
+  onNavigateToTask,
   darkMode,
   containerHeight = 600,
 }: VirtualizedClientGridProps) {
@@ -240,6 +242,7 @@ export default function VirtualizedClientGrid({
                       onUpdate={onUpdate}
                       onDeleteTask={onDeleteTask}
                       onShowDetails={onShowDetails}
+                      onNavigateToTask={onNavigateToTask}
                       darkMode={darkMode}
                       isPinned={pinnedClients.includes(client.id)}
                     />
@@ -265,6 +268,7 @@ export default function VirtualizedClientGrid({
                 onUpdate={() => {}}
                 onDeleteTask={() => {}}
                 onShowDetails={() => {}}
+                onNavigateToTask={() => {}}
                 darkMode={darkMode}
                 isPinned={pinnedClients.includes(activeClient.id)}
               />

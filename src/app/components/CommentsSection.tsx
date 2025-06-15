@@ -3,14 +3,18 @@
 import { useState, useRef, useEffect } from 'react';
 import { Comment } from '@/types/types';
 import DateDisplay from './DateDisplay';
+import UserInfo from './UserInfo';
 
 interface CommentsSectionProps {
   comments: Comment[];
-  onAddComment: (text: string) => void;
+  onAddComment: (text: string) => void | Promise<void>;
   darkMode: boolean;
   isLoading?: boolean;
   autoScrollToNewComment?: boolean;
   forceExpanded?: boolean;
+  taskId?: number;
+  clientId?: string;
+  onNavigateToTask?: (taskId: number, clientId: string) => void;
 }
 
 export default function CommentsSection({ 
@@ -19,7 +23,10 @@ export default function CommentsSection({
   darkMode, 
   isLoading = false,
   autoScrollToNewComment = true,
-  forceExpanded = false
+  forceExpanded = false,
+  taskId,
+  clientId,
+  onNavigateToTask
 }: CommentsSectionProps) {
   const [newComment, setNewComment] = useState('');
   const [isExpanded, setIsExpanded] = useState(forceExpanded);
@@ -53,11 +60,16 @@ export default function CommentsSection({
     setPreviousCommentsLength(comments.length);
   }, [comments.length, previousCommentsLength, autoScrollToNewComment]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newComment.trim() && !isLoading) {
-      onAddComment(newComment.trim());
-      setNewComment('');
+      try {
+        await onAddComment(newComment.trim());
+        setNewComment('');
+      } catch (error) {
+        console.error('Error in handleSubmit:', error);
+        // Error handling is done in the parent component
+      }
     }
   };
 
@@ -323,15 +335,26 @@ export default function CommentsSection({
                 <div
                   key={comment.id}
                   ref={index === 0 ? latestCommentRef : null} // First comment is the most recent due to sorting
-                  className="p-3 rounded-lg border-l-4 border-l-blue-500 comment-item"
+                  className="p-3 rounded-lg border-l-4 border-l-blue-500 comment-item transition-all duration-200"
                   style={{
                     backgroundColor: 'var(--card-background-hover)',
                   }}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-blue-500">
-                      {highlightText(comment.author || 'User', searchFilter)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-blue-500">
+                        {highlightText(comment.author || 'User', searchFilter)}
+                      </span>
+                      {comment.createdBy && (
+                        <UserInfo 
+                          user={comment.createdBy} 
+                          label="" 
+                          size="sm" 
+                          darkMode={darkMode} 
+                          showRole={false}
+                        />
+                      )}
+                    </div>
                     <span className="text-xs" style={{ color: 'var(--muted-text)' }}>
                       <DateDisplay date={comment.timestamp} fullTimestamp />
                     </span>

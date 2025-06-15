@@ -10,6 +10,7 @@ import { useClientCard } from '../hooks/client/useClientCard';
 import { api } from '@/services/api';
 import { useToast } from '../hooks/useToast';
 import { CopyIcon } from './Icons';
+import UserInfo from './UserInfo';
 
 interface ClientCardProps {
   client: Client;
@@ -19,6 +20,7 @@ interface ClientCardProps {
   onToggleExpand: () => void;
   darkMode: boolean;
   onShowDetails?: (client: Client) => void;
+  onNavigateToTask?: (taskId: number, clientId: string) => void;
 }
 
 export default function ClientCard({
@@ -29,6 +31,7 @@ export default function ClientCard({
   isExpanded,
   onToggleExpand,
   onShowDetails,
+  onNavigateToTask,
 }: ClientCardProps) {
   
   // State for task tabs
@@ -261,12 +264,13 @@ export default function ClientCard({
                     onTouchStart={handleTouchStart}
                     onTouchEnd={handleTouchEnd}
                     onTouchCancel={handleTouchCancel}
-                            onAddComment={handleAddComment}
-        getStatusColor={getStatusColor}
-        getPriorityColor={getPriorityColor}
-        getStatusBgColor={getStatusBgColor}
-        getPriorityStyle={getPriorityStyle}
-        getStatusStyle={getStatusStyle}
+                    onAddComment={handleAddComment}
+                    onNavigateToTask={onNavigateToTask}
+                    getStatusColor={getStatusColor}
+                    getPriorityColor={getPriorityColor}
+                    getStatusBgColor={getStatusBgColor}
+                    getPriorityStyle={getPriorityStyle}
+                    getStatusStyle={getStatusStyle}
                   />
                 ))}
               </div>

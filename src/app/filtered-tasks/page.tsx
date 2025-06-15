@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Client, Task, TaskStatus } from '@/types/types';
 import { api } from '@/services/api';
 import { useDarkMode } from '../layout';
+import AuthGuard from '../components/auth/AuthGuard';
 import { usePersistedFilters } from '../hooks/usePersistedFilters';
 import { useTaskFilters } from '../hooks/useTaskFilters';
 import AnalyticsFilters from '../components/analytics/AnalyticsFilters';
@@ -135,6 +136,7 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
 
   const handleContextMenu = (e: React.MouseEvent, task: Task) => {
     e.preventDefault();
+    e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX;
     const y = e.clientY;
@@ -153,27 +155,7 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
     });
   };
 
-  const handleMoreVerticalClick = (e: React.MouseEvent, task: Task) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = rect.right + 5;
-    const y = rect.top;
-    
-    // Ensure menu doesn't go off screen
-    const menuWidth = 208;
-    const menuHeight = 300;
-    const adjustedX = x + menuWidth > window.innerWidth ? rect.left - menuWidth - 5 : x;
-    const adjustedY = y + menuHeight > window.innerHeight ? y - menuHeight + rect.height : y;
-    
-    setContextMenu({
-      visible: true,
-      x: adjustedX,
-      y: adjustedY,
-      task
-    });
-  };
+
 
   const handleEditTask = () => {
     if (contextMenu.task) {
@@ -200,7 +182,10 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
   };
 
   const handleStatusChange = async (newStatus: TaskStatus) => {
-    if (!contextMenu.task) return;
+    if (!contextMenu.task || !contextMenu.task.id) {
+      toast.error('Update Failed', 'Invalid task selected. Please try again.');
+      return;
+    }
     
     setIsLoading(true);
     try {
@@ -210,7 +195,8 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
       onUpdate();
     } catch (error) {
       console.error('Error updating task status:', error);
-      toast.error('Update Failed', 'Failed to update task status');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update task status';
+      toast.error('Update Failed', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -461,21 +447,17 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                   >
                     SLA
                   </th>
-                  <th 
-                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-                    style={{ color: 'var(--secondary-text)' }}
-                  >
-                    Actions
-                  </th>
+
                 </tr>
               </thead>
               <tbody className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
                 {sortedTasks.map((task) => (
                   <tr 
                     key={task.id}
-                    className={`transition-colors ${
+                    className={`transition-colors cursor-context-menu ${
                       selectedTasks.has(task.id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                     }`}
+                    title="Right-click for actions"
                     style={{
                       backgroundColor: highlightTaskId && task.id.toString() === highlightTaskId
                         ? darkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
@@ -493,12 +475,15 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                         e.currentTarget.style.backgroundColor = 'transparent';
                       }
                     }}
+                    onDoubleClick={() => handleTaskSelection(task.id, !selectedTasks.has(task.id))}
+                    onContextMenu={(e) => handleContextMenu(e, task)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"
                         checked={selectedTasks.has(task.id)}
                         onChange={(e) => handleTaskSelection(task.id, e.target.checked)}
+                        onClick={(e) => e.stopPropagation()}
                         className="rounded"
                       />
                     </td>
@@ -538,7 +523,10 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                         <div 
                           className="text-sm font-medium break-words-enhanced cursor-pointer hover:text-blue-600"
                           style={{ color: 'var(--primary-text)' }}
-                          onClick={() => handleStartEdit(task)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartEdit(task);
+                          }}
                           title="Click to edit"
                         >
                           {task.description}
@@ -570,16 +558,7 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                         <span style={{ color: 'var(--muted-text)' }}>No SLA</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={(e) => handleMoreVerticalClick(e, task)}
-                        className="p-1 rounded transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
-                        style={{ color: 'var(--secondary-text)' }}
-                        title="More actions"
-                      >
-                        <MoreVerticalIcon size={16} />
-                      </button>
-                    </td>
+
                   </tr>
                 ))}
               </tbody>
@@ -598,13 +577,14 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
         {sortedTasks.map((task) => (
           <div 
             key={task.id} 
-            className={`p-4 rounded-lg border shadow task-card-hover relative ${
+            className={`p-4 rounded-lg border shadow task-card-hover relative cursor-context-menu ${
               task.sla_date && task.status !== 'completed' && getSLAStatus(task) === 'overdue'
                 ? 'border-l-4 border-l-red-500'
                 : task.sla_date && task.status !== 'completed' && getSLAStatus(task) === 'due_today'
                 ? 'border-l-4 border-l-orange-500'
                 : ''
             } ${selectedTasks.has(task.id) ? 'ring-2 ring-blue-500' : ''}`}
+            title="Right-click for actions"
             style={{
               backgroundColor: highlightTaskId && task.id.toString() === highlightTaskId
                 ? darkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
@@ -628,6 +608,7 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                 e.currentTarget.style.backgroundColor = 'var(--card-background)';
               }
             }}
+            onDoubleClick={() => handleTaskSelection(task.id, !selectedTasks.has(task.id))}
             onContextMenu={(e) => handleContextMenu(e, task)}
           >
             {/* Selection Checkbox */}
@@ -648,28 +629,9 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
               >
                 <DateDisplay date={task.date} />
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-white ${getStatusColor(task.status)}`}>
-                  {task.status}
-                </span>
-                <button
-                  onClick={(e) => handleMoreVerticalClick(e, task)}
-                  className="p-1 rounded transition-colors"
-                  style={{ color: 'var(--secondary-text)' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
-                    e.currentTarget.style.color = 'var(--primary-text)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = 'var(--secondary-text)';
-                  }}
-                  title="Quick actions"
-                  aria-label="Quick actions"
-                >
-                  <MoreVerticalIcon size={16} />
-                </button>
-              </div>
+              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-white ${getStatusColor(task.status)}`}>
+                {task.status}
+              </span>
             </div>
             
             <h3 
@@ -728,108 +690,110 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
         ))}
       </div>
 
-      {/* Context Menu */}
-      {contextMenu.visible && (
-        <div
-          ref={contextMenuRef}
-          className="fixed z-50 py-1 rounded-md shadow-lg w-52 border"
-          style={{
-            backgroundColor: 'var(--card-background)',
-            borderColor: 'var(--card-border)',
-            top: `${contextMenu.y}px`,
-            left: `${contextMenu.x}px`,
-            maxHeight: 'calc(100vh - 20px)',
-            overflowY: 'auto',
+    {/* Context Menu - Shared between table and cards view */}
+    {contextMenu.visible && (
+      <div
+        ref={contextMenuRef}
+        className="fixed py-1 rounded-md shadow-lg w-52 border"
+        style={{
+          backgroundColor: 'var(--card-background)',
+          borderColor: 'var(--card-border)',
+          top: `${contextMenu.y}px`,
+          left: `${contextMenu.x}px`,
+          maxHeight: 'calc(100vh - 20px)',
+          overflowY: 'auto',
+          zIndex: 9999, // Explicit high z-index
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+        }}
+      >
+        {/* Quick Actions Section */}
+        <div 
+          className="px-3 py-2 text-xs font-medium"
+          style={{ color: 'var(--muted-text)' }}
+        >
+          Quick Actions
+        </div>
+        
+        <button
+          onClick={handleEditTask}
+          disabled={isLoading}
+          className="flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors"
+          style={{ color: 'var(--primary-text)' }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
-          {/* Quick Actions Section */}
-          <div 
-            className="px-3 py-2 text-xs font-medium"
-            style={{ color: 'var(--muted-text)' }}
-          >
-            Quick Actions
-          </div>
-          
-          <button
-            onClick={handleEditTask}
-            disabled={isLoading}
-            className="flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors"
-            style={{ color: 'var(--primary-text)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-          >
-            <EditIcon size={16} className="mr-3" />
-            Edit Task
-          </button>
-          
-          <button
-            onClick={handleDeleteTask}
-            disabled={isLoading}
-            className="flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors text-red-600"
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-          >
-            <TrashIcon size={16} className="mr-3" />
-            Delete Task
-          </button>
+          <EditIcon size={16} className="mr-3" />
+          Edit Task
+        </button>
+        
+        <button
+          onClick={handleDeleteTask}
+          disabled={isLoading}
+          className="flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors text-red-600"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          <TrashIcon size={16} className="mr-3" />
+          Delete Task
+        </button>
 
-          {/* Separator */}
-          <div 
-            className="border-t my-1"
-            style={{ borderColor: 'var(--card-border)' }}
-          ></div>
+        {/* Separator */}
+        <div 
+          className="border-t my-1"
+          style={{ borderColor: 'var(--card-border)' }}
+        ></div>
 
-          {/* Status Change Section */}
-          <div 
-            className="px-3 py-2 text-xs font-medium"
-            style={{ color: 'var(--muted-text)' }}
-          >
-            Change Status
-          </div>
-          
-          {(['pending', 'in progress', 'completed', 'awaiting client'] as TaskStatus[]).map((status) => (
-            <button
-              key={status}
-              onClick={() => handleStatusChange(status)}
-              disabled={isLoading || contextMenu.task?.status === status}
-              className="flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors"
-              style={{ 
-                color: contextMenu.task?.status === status ? 'var(--muted-text)' : 'var(--primary-text)'
-              }}
-              onMouseEnter={(e) => {
-                if (contextMenu.task?.status !== status) {
-                  e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-            >
-              <span className={`inline-block w-3 h-3 rounded-full mr-3 ${getStatusColor(status)}`}></span>
-              {status} {contextMenu.task?.status === status && '(current)'}
-            </button>
-          ))}
+        {/* Status Change Section */}
+        <div 
+          className="px-3 py-2 text-xs font-medium"
+          style={{ color: 'var(--muted-text)' }}
+        >
+          Change Status
         </div>
-      )}
+        
+        {(['pending', 'in progress', 'completed', 'awaiting client'] as TaskStatus[]).map((status) => (
+          <button
+            key={status}
+            onClick={() => handleStatusChange(status)}
+            disabled={isLoading || contextMenu.task?.status === status}
+            className="flex items-center w-full text-left px-4 py-2 text-sm disabled:opacity-50 transition-colors"
+            style={{ 
+              color: contextMenu.task?.status === status ? 'var(--muted-text)' : 'var(--primary-text)'
+            }}
+            onMouseEnter={(e) => {
+              if (contextMenu.task?.status !== status) {
+                e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            <span className={`inline-block w-3 h-3 rounded-full mr-3 ${getStatusColor(status)}`}></span>
+            {status} {contextMenu.task?.status === status && '(current)'}
+          </button>
+        ))}
+      </div>
+    )}
 
-      {/* Edit Task Modal */}
-      {editingTask && (
-        <EditTaskModal
-          task={editingTask}
-          isOpen={true}
-          onClose={() => setEditingTask(null)}
-          onUpdate={onUpdate}
-          darkMode={darkMode}
-        />
-      )}
+    {/* Edit Task Modal - Shared between table and cards view */}
+    {editingTask && (
+      <EditTaskModal
+        task={editingTask}
+        isOpen={true}
+        onClose={() => setEditingTask(null)}
+        onUpdate={onUpdate}
+        darkMode={darkMode}
+      />
+    )}
     </>
   );
 }
@@ -911,7 +875,8 @@ export default function FilteredTasksPage() {
   }
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
+    <AuthGuard darkMode={darkMode}>
+      <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -1007,5 +972,6 @@ export default function FilteredTasksPage() {
         )}
       </div>
     </div>
+    </AuthGuard>
   );
 }

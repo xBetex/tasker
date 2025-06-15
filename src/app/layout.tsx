@@ -11,6 +11,7 @@ import { ScrollProvider } from './contexts/ScrollContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { DragDropProvider } from './contexts/DragDropContext';
 import { TimezoneProvider } from './contexts/TimezoneContext';
+import { AuthProvider } from './contexts/AuthContext';
 import NotificationToast from './components/NotificationToast';
 import "./globals.css";
 
@@ -130,25 +131,27 @@ function ClientLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ThemeProvider>
-      <TimezoneProvider>
-        <NotificationProvider>
-          <ScrollProvider>
-            <DragDropProvider>
-              <ThemeSync 
-                darkMode={darkMode}
-                toggleDarkMode={toggleDarkMode}
-                clients={clients}
-                refreshClients={refreshClients}
-                isLoading={isLoading}
-              >
-                {children}
-              </ThemeSync>
-            </DragDropProvider>
-          </ScrollProvider>
-        </NotificationProvider>
-      </TimezoneProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <TimezoneProvider>
+          <NotificationProvider>
+            <ScrollProvider>
+              <DragDropProvider>
+                <ThemeSync 
+                  darkMode={darkMode}
+                  toggleDarkMode={toggleDarkMode}
+                  clients={clients}
+                  refreshClients={refreshClients}
+                  isLoading={isLoading}
+                >
+                  {children}
+                </ThemeSync>
+              </DragDropProvider>
+            </ScrollProvider>
+          </NotificationProvider>
+        </TimezoneProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 

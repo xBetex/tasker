@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { useTheme, ThemeColors } from '../contexts/ThemeContext';
 import { useTimezone, TIMEZONE_OPTIONS } from '../contexts/TimezoneContext';
+import AuthGuard from '../components/auth/AuthGuard';
 
 interface ColorInputProps {
   label: string;
@@ -124,7 +125,8 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen p-4" style={{ backgroundColor: 'var(--page-background)' }}>
+    <AuthGuard>
+      <div className="min-h-screen p-4" style={{ backgroundColor: 'var(--page-background)' }}>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -137,17 +139,17 @@ export default function SettingsPage() {
         </div>
 
         {/* Timezone Settings */}
-        <div className="mb-6 p-4 rounded-lg border" 
+        <div className="mb-6 p-6 rounded-lg border max-w-2xl mx-auto" 
              style={{ 
                backgroundColor: 'var(--card-background)', 
                borderColor: 'var(--card-border)' 
              }}>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--primary-text)' }}>
+          <h2 className="text-xl font-semibold mb-6 text-center" style={{ color: 'var(--primary-text)' }}>
             🌍 Timezone Settings
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--primary-text)' }}>
+          <div className="flex flex-col items-center space-y-6">
+            <div className="w-full max-w-md">
+              <label className="block text-sm font-medium mb-2 text-center" style={{ color: 'var(--primary-text)' }}>
                 Timezone
               </label>
               <select
@@ -166,36 +168,34 @@ export default function SettingsPage() {
                   </option>
                 ))}
               </select>
-              <p className="text-xs mt-1" style={{ color: 'var(--secondary-text)' }}>
+              <p className="text-xs mt-2 text-center" style={{ color: 'var(--secondary-text)' }}>
                 All dates and times will be displayed in this timezone
               </p>
             </div>
-            <div className="flex items-center justify-center">
-              <div className="text-center p-4 rounded-lg border" 
-                   style={{ 
-                     backgroundColor: 'var(--card-background-hover)', 
-                     borderColor: 'var(--card-border)' 
-                   }}>
-                <div className="text-2xl mb-2">🕐</div>
-                <div className="text-sm font-medium" style={{ color: 'var(--primary-text)' }}>
-                  Current Time
-                </div>
-                <div className="text-lg font-bold" style={{ color: 'var(--primary-text)' }}>
-                  {new Date().toLocaleString('en-US', { 
-                    timeZone: timezone,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                  })}
-                </div>
-                <div className="text-xs" style={{ color: 'var(--secondary-text)' }}>
-                  {new Date().toLocaleDateString('en-US', { 
-                    timeZone: timezone,
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                  })}
-                </div>
+            <div className="text-center p-6 rounded-lg border" 
+                 style={{ 
+                   backgroundColor: 'var(--card-background-hover)', 
+                   borderColor: 'var(--card-border)' 
+                 }}>
+              <div className="text-3xl mb-3">🕐</div>
+              <div className="text-sm font-medium mb-2" style={{ color: 'var(--primary-text)' }}>
+                Current Time
+              </div>
+              <div className="text-2xl font-bold mb-1" style={{ color: 'var(--primary-text)' }}>
+                {new Date().toLocaleString('en-US', { 
+                  timeZone: timezone,
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+                })}
+              </div>
+              <div className="text-sm" style={{ color: 'var(--secondary-text)' }}>
+                {new Date().toLocaleDateString('en-US', { 
+                  timeZone: timezone,
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric'
+                })}
               </div>
             </div>
           </div>
@@ -521,5 +521,6 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+    </AuthGuard>
   );
 } 

@@ -13,6 +13,7 @@ interface SortableClientCardProps {
   onToggleExpand: () => void;
   darkMode: boolean;
   onShowDetails?: (client: Client) => void;
+  onNavigateToTask?: (taskId: number, clientId: string) => void;
   isPinned?: boolean;
   disableDrag?: boolean; // New prop to disable drag
 }
@@ -68,7 +69,7 @@ function DragHandle({ className = "" }: { className?: string }) {
 }
 
 const SortableClientCard = forwardRef<HTMLDivElement, SortableClientCardProps>(
-  ({ client, onUpdate, onDeleteTask, isExpanded, onToggleExpand, darkMode, onShowDetails, isPinned = false, disableDrag = false }, ref) => {
+  ({ client, onUpdate, onDeleteTask, isExpanded, onToggleExpand, darkMode, onShowDetails, onNavigateToTask, isPinned = false, disableDrag = false }, ref) => {
     const { pinnedClients, togglePinClient, isDragging } = useDragDrop();
     const isClientPinned = pinnedClients.includes(client.id);
     
@@ -164,6 +165,7 @@ const SortableClientCard = forwardRef<HTMLDivElement, SortableClientCardProps>(
             onToggleExpand={onToggleExpand}
             darkMode={darkMode}
             onShowDetails={onShowDetails}
+            onNavigateToTask={onNavigateToTask}
           />
         </div>
 

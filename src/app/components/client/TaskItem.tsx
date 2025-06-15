@@ -5,6 +5,7 @@ import DateDisplay from '../DateDisplay';
 import { getSLAStatus, getSLAStatusColor, getSLAStatusBadge } from '@/utils/slaUtils';
 import CommentsSection from '../CommentsSection';
 import { useScroll } from '../../contexts/ScrollContext';
+import UserInfo from '../UserInfo';
 
 interface TaskItemProps {
   task: Task;
@@ -17,6 +18,7 @@ interface TaskItemProps {
   onTouchEnd: () => void;
   onTouchCancel: () => void;
   onAddComment: (taskId: number, commentText: string) => void;
+  onNavigateToTask?: (taskId: number, clientId: string) => void;
   getStatusColor: (status: string) => string;
   getPriorityColor: (priority: string) => string;
   getStatusBgColor: (status: string) => string;
@@ -35,6 +37,7 @@ export default function TaskItem({
   onTouchEnd,
   onTouchCancel,
   onAddComment,
+  onNavigateToTask,
   getStatusColor,
   getPriorityColor,
   getStatusBgColor,
@@ -266,10 +269,35 @@ export default function TaskItem({
         )}
       </div>
 
+      {/* User Information */}
+      {(task.createdBy || task.lastModifiedBy) && (
+        <div className="flex flex-wrap gap-4 mb-2">
+          {task.createdBy && (
+            <UserInfo 
+              user={task.createdBy} 
+              label="Created by" 
+              size="sm" 
+              darkMode={darkMode} 
+            />
+          )}
+          {task.lastModifiedBy && task.lastModifiedBy.id !== task.createdBy?.id && (
+            <UserInfo 
+              user={task.lastModifiedBy} 
+              label="Modified by" 
+              size="sm" 
+              darkMode={darkMode} 
+            />
+          )}
+        </div>
+      )}
+
       <CommentsSection
         comments={task.comments || []}
         onAddComment={(text: string) => onAddComment(task.id, text)}
         darkMode={darkMode}
+        taskId={task.id}
+        clientId={task.client_id}
+        onNavigateToTask={onNavigateToTask}
       />
     </div>
   );
