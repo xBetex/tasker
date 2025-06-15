@@ -41,6 +41,9 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [bulkStatus, setBulkStatus] = useState<TaskStatus>('pending');
+  const [bulkPriority, setBulkPriority] = useState<'high' | 'medium' | 'low'>('medium');
+  const [bulkSlaDate, setBulkSlaDate] = useState<string>('');
+  const [bulkOperation, setBulkOperation] = useState<'status' | 'priority' | 'sla'>('status');
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
 
@@ -60,6 +63,13 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
     setSelectedTasks(new Set());
     setShowBulkActions(false);
   }, [tasks]);
+
+  // Initialize bulk SLA date to tomorrow
+  useEffect(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    setBulkSlaDate(tomorrow.toISOString().split('T')[0]);
+  }, []);
 
   const getClientName = (clientId: string) => {
     const client = clients.find(c => c.id === clientId);
@@ -85,6 +95,25 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
     }
   };
 
+  // Calculate task statistics
+  const taskStats = {
+    total: tasks.length,
+    selected: selectedTasks.size,
+    byStatus: {
+      pending: tasks.filter(t => t.status === 'pending').length,
+      'in progress': tasks.filter(t => t.status === 'in progress').length,
+      completed: tasks.filter(t => t.status === 'completed').length,
+      'awaiting client': tasks.filter(t => t.status === 'awaiting client').length,
+    },
+    byPriority: {
+      high: tasks.filter(t => t.priority === 'high').length,
+      medium: tasks.filter(t => t.priority === 'medium').length,
+      low: tasks.filter(t => t.priority === 'low').length,
+    },
+    withSLA: tasks.filter(t => t.sla_date).length,
+    overdue: tasks.filter(t => t.sla_date && t.status !== 'completed' && new Date(t.sla_date) < new Date()).length
+  };
+
   const handleTaskSelection = (taskId: number, selected: boolean) => {
     const newSelected = new Set(selectedTasks);
     if (selected) {
@@ -107,20 +136,40 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
     }
   };
 
-  const handleBulkStatusChange = async () => {
+  const handleBulkUpdate = async () => {
     if (selectedTasks.size === 0) return;
     
     setIsLoading(true);
     try {
-      const promises = Array.from(selectedTasks).map(taskId => 
-        api.updateTaskStatus(taskId, bulkStatus)
-      );
+      const promises = Array.from(selectedTasks).map(taskId => {
+        const updates: Partial<Task> = {};
+        
+        switch (bulkOperation) {
+          case 'status':
+            updates.status = bulkStatus;
+            break;
+          case 'priority':
+            updates.priority = bulkPriority;
+            break;
+          case 'sla':
+            updates.sla_date = bulkSlaDate;
+            break;
+        }
+        
+        return api.updateTask(taskId, updates);
+      });
       
       await Promise.all(promises);
       
+      const operationText = {
+        status: `status to "${bulkStatus}"`,
+        priority: `priority to "${bulkPriority}"`,
+        sla: `SLA date to ${bulkSlaDate}`
+      };
+      
       toast.success(
         'Bulk Update Complete', 
-        `Updated ${selectedTasks.size} task${selectedTasks.size > 1 ? 's' : ''} to "${bulkStatus}"`
+        `Updated ${selectedTasks.size} task${selectedTasks.size > 1 ? 's' : ''} ${operationText[bulkOperation]}`
       );
       
       setSelectedTasks(new Set());
@@ -133,6 +182,9 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
       setIsLoading(false);
     }
   };
+
+  // Legacy function for backwards compatibility
+  const handleBulkStatusChange = () => handleBulkUpdate();
 
   const handleContextMenu = (e: React.MouseEvent, task: Task) => {
     e.preventDefault();
@@ -154,8 +206,6 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
       task
     });
   };
-
-
 
   const handleEditTask = () => {
     if (contextMenu.task) {
@@ -257,7 +307,7 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
     return sortOrder === 'asc' ? comparison : -comparison;
   });
 
-  // Bulk Actions Bar
+  // Enhanced Bulk Actions Bar
   const BulkActionsBar = () => (
     <div 
       className="mb-4 p-4 rounded-lg border-2 border-dashed"
@@ -266,35 +316,139 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
         borderColor: 'var(--primary-button)'
       }}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <span 
-            className="font-medium"
-            style={{ color: 'var(--primary-text)' }}
-          >
-            {selectedTasks.size} task{selectedTasks.size > 1 ? 's' : ''} selected
-          </span>
-          <select
-            value={bulkStatus}
-            onChange={(e) => setBulkStatus(e.target.value as TaskStatus)}
-            className="px-3 py-1 rounded border"
+      <div className="space-y-4">
+        {/* Header with selection info */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <span 
+              className="font-medium text-lg"
+              style={{ color: 'var(--primary-text)' }}
+            >
+              📋 {selectedTasks.size} task{selectedTasks.size > 1 ? 's' : ''} selected
+            </span>
+            <span 
+              className="text-sm px-2 py-1 rounded"
+              style={{ 
+                backgroundColor: 'var(--card-background)',
+                color: 'var(--secondary-text)' 
+              }}
+            >
+              Bulk Operations
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setSelectedTasks(new Set());
+              setShowBulkActions(false);
+            }}
+            className="px-3 py-1 rounded-lg text-sm font-medium transition-colors"
             style={{
-              backgroundColor: 'var(--card-background)',
-              borderColor: 'var(--card-border)',
-              color: 'var(--primary-text)'
+              backgroundColor: 'var(--secondary-button)',
+              color: 'white'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--secondary-button-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--secondary-button)';
             }}
           >
-            <option value="pending">Pending</option>
-            <option value="in progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="awaiting client">Awaiting Client</option>
-          </select>
+            ✕ Cancel
+          </button>
         </div>
-        <div className="flex items-center space-x-2">
+
+        {/* Operation selection and controls */}
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Operation Type Selector */}
+          <div className="flex items-center space-x-2">
+            <label 
+              className="text-sm font-medium"
+              style={{ color: 'var(--secondary-text)' }}
+            >
+              Operation:
+            </label>
+            <select
+              value={bulkOperation}
+              onChange={(e) => setBulkOperation(e.target.value as 'status' | 'priority' | 'sla')}
+              className="px-3 py-1 rounded border text-sm"
+              style={{
+                backgroundColor: 'var(--card-background)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--primary-text)'
+              }}
+            >
+              <option value="status">📊 Update Status</option>
+              <option value="priority">🔥 Update Priority</option>
+              <option value="sla">📅 Update SLA Date</option>
+            </select>
+          </div>
+
+          {/* Dynamic Value Selector */}
+          <div className="flex items-center space-x-2">
+            <label 
+              className="text-sm font-medium"
+              style={{ color: 'var(--secondary-text)' }}
+            >
+              {bulkOperation === 'status' && 'New Status:'}
+              {bulkOperation === 'priority' && 'New Priority:'}
+              {bulkOperation === 'sla' && 'New SLA Date:'}
+            </label>
+            
+            {bulkOperation === 'status' && (
+              <select
+                value={bulkStatus}
+                onChange={(e) => setBulkStatus(e.target.value as TaskStatus)}
+                className="px-3 py-1 rounded border text-sm"
+                style={{
+                  backgroundColor: 'var(--card-background)',
+                  borderColor: 'var(--card-border)',
+                  color: 'var(--primary-text)'
+                }}
+              >
+                <option value="pending">⏳ Pending</option>
+                <option value="in progress">🚧 In Progress</option>
+                <option value="completed">✅ Completed</option>
+                <option value="awaiting client">⏸️ Awaiting Client</option>
+              </select>
+            )}
+
+            {bulkOperation === 'priority' && (
+              <select
+                value={bulkPriority}
+                onChange={(e) => setBulkPriority(e.target.value as 'high' | 'medium' | 'low')}
+                className="px-3 py-1 rounded border text-sm"
+                style={{
+                  backgroundColor: 'var(--card-background)',
+                  borderColor: 'var(--card-border)',
+                  color: 'var(--primary-text)'
+                }}
+              >
+                <option value="low">🟢 Low Priority</option>
+                <option value="medium">🟡 Medium Priority</option>
+                <option value="high">🔴 High Priority</option>
+              </select>
+            )}
+
+            {bulkOperation === 'sla' && (
+              <input
+                type="date"
+                value={bulkSlaDate}
+                onChange={(e) => setBulkSlaDate(e.target.value)}
+                className="px-3 py-1 rounded border text-sm"
+                style={{
+                  backgroundColor: 'var(--card-background)',
+                  borderColor: 'var(--card-border)',
+                  color: 'var(--primary-text)'
+                }}
+              />
+            )}
+          </div>
+
+          {/* Execute Button */}
           <button
-            onClick={handleBulkStatusChange}
+            onClick={handleBulkUpdate}
             disabled={isLoading}
-            className="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+            className="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ml-auto"
             style={{
               backgroundColor: 'var(--primary-button)',
               color: 'white'
@@ -310,27 +464,131 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
               }
             }}
           >
-            {isLoading ? 'Updating...' : 'Update Status'}
+            {isLoading ? '⏳ Updating...' : '🚀 Apply Changes'}
           </button>
-          <button
-            onClick={() => {
-              setSelectedTasks(new Set());
-              setShowBulkActions(false);
-            }}
-            className="px-4 py-2 rounded-lg font-medium transition-colors"
-            style={{
-              backgroundColor: 'var(--secondary-button)',
-              color: 'white'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--secondary-button-hover)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--secondary-button)';
-            }}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Task Statistics Header
+  const TaskStatsHeader = () => (
+    <div 
+      className="mb-4 p-4 rounded-lg border"
+      style={{
+        backgroundColor: 'var(--card-background)',
+        borderColor: 'var(--card-border)'
+      }}
+    >
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {/* Total Tasks */}
+        <div className="text-center">
+          <div 
+            className="text-2xl font-bold"
+            style={{ color: 'var(--primary-text)' }}
           >
-            Cancel
-          </button>
+            {taskStats.total}
+          </div>
+          <div 
+            className="text-xs"
+            style={{ color: 'var(--secondary-text)' }}
+          >
+            📋 Total Tasks
+          </div>
+        </div>
+
+        {/* Status Distribution */}
+        <div className="text-center">
+          <div 
+            className="text-lg font-semibold text-gray-500"
+          >
+            {taskStats.byStatus.pending}
+          </div>
+          <div 
+            className="text-xs"
+            style={{ color: 'var(--secondary-text)' }}
+          >
+            ⏳ Pending
+          </div>
+        </div>
+
+        <div className="text-center">
+          <div 
+            className="text-lg font-semibold text-yellow-600"
+          >
+            {taskStats.byStatus['in progress']}
+          </div>
+          <div 
+            className="text-xs"
+            style={{ color: 'var(--secondary-text)' }}
+          >
+            🚧 In Progress
+          </div>
+        </div>
+
+        <div className="text-center">
+          <div 
+            className="text-lg font-semibold text-green-600"
+          >
+            {taskStats.byStatus.completed}
+          </div>
+          <div 
+            className="text-xs"
+            style={{ color: 'var(--secondary-text)' }}
+          >
+            ✅ Completed
+          </div>
+        </div>
+
+        {/* Priority Distribution */}
+        <div className="text-center">
+          <div 
+            className="text-lg font-semibold text-red-600"
+          >
+            {taskStats.byPriority.high}
+          </div>
+          <div 
+            className="text-xs"
+            style={{ color: 'var(--secondary-text)' }}
+          >
+            🔴 High Priority
+          </div>
+        </div>
+
+        {/* SLA Info */}
+        <div className="text-center">
+          <div 
+            className="text-lg font-semibold"
+            style={{ color: taskStats.overdue > 0 ? '#dc2626' : 'var(--primary-text)' }}
+          >
+            {taskStats.overdue}
+          </div>
+          <div 
+            className="text-xs"
+            style={{ color: 'var(--secondary-text)' }}
+          >
+            🚨 Overdue
+          </div>
+        </div>
+      </div>
+
+      {/* Additional info row */}
+      <div className="mt-3 pt-3 border-t flex justify-between items-center text-sm">
+        <div 
+          className="flex items-center space-x-4"
+          style={{ color: 'var(--secondary-text)' }}
+        >
+          <span>📅 {taskStats.withSLA} tasks with SLA dates</span>
+          <span>🎯 {taskStats.byStatus['awaiting client']} awaiting client</span>
+        </div>
+        <div 
+          className="text-xs px-2 py-1 rounded"
+          style={{ 
+            backgroundColor: 'var(--card-background-hover)',
+            color: 'var(--muted-text)' 
+          }}
+        >
+          Updated in real-time
         </div>
       </div>
     </div>
@@ -339,6 +597,7 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
   if (viewMode === 'table') {
     return (
       <>
+        <TaskStatsHeader />
         {showBulkActions && <BulkActionsBar />}
         <div 
           className="rounded-xl border shadow-lg overflow-hidden"
@@ -454,10 +713,9 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                 {sortedTasks.map((task) => (
                   <tr 
                     key={task.id}
-                    className={`transition-colors cursor-context-menu ${
+                    className={`transition-colors ${
                       selectedTasks.has(task.id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                     }`}
-                    title="Right-click for actions"
                     style={{
                       backgroundColor: highlightTaskId && task.id.toString() === highlightTaskId
                         ? darkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
@@ -476,7 +734,6 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                       }
                     }}
                     onDoubleClick={() => handleTaskSelection(task.id, !selectedTasks.has(task.id))}
-                    onContextMenu={(e) => handleContextMenu(e, task)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
@@ -572,6 +829,7 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
   // Cards view
   return (
     <>
+      <TaskStatsHeader />
       {showBulkActions && <BulkActionsBar />}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sortedTasks.map((task) => (

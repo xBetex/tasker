@@ -132,7 +132,9 @@ const GlobalCommentsSearch: React.FC = () => {
     
     return parts.map((part, index) => 
       regex.test(part) ? (
-        <mark key={index} className="bg-yellow-200 dark:bg-yellow-800 px-1 rounded">
+        <mark key={index} className={`px-1 rounded ${
+          isDarkMode ? 'bg-yellow-800 text-yellow-200' : 'bg-yellow-200 text-yellow-800'
+        }`}>
           {part}
         </mark>
       ) : part
@@ -155,19 +157,22 @@ const GlobalCommentsSearch: React.FC = () => {
   };
 
   return (
-    <div className={`p-6 rounded-lg border ${
-      isDarkMode 
-        ? 'bg-gray-800 border-gray-700' 
-        : 'bg-white border-gray-200'
-    }`}>
+    <div 
+      className="p-6 rounded-xl border shadow-lg"
+      style={{
+        backgroundColor: 'var(--card-background)',
+        borderColor: 'var(--card-border)'
+      }}
+    >
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <MessageCircleIcon className={`w-6 h-6 ${
-          isDarkMode ? 'text-blue-400' : 'text-blue-600'
-        }`} />
-        <h2 className={`text-xl font-semibold ${
-          isDarkMode ? 'text-white' : 'text-gray-900'
-        }`}>
+        <div style={{ color: 'var(--primary-button)' }}>
+          <MessageCircleIcon className="w-6 h-6" />
+        </div>
+        <h2 
+          className="text-xl font-semibold"
+          style={{ color: 'var(--primary-text)' }}
+        >
           Global Comments Search
         </h2>
       </div>
@@ -175,27 +180,33 @@ const GlobalCommentsSearch: React.FC = () => {
       {/* Search Input */}
       <div className="relative mb-6">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <SearchIcon className={`w-5 h-5 ${
-            isDarkMode ? 'text-gray-400' : 'text-gray-500'
-          }`} />
+          <div style={{ color: 'var(--secondary-text)' }}>
+            <SearchIcon className="w-5 h-5" />
+          </div>
         </div>
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search across all comments and authors..."
-          className={`w-full pl-10 pr-10 py-3 rounded-lg border transition-colors ${
-            isDarkMode
-              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
-              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
-          } focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+          className="w-full pl-10 pr-10 py-3 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          style={{
+            backgroundColor: 'var(--input-background)',
+            borderColor: 'var(--input-border)',
+            color: 'var(--input-text)'
+          }}
         />
         {searchQuery && (
           <button
             onClick={clearSearch}
-            className={`absolute inset-y-0 right-0 pr-3 flex items-center ${
-              isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
-            }`}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center transition-colors"
+            style={{ color: 'var(--secondary-text)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--primary-text)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--secondary-text)';
+            }}
           >
             <XIcon className="w-5 h-5" />
           </button>
@@ -204,12 +215,16 @@ const GlobalCommentsSearch: React.FC = () => {
 
       {/* Results Header */}
       {hasSearched && (
-        <div className={`mb-4 text-sm ${
-          isDarkMode ? 'text-gray-300' : 'text-gray-600'
-        }`}>
+        <div 
+          className="mb-4 text-sm"
+          style={{ color: 'var(--secondary-text)' }}
+        >
           {isLoading ? (
             <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+              <div 
+                className="animate-spin rounded-full h-4 w-4 border-2 border-t-transparent"
+                style={{ borderColor: 'var(--primary-button)' }}
+              ></div>
               Searching...
             </div>
           ) : (
@@ -230,23 +245,31 @@ const GlobalCommentsSearch: React.FC = () => {
         {searchResults.map((comment) => (
           <div
             key={comment.id}
-            className={`p-4 rounded-lg border transition-colors ${
-              isDarkMode
-                ? 'bg-gray-700 border-gray-600 hover:bg-gray-650'
-                : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-            }`}
+            className="p-4 rounded-lg border transition-colors"
+            style={{
+              backgroundColor: 'var(--card-background)',
+              borderColor: 'var(--card-border)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--card-background-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--card-background)';
+            }}
           >
             {/* Comment Text */}
-            <div className={`mb-3 ${
-              isDarkMode ? 'text-gray-100' : 'text-gray-800'
-            }`}>
+            <div 
+              className="mb-3"
+              style={{ color: 'var(--primary-text)' }}
+            >
               {highlightText(comment.text, searchQuery)}
             </div>
 
             {/* Comment Metadata */}
-            <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 text-sm ${
-              isDarkMode ? 'text-gray-300' : 'text-gray-600'
-            }`}>
+            <div 
+              className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm"
+              style={{ color: 'var(--secondary-text)' }}
+            >
               {/* Author and Date */}
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -267,9 +290,13 @@ const GlobalCommentsSearch: React.FC = () => {
                   <BuildingIcon className="w-4 h-4" />
                   <span className="font-medium">{comment.client_name}</span>
                   {comment.client_company && (
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'
-                    }`}>
+                    <span 
+                      className="text-xs px-2 py-1 rounded"
+                      style={{
+                        backgroundColor: 'var(--card-background-hover)',
+                        color: 'var(--secondary-text)'
+                      }}
+                    >
                       {comment.client_company}
                     </span>
                   )}
@@ -284,18 +311,22 @@ const GlobalCommentsSearch: React.FC = () => {
             {/* Client ID Badge and View Task Button */}
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className={`text-xs px-2 py-1 rounded font-mono ${
-                  isDarkMode 
-                    ? 'bg-blue-900 text-blue-200' 
-                    : 'bg-blue-100 text-blue-800'
-                }`}>
+                <span 
+                  className="text-xs px-2 py-1 rounded font-mono"
+                  style={{
+                    backgroundColor: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)',
+                    color: isDarkMode ? 'rgb(147, 197, 253)' : 'rgb(30, 64, 175)'
+                  }}
+                >
                   {comment.client_id}
                 </span>
-                <span className={`text-xs px-2 py-1 rounded font-mono ${
-                  isDarkMode 
-                    ? 'bg-green-900 text-green-200' 
-                    : 'bg-green-100 text-green-800'
-                }`}>
+                <span 
+                  className="text-xs px-2 py-1 rounded font-mono"
+                  style={{
+                    backgroundColor: isDarkMode ? 'rgba(34, 197, 94, 0.2)' : 'rgba(34, 197, 94, 0.1)',
+                    color: isDarkMode ? 'rgb(134, 239, 172)' : 'rgb(22, 101, 52)'
+                  }}
+                >
                   Task #{comment.task_id}
                 </span>
               </div>
@@ -307,11 +338,17 @@ const GlobalCommentsSearch: React.FC = () => {
                   const url = `${window.location.origin}/?highlight=${comment.client_id}-${comment.task_id}`;
                   window.open(url, '_blank');
                 }}
-                className={`text-xs px-3 py-1.5 rounded-md font-medium transition-all duration-200 flex items-center gap-1.5 ${
-                  isDarkMode 
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                    : 'bg-blue-500 hover:bg-blue-600 text-white'
-                } hover:shadow-md hover:scale-105`}
+                className="text-xs px-3 py-1.5 rounded-md font-medium transition-all duration-200 flex items-center gap-1.5 hover:shadow-md hover:scale-105"
+                style={{
+                  backgroundColor: 'var(--primary-button)',
+                  color: 'white'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--primary-button-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--primary-button)';
+                }}
                 title="Open task in new tab"
               >
                 <FileTextIcon className="w-3 h-3" />
@@ -324,9 +361,10 @@ const GlobalCommentsSearch: React.FC = () => {
 
       {/* Empty State */}
       {hasSearched && !isLoading && searchResults.length === 0 && (
-        <div className={`text-center py-12 ${
-          isDarkMode ? 'text-gray-400' : 'text-gray-500'
-        }`}>
+        <div 
+          className="text-center py-12"
+          style={{ color: 'var(--muted-text)' }}
+        >
           <MessageCircleIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p className="text-lg font-medium mb-2">No comments found</p>
           <p className="text-sm">
@@ -337,9 +375,10 @@ const GlobalCommentsSearch: React.FC = () => {
 
       {/* Initial State */}
       {!hasSearched && !isLoading && (
-        <div className={`text-center py-12 ${
-          isDarkMode ? 'text-gray-400' : 'text-gray-500'
-        }`}>
+        <div 
+          className="text-center py-12"
+          style={{ color: 'var(--muted-text)' }}
+        >
           <SearchIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p className="text-lg font-medium mb-2">Search Comments Globally</p>
           <p className="text-sm">

@@ -68,7 +68,9 @@ export default function SLANotifications({
   };
 
   const handleNotificationClick = (notification: SLANotification) => {
-    router.push(`/filtered-tasks?task=${notification.taskId}`);
+    // Navigate to the main dashboard with highlight parameter to show the specific task
+    const url = `/?highlight=${notification.clientId}-${notification.taskId}`;
+    router.push(url);
     setIsOpen(false);
   };
 

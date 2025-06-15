@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useDashboard } from './hooks/useDashboard';
 import { useContainerHeight } from './hooks/useContainerHeight';
 
@@ -24,22 +25,22 @@ import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
 export default function Home() {
   const dashboard = useDashboard();
   const containerHeight = useContainerHeight(280, 600);
+  const searchParams = useSearchParams();
 
-  // Handle highlight from URL parameters (from Global Comments Search)
+  // Handle highlight from URL parameters (from Global Comments Search and SLA Alerts)
   const [highlightTaskId, setHighlightTaskId] = useState<number | null>(null);
   const [pendingHighlight, setPendingHighlight] = useState<string | null>(null);
   
-  // Check for highlight parameter on mount
+  // Check for highlight parameter whenever URL changes
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const highlight = urlParams.get('highlight');
+    const highlight = searchParams.get('highlight');
     
     if (highlight && highlight.includes('-')) {
       setPendingHighlight(highlight);
       // Clean the URL immediately
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, []);
+  }, [searchParams]);
 
   // Process highlight when clients are loaded
   useEffect(() => {
@@ -47,12 +48,19 @@ export default function Home() {
       const [clientId, taskIdStr] = pendingHighlight.split('-');
       const taskId = parseInt(taskIdStr);
       
+      console.log('Processing highlight:', { clientId, taskId, pendingHighlight });
+      console.log('Available clients:', dashboard.clients.map(c => ({ id: c.id, name: c.name, taskCount: c.tasks.length })));
+      
       // Find the client
       const client = dashboard.clients.find(c => c.id === clientId);
       if (client) {
+        console.log('Found client:', client.name, 'with tasks:', client.tasks.map(t => ({ id: t.id, description: t.description })));
+        
         // Check if the task exists in the client
         const task = client.tasks.find(t => t.id === taskId);
         if (task) {
+          console.log('Found task:', task.description);
+          
           // Expand the client card
           dashboard.setExpandedCards(prev => ({
             ...prev,
@@ -68,9 +76,11 @@ export default function Home() {
           
           dashboard.toast.success('Task Located', `Found task "${task.description}" for ${client.name}`);
         } else {
+          console.log('Task not found in client');
           dashboard.toast.error('Task Not Found', `Task #${taskId} not found in ${client.name}`);
         }
       } else {
+        console.log('Client not found, looking for ID:', clientId);
         dashboard.toast.error('Client Not Found', 'Could not locate the specified client');
       }
       
