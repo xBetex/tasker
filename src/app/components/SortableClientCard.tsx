@@ -105,6 +105,7 @@ const SortableClientCard = forwardRef<HTMLDivElement, SortableClientCardProps>(
         ref={setNodeRef}
         style={style}
         className={`relative group ${isSortableDragging ? 'cursor-grabbing dragging' : ''} ${isExpanded ? 'z-10' : ''}`}
+        data-client-id={client.id}
       >
         {/* Pin indicator and controls */}
         <div className="absolute -top-2 -right-2 z-20 flex gap-1">

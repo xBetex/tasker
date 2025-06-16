@@ -25,15 +25,6 @@ export interface Task {
   creation_timestamp?: string;
   completion_timestamp?: string;
   comments?: Comment[];
-  attachments?: {
-    id: string;
-    filename: string;
-    url: string;
-    type: 'image' | 'document' | 'other';
-    size: number;
-    uploadedAt: string;
-    uploadedBy?: string;
-  }[];
   createdBy?: {
     id: string;
     username: string;

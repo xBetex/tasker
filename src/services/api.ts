@@ -36,15 +36,6 @@ interface TaskPayload {
   client_id?: string;
   sla_date?: string;
   completion_date?: string;
-  attachments?: {
-    id: string;
-    filename: string;
-    url: string;
-    type: 'image' | 'document' | 'other';
-    size: number;
-    uploadedAt: string;
-    uploadedBy?: string;
-  }[];
   createdBy?: {
     id: string;
     username: string;

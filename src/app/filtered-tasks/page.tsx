@@ -14,7 +14,8 @@ import { MoreVerticalIcon, EditIcon, TrashIcon } from '../components/Icons';
 import { useSearchParams } from 'next/navigation';
 import { getSLAStatus, getSLAStatusColor, getSLAStatusBadge } from '@/utils/slaUtils';
 import { useToast } from '../hooks/useToast';
-import { PhotoGallery } from '@/components/PhotoGallery';
+import GlobalCommentSearch from '@/components/GlobalCommentSearch';
+
 
 interface TaskListViewProps {
   tasks: Task[];
@@ -799,19 +800,6 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                           title="Click to edit"
                         >
                           {task.description}
-                          {/* Photo count indicator */}
-                          {task.attachments && task.attachments.filter(att => att.type === 'image').length > 0 && (
-                            <span 
-                              className="ml-2 px-2 py-1 text-xs rounded-full"
-                              style={{
-                                backgroundColor: 'var(--primary-button)',
-                                color: 'white'
-                              }}
-                              title={`${task.attachments.filter(att => att.type === 'image').length} photo(s) attached`}
-                            >
-                              📸 {task.attachments.filter(att => att.type === 'image').length}
-                            </span>
-                          )}
                         </div>
                       )}
                     </td>
@@ -924,14 +912,7 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
               {task.description}
             </h3>
             
-            {/* Photo Gallery */}
-            <div className="ml-6 mb-3">
-              <PhotoGallery 
-                task={task} 
-                readonly={true}
-                darkMode={darkMode}
-              />
-            </div>
+
             
             <div className="flex items-center justify-between mb-2 ml-6">
               <span className={`text-sm font-medium ${getPriorityColor(task.priority)}`}>
@@ -1110,6 +1091,7 @@ export default function FilteredTasksPage() {
     setDateRange,
     setSlaFilter,
     setDescriptionFilter,
+    setCommentFilter,
     clearFilters
   } = usePersistedFilters('analytics-filters');
 
@@ -1138,6 +1120,13 @@ export default function FilteredTasksPage() {
   useEffect(() => {
     fetchClients();
   }, []);
+
+  // Handle navigation to task from global comment search
+  const handleNavigateToTask = (taskId: number, clientId: string) => {
+    // Navigate to the specific task
+    const url = `/filtered-tasks?task=${taskId}`;
+    window.location.href = url;
+  };
 
   if (loading || !filtersLoaded) {
     return (
@@ -1237,8 +1226,17 @@ export default function FilteredTasksPage() {
           setSlaFilter={setSlaFilter}
           descriptionFilter={filters.descriptionFilter}
           setDescriptionFilter={setDescriptionFilter}
+          commentFilter={filters.commentFilter}
+          setCommentFilter={setCommentFilter}
           clients={clients}
           darkMode={darkMode}
+        />
+
+        {/* Global Comment Search */}
+        <GlobalCommentSearch 
+          clients={clients}
+          darkMode={darkMode}
+          onNavigateToTask={handleNavigateToTask}
         />
 
         {/* Task List */}

@@ -295,9 +295,6 @@ export default function TaskItem({
         comments={task.comments || []}
         onAddComment={(text: string) => onAddComment(task.id, text)}
         darkMode={darkMode}
-        taskId={task.id}
-        clientId={task.client_id}
-        onNavigateToTask={onNavigateToTask}
       />
     </div>
   );

@@ -12,6 +12,7 @@ interface FilterOptions {
   selectedClients?: string[];
   slaFilter: SLAFilter;
   descriptionFilter: string;
+  commentFilter: string;
 }
 
 interface TaskStats {
@@ -37,7 +38,7 @@ export function useTaskFilters(
   clients: Client[],
   filters: FilterOptions
 ): UseTaskFiltersReturn {
-  const { statusFilter, priorityFilter, clientSearch, selectedClientId, dateRange, selectedClients, slaFilter, descriptionFilter } = filters;
+  const { statusFilter, priorityFilter, clientSearch, selectedClientId, dateRange, selectedClients, slaFilter, descriptionFilter, commentFilter } = filters;
 
   const filteredData = useMemo(() => {
     // First filter clients based on search and selection
@@ -107,6 +108,18 @@ export function useTaskFilters(
       );
     }
 
+    // Filter by comments
+    if (commentFilter.trim()) {
+      const searchLower = commentFilter.toLowerCase();
+      allTasks = allTasks.filter(task => {
+        // Check if any comment contains the search term
+        return task.comments?.some(comment => 
+          comment.text.toLowerCase().includes(searchLower) ||
+          (comment.author && comment.author.toLowerCase().includes(searchLower))
+        ) || false;
+      });
+    }
+
     // Filter by SLA status
     if (slaFilter !== 'all') {
       allTasks = allTasks.filter(task => {
@@ -171,7 +184,7 @@ export function useTaskFilters(
       filteredClients: workingClients,
       stats
     };
-  }, [clients, statusFilter, priorityFilter, clientSearch, selectedClientId, dateRange, selectedClients, slaFilter, descriptionFilter]);
+  }, [clients, statusFilter, priorityFilter, clientSearch, selectedClientId, dateRange, selectedClients, slaFilter, descriptionFilter, commentFilter]);
 
   return filteredData;
 } 

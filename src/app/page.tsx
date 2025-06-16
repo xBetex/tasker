@@ -18,6 +18,7 @@ import ClientDetailModal from './components/ClientDetailModal';
 import ScrollToTop from './components/ScrollToTop';
 import ScrollToBottom from './components/ScrollToBottom';
 import { ClientCardsGridSkeleton } from './components/SkeletonLoaders';
+import GlobalCommentSearch from '@/components/GlobalCommentSearch';
 
 import { api } from '@/services/api';
 import { getCurrentDateForInput, getDefaultSLADate } from '@/utils/dateUtils';
@@ -30,13 +31,21 @@ export default function Home() {
   // Handle highlight from URL parameters (from Global Comments Search and SLA Alerts)
   const [highlightTaskId, setHighlightTaskId] = useState<number | null>(null);
   const [pendingHighlight, setPendingHighlight] = useState<string | null>(null);
+  const [focusClientId, setFocusClientId] = useState<string | null>(null);
   
   // Check for highlight parameter whenever URL changes
   useEffect(() => {
     const highlight = searchParams.get('highlight');
+    const focus = searchParams.get('focus');
     
     if (highlight && highlight.includes('-')) {
       setPendingHighlight(highlight);
+      // Clean the URL immediately
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (focus) {
+      setFocusClientId(focus);
       // Clean the URL immediately
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -80,6 +89,45 @@ export default function Home() {
       setPendingHighlight(null);
     }
   }, [dashboard.clients, dashboard.isLoading, pendingHighlight, dashboard.setExpandedCards, dashboard.setSelectedClient, dashboard.setIsDetailModalOpen, dashboard.toast]);
+
+  // Handle client focus from URL parameter
+  useEffect(() => {
+    if (focusClientId && dashboard.clients.length > 0 && !dashboard.isLoading) {
+      // Find the client
+      const client = dashboard.clients.find(c => c.id === focusClientId);
+      if (client) {
+        // Expand the client card
+        dashboard.setExpandedCards(prev => ({
+          ...prev,
+          [focusClientId]: true
+        }));
+        
+        // Scroll to the client after a short delay
+        setTimeout(() => {
+          const clientElement = document.querySelector(`[data-client-id="${focusClientId}"]`);
+          if (clientElement) {
+            clientElement.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center' 
+            });
+            
+            // Add a temporary highlight effect
+            clientElement.classList.add('highlight-flash');
+            setTimeout(() => {
+              clientElement.classList.remove('highlight-flash');
+            }, 3000);
+          }
+        }, 500);
+        
+        dashboard.toast.success('Client Located', `Found ${client.name} (${client.company})`);
+      } else {
+        dashboard.toast.error('Client Not Found', 'Could not locate the specified client');
+      }
+      
+      // Clear focus client ID
+      setFocusClientId(null);
+    }
+  }, [dashboard.clients, dashboard.isLoading, focusClientId, dashboard.setExpandedCards, dashboard.toast]);
 
   // Import/Export handlers
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -259,6 +307,20 @@ export default function Home() {
 
   return (
     <AuthGuard darkMode={dashboard.darkMode}>
+      <style jsx global>{`
+        .highlight-flash {
+          animation: highlightFlash 3s ease-in-out;
+        }
+        
+        @keyframes highlightFlash {
+          0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+          10% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.5); }
+          20% { box-shadow: 0 0 0 16px rgba(59, 130, 246, 0.3); }
+          30% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.5); }
+          40% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+          100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+      `}</style>
       <div className={`min-h-screen ${dashboard.darkMode ? 'bg-black text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
         <div className="container mx-auto px-4 py-8">
         <DashboardHeader darkMode={dashboard.darkMode} />
@@ -330,6 +392,13 @@ export default function Home() {
           totalInProgressTasks={dashboard.totalInProgressTasks}
           totalPendingTasks={dashboard.totalPendingTasks}
           totalAwaitingClientTasks={dashboard.totalAwaitingClientTasks}
+        />
+
+        {/* Global Comment Search */}
+        <GlobalCommentSearch 
+          clients={dashboard.clients}
+          darkMode={dashboard.darkMode}
+          onNavigateToTask={handleNavigateToTask}
         />
 
         {/* Render different view modes */}

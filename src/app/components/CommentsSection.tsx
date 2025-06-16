@@ -225,9 +225,6 @@ export default function CommentsSection({
                   onImageUploaded={(url) => setNewComment(prev => prev + (prev ? '\n\n' : '') + url)}
                   disabled={isLoading}
                 />
-                <div className="text-xs flex items-center gap-2" style={{ color: 'var(--secondary-text)' }}>
-                  <span>💡 Tip: Copy any image and paste here with Ctrl+V</span>
-                </div>
                 <button
                   type="submit"
                   disabled={!newComment.trim() || isLoading}

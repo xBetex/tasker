@@ -4,7 +4,7 @@ import { api } from '@/services/api';
 import { isValidStorageDate, getDefaultSLADate } from '@/utils/dateUtils';
 import { useScroll } from '../contexts/ScrollContext';
 import { useTimezone } from '../contexts/TimezoneContext';
-import { PhotoGallery } from '@/components/PhotoGallery';
+
 
 interface EditTaskModalProps {
   isOpen: boolean;
@@ -24,8 +24,7 @@ export default function EditTaskModal({ isOpen, onClose, task, onUpdate, darkMod
     status: task.status,
     priority: task.priority,
     sla_date: task.sla_date || getDefaultSLADate(getTimezoneOffset()),
-    completion_date: task.completion_date || '',
-    attachments: task.attachments || []
+    completion_date: task.completion_date || ''
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,8 +48,7 @@ export default function EditTaskModal({ isOpen, onClose, task, onUpdate, darkMod
         status: formData.status,
         priority: formData.priority,
         sla_date: formData.sla_date || undefined,
-        completion_date: formData.completion_date || undefined,
-        attachments: formData.attachments
+        completion_date: formData.completion_date || undefined
       });
       
       // Set task as focused before updating
@@ -64,9 +62,7 @@ export default function EditTaskModal({ isOpen, onClose, task, onUpdate, darkMod
     }
   };
 
-  const handlePhotosUpdate = (photos: Task['attachments']) => {
-    setFormData(prev => ({ ...prev, attachments: photos || [] }));
-  };
+
 
   if (!isOpen) return null;
 
@@ -229,15 +225,7 @@ export default function EditTaskModal({ isOpen, onClose, task, onUpdate, darkMod
               />
             </div>
 
-            {/* Photo Attachments */}
-            <div>
-              <PhotoGallery 
-                task={{ ...task, attachments: formData.attachments }}
-                onPhotosUpdate={handlePhotosUpdate}
-                readonly={false}
-                darkMode={darkMode}
-              />
-            </div>
+
           </div>
 
           <div className="flex justify-end space-x-2 mt-6">

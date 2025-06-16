@@ -20,6 +20,8 @@ interface AnalyticsFiltersProps {
   setSlaFilter?: (slaFilter: SLAFilter) => void;
   descriptionFilter: string;
   setDescriptionFilter: (description: string) => void;
+  commentFilter: string;
+  setCommentFilter: (comment: string) => void;
   clients: Client[];
   darkMode: boolean;
 }
@@ -39,6 +41,8 @@ export default function AnalyticsFilters({
   setSlaFilter,
   descriptionFilter,
   setDescriptionFilter,
+  commentFilter,
+  setCommentFilter,
   clients,
   darkMode,
 }: AnalyticsFiltersProps) {
@@ -50,6 +54,7 @@ export default function AnalyticsFilters({
     setClientSearch('');
     setSelectedClientId(null);
     setDescriptionFilter('');
+    setCommentFilter('');
     if (setSlaFilter) {
       setSlaFilter('all');
     }
@@ -63,6 +68,7 @@ export default function AnalyticsFilters({
     clientSearch ||
     selectedClientId ||
     descriptionFilter ||
+    commentFilter ||
     (slaFilter && slaFilter !== 'all');
 
   // Obter nome do cliente selecionado para exibição
@@ -109,6 +115,7 @@ export default function AnalyticsFilters({
                   if (priorityFilter !== 'all') count++;
                   if (clientSearch || selectedClientId) count++;
                   if (descriptionFilter) count++;
+                  if (commentFilter) count++;
                   if (slaFilter && slaFilter !== 'all') count++;
                   return count;
                 })()}
@@ -146,7 +153,7 @@ export default function AnalyticsFilters({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
         {/* Date Range Filter */}
         <div className="space-y-2">
           <label 
@@ -306,6 +313,28 @@ export default function AnalyticsFilters({
               color: 'var(--input-text)'
             }}
             placeholder="Search task content..."
+          />
+        </div>
+
+        {/* Comment Filter */}
+        <div className="space-y-2">
+          <label 
+            className="block text-sm font-medium"
+            style={{ color: 'var(--secondary-text)' }}
+          >
+            💬 Comments
+          </label>
+          <input
+            type="text"
+            value={commentFilter}
+            onChange={(e) => setCommentFilter(e.target.value)}
+            className="block w-full rounded-md text-sm transition-all duration-200 shadow-sm border px-3 py-2"
+            style={{
+              backgroundColor: 'var(--input-background)',
+              borderColor: 'var(--input-border)',
+              color: 'var(--input-text)'
+            }}
+            placeholder="Search comments..."
           />
         </div>
       </div>

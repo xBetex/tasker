@@ -19,6 +19,7 @@ import TaskPriorityChart from '../components/analytics/TaskPriorityChart';
 import TasksPerClientChart from '../components/analytics/TasksPerClientChart';
 import TaskTimeline from '../components/analytics/TaskTimeline';
 import CompletionRateChart from '../components/analytics/CompletionRateChart';
+import GlobalCommentSearch from '@/components/GlobalCommentSearch';
 
 export default function AnalyticsPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -43,6 +44,7 @@ export default function AnalyticsPage() {
     setSelectedClients: _setSelectedClients,
     setSlaFilter,
     setDescriptionFilter,
+    setCommentFilter,
     clearFilters
   } = usePersistedFilters('analytics-filters');
 
@@ -227,6 +229,13 @@ export default function AnalyticsPage() {
     fetchClients();
   }, []);
 
+  // Handle navigation to task from global comment search
+  const handleNavigateToTask = (taskId: number, clientId: string) => {
+    // Navigate to the filtered tasks page with the specific task
+    const url = `/filtered-tasks?task=${taskId}`;
+    window.location.href = url;
+  };
+
   if (loading || !filtersLoaded) {
     return (
       <div 
@@ -350,8 +359,17 @@ export default function AnalyticsPage() {
           setSlaFilter={setSlaFilter}
           descriptionFilter={filters.descriptionFilter}
           setDescriptionFilter={setDescriptionFilter}
+          commentFilter={filters.commentFilter}
+          setCommentFilter={setCommentFilter}
           clients={clients}
           darkMode={darkMode}
+        />
+
+        {/* Global Comment Search */}
+        <GlobalCommentSearch 
+          clients={clients}
+          darkMode={darkMode}
+          onNavigateToTask={handleNavigateToTask}
         />
 
         {/* KPI Overview */}

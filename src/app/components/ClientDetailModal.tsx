@@ -597,6 +597,30 @@ export default function ClientDetailModal({
                     <span>Back</span>
                   </button>
 
+                  <button
+                    onClick={() => {
+                      // Navigate to dashboard with client focus
+                      const url = `/?focus=${client.id}`;
+                      window.location.href = url;
+                    }}
+                    className="flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm"
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      color: 'white'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                    }}
+                    title="View this client on the dashboard"
+                  >
+                    <span>📋</span>
+                    <span>Dashboard</span>
+                  </button>
+
                   {/* Navigation Arrows */}
                   {allClients.length > 1 && (
                     <div className="flex items-center space-x-2">
