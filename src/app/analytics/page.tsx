@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react';
-import { Client, Task } from '@/types/types';
+import { Client } from '@/types/types';
 import { api } from '@/services/api';
 import { useDarkMode } from '../layout';
 import AuthGuard from '../components/auth/AuthGuard';
@@ -40,7 +40,7 @@ export default function AnalyticsPage() {
     setClientSearch,
     setSelectedClientId,
     setDateRange,
-    setSelectedClients,
+    setSelectedClients: _setSelectedClients,
     setSlaFilter,
     setDescriptionFilter,
     clearFilters
@@ -61,7 +61,7 @@ export default function AnalyticsPage() {
 
     // Sort tasks
     const sorted = [...tasksWithClients].sort((a, b) => {
-      let aValue: any, bValue: any;
+      let aValue: string | number | Date, bValue: string | number | Date;
       
       switch (tasksSortBy) {
         case 'date':
@@ -215,9 +215,9 @@ export default function AnalyticsPage() {
       const data = await api.getClients();
       setClients(data);
       setError(null);
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to fetch clients');
-      console.error('Error fetching clients:', err);
+      // Error fetching clients
     } finally {
       setLoading(false);
     }

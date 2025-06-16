@@ -14,7 +14,7 @@ const getCurrentUserInfo = () => {
       };
     }
   } catch (error) {
-    console.error('Error getting current user:', error);
+    // Error getting current user
   }
   return null;
 };
@@ -36,6 +36,15 @@ interface TaskPayload {
   client_id?: string;
   sla_date?: string;
   completion_date?: string;
+  attachments?: {
+    id: string;
+    filename: string;
+    url: string;
+    type: 'image' | 'document' | 'other';
+    size: number;
+    uploadedAt: string;
+    uploadedBy?: string;
+  }[];
   createdBy?: {
     id: string;
     username: string;
@@ -63,7 +72,7 @@ interface ApiError {
     type: string;
     loc: string[];
     msg: string;
-    input: any;
+    input: unknown;
   }[];
 }
 
@@ -81,8 +90,8 @@ const formatErrorMessage = (error: unknown): string => {
     }
     
     // Handle string detail messages
-    if (typeof (error as any).detail === 'string') {
-      return (error as any).detail;
+    if (typeof (error as Record<string, unknown>).detail === 'string') {
+      return (error as Record<string, unknown>).detail as string;
     }
     
     // Handle empty objects or objects without detail
@@ -92,8 +101,8 @@ const formatErrorMessage = (error: unknown): string => {
     }
     
     // Try to extract meaningful error message from object
-    if ((error as any).message) {
-      return (error as any).message;
+    if ((error as Record<string, unknown>).message) {
+      return (error as Record<string, unknown>).message as string;
     }
     
     // Return stringified object as last resort
@@ -117,7 +126,7 @@ export const api = {
       }
       return response.json();
     } catch (error) {
-      console.error('Error fetching clients:', error);
+      // Error fetching clients
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -131,7 +140,7 @@ export const api = {
       }
       return response.json();
     } catch (error) {
-      console.error('Error fetching all clients:', error);
+      // Error fetching all clients
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -145,7 +154,7 @@ export const api = {
       }
       return response.json();
     } catch (error) {
-      console.error('Error fetching client:', error);
+      // Error fetching client
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -167,7 +176,7 @@ export const api = {
       
       return response.json();
     } catch (error) {
-      console.error('Error creating client:', error);
+      // Error creating client
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -225,7 +234,7 @@ export const api = {
         try {
           await this.deleteClient(client.id);
         } catch (rollbackError) {
-          console.error('Error during rollback:', rollbackError);
+          // Error during rollback
         }
         throw taskError;
       }
@@ -233,7 +242,7 @@ export const api = {
       // Return the updated client with tasks
       return this.getClient(client.id);
     } catch (error) {
-      console.error('Error in createClientWithTasks:', error);
+      // Error in createClientWithTasks
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -263,7 +272,7 @@ export const api = {
       
       return response.json();
     } catch (error) {
-      console.error('Error creating task:', error);
+      // Error creating task
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -278,7 +287,7 @@ export const api = {
       );
       return Promise.all(taskPromises);
     } catch (error) {
-      console.error('Error creating tasks for client:', error);
+      // Error creating tasks for client
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -316,7 +325,7 @@ export const api = {
       
       return response.json();
     } catch (error) {
-      console.error('Error updating task:', error);
+      // Error updating task
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -363,7 +372,7 @@ export const api = {
       
       return response.json();
     } catch (error) {
-      console.error('Error deleting task:', error);
+      // Error deleting task
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -379,7 +388,7 @@ export const api = {
         throw error;
       }
     } catch (error) {
-      console.error('Error deleting client:', error);
+      // Error deleting client
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -397,7 +406,7 @@ export const api = {
       
       return response.json();
     } catch (error) {
-      console.error('Error importing data:', error);
+      // Error importing data
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -419,7 +428,7 @@ export const api = {
       
       return response.json();
     } catch (error) {
-      console.error('Error updating client:', error);
+      // Error updating client
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -451,7 +460,7 @@ export const api = {
       
       return response.json();
     } catch (error) {
-      console.error('Error creating comment:', error);
+      // Error creating comment
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -467,7 +476,7 @@ export const api = {
       
       return response.json();
     } catch (error) {
-      console.error('Error fetching comments:', error);
+      // Error fetching comments
       throw new Error(formatErrorMessage(error));
     }
   },
@@ -485,7 +494,7 @@ export const api = {
       
       return response.json();
     } catch (error) {
-      console.error('Error deleting comment:', error);
+      // Error deleting comment
       throw new Error(formatErrorMessage(error));
     }
   },

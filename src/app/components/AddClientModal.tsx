@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { TaskStatus, TaskPriority } from '@/types/types';
 import { api } from '@/services/api';
-import DatePicker from 'react-datepicker';
+// DatePicker import removed as it's not used
 import 'react-datepicker/dist/react-datepicker.css';
 import { 
   getCurrentDateForInput, 
-  dateToInputFormat, 
   isValidStorageDate,
   getDefaultSLADate
 } from '@/utils/dateUtils';
@@ -137,7 +136,7 @@ export default function AddClientModal({
       onClose();
       setFormData(initialFormData);
     } catch (error) {
-      console.error('Error creating client with tasks:', error);
+      // Error creating client with tasks
       setApiError(error instanceof Error ? error.message : 'Failed to create client and tasks');
     } finally {
       setIsSubmitting(false);
@@ -172,7 +171,7 @@ export default function AddClientModal({
     }
   };
 
-  const focusTaskDescription = () => {
+  const _focusTaskDescription = () => {
     // Multiple attempts to ensure focus works reliably
     const focusAttempt = () => {
       const taskDescriptionInput = document.querySelector('textarea[placeholder="Describe the initial task..."]') as HTMLTextAreaElement;

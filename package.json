@@ -31,6 +31,7 @@
     "@types/chart.js": "^2.9.41",
     "@types/react-datepicker": "^6.2.0",
     "@types/react-tooltip": "^3.11.0",
+    "@types/uuid": "^10.0.0",
     "chart.js": "^4.4.9",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.15.0",
@@ -40,6 +41,7 @@
     "react-datepicker": "^8.4.0",
     "react-dom": "^19.0.0",
     "react-tooltip": "^5.28.1",
+    "uuid": "^11.1.0",
     "zustand": "^5.0.5"
   },
   "devDependencies": {

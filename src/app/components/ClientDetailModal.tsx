@@ -1077,14 +1077,12 @@ export default function ClientDetailModal({
                           comments={task.comments || []}
                           onAddComment={async (text: string) => {
                             try {
-                              console.log('Adding comment:', text, 'to task:', task.id);
                               setIsLoading(true);
                               await api.addComment(task.id, text);
                               onUpdate();
                               setRefreshKey(prev => prev + 1);
                               toast.success('Comment Added', 'Your comment has been added successfully!');
                             } catch (error) {
-                              console.error('Error adding comment:', error);
                               const errorMessage = error instanceof Error ? error.message : 'Failed to add comment';
                               toast.error('Failed to Add Comment', errorMessage);
                             } finally {

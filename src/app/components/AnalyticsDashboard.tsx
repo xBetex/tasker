@@ -13,7 +13,7 @@ import {
   ChartData,
   ChartOptions
 } from 'chart.js';
-import { Bar, Line, Pie } from 'react-chartjs-2';
+import { Bar, Line } from 'react-chartjs-2';
 import { Client, Task } from '@/types/types';
 import { AnalyticsDashboardProps } from '@/types/analytics';
 import { calculateTaskAnalytics, chartColors } from '@/utils/analytics';

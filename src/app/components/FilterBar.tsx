@@ -1,5 +1,5 @@
 // app/components/FilterBar.tsx
-import { useState } from 'react';
+// React imports cleaned up
 import { TaskStatus, TaskPriority } from '@/types/types';
 
 export type SLAFilter = 'all' | 'overdue' | 'due_today' | 'due_this_week' | 'on_track' | 'no_sla';

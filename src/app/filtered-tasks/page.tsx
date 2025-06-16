@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Client, Task, TaskStatus } from '@/types/types';
 import { api } from '@/services/api';
 import { useDarkMode } from '../layout';
@@ -14,6 +14,7 @@ import { MoreVerticalIcon, EditIcon, TrashIcon } from '../components/Icons';
 import { useSearchParams } from 'next/navigation';
 import { getSLAStatus, getSLAStatusColor, getSLAStatusBadge } from '@/utils/slaUtils';
 import { useToast } from '../hooks/useToast';
+import { PhotoGallery } from '@/components/PhotoGallery';
 
 interface TaskListViewProps {
   tasks: Task[];
@@ -44,32 +45,9 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
   const [bulkPriority, setBulkPriority] = useState<'high' | 'medium' | 'low'>('medium');
   const [bulkSlaDate, setBulkSlaDate] = useState<string>('');
   const [bulkOperation, setBulkOperation] = useState<'status' | 'priority' | 'sla'>('status');
+  
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
-
-  // Click outside handler
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
-        setContextMenu({ visible: false, x: 0, y: 0, task: null });
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Reset selection when tasks change
-  useEffect(() => {
-    setSelectedTasks(new Set());
-    setShowBulkActions(false);
-  }, [tasks]);
-
-  // Initialize bulk SLA date to tomorrow
-  useEffect(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    setBulkSlaDate(tomorrow.toISOString().split('T')[0]);
-  }, []);
 
   const getClientName = (clientId: string) => {
     const client = clients.find(c => c.id === clientId);
@@ -93,25 +71,6 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
       case 'awaiting client': return 'bg-blue-500';
       default: return 'bg-gray-500';
     }
-  };
-
-  // Calculate task statistics
-  const taskStats = {
-    total: tasks.length,
-    selected: selectedTasks.size,
-    byStatus: {
-      pending: tasks.filter(t => t.status === 'pending').length,
-      'in progress': tasks.filter(t => t.status === 'in progress').length,
-      completed: tasks.filter(t => t.status === 'completed').length,
-      'awaiting client': tasks.filter(t => t.status === 'awaiting client').length,
-    },
-    byPriority: {
-      high: tasks.filter(t => t.priority === 'high').length,
-      medium: tasks.filter(t => t.priority === 'medium').length,
-      low: tasks.filter(t => t.priority === 'low').length,
-    },
-    withSLA: tasks.filter(t => t.sla_date).length,
-    overdue: tasks.filter(t => t.sla_date && t.status !== 'completed' && new Date(t.sla_date) < new Date()).length
   };
 
   const handleTaskSelection = (taskId: number, selected: boolean) => {
@@ -285,7 +244,42 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
   };
 
   const handleEditChange = (field: keyof Task, value: string) => {
-    setEditingData(prev => ({ ...prev, [field]: value }));
+    setEditingData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Calculate task statistics
+  const taskStats = {
+    total: tasks.length,
+    selected: selectedTasks.size,
+    byStatus: {
+      pending: tasks.filter(t => t.status === 'pending').length,
+      'in progress': tasks.filter(t => t.status === 'in progress').length,
+      completed: tasks.filter(t => t.status === 'completed').length,
+      'awaiting client': tasks.filter(t => t.status === 'awaiting client').length,
+    },
+    byPriority: {
+      high: tasks.filter(t => t.priority === 'high').length,
+      medium: tasks.filter(t => t.priority === 'medium').length,
+      low: tasks.filter(t => t.priority === 'low').length,
+    },
+    withSLA: tasks.filter(t => t.sla_date).length,
+    overdue: tasks.filter(t => t.sla_date && t.status !== 'completed' && new Date(t.sla_date) < new Date()).length,
+    // Calculate average resolution time
+    avgResolutionTime: (() => {
+      const completedTasks = tasks.filter(t => t.status === 'completed' && t.creation_timestamp && t.completion_timestamp);
+      if (completedTasks.length === 0) return 0;
+      
+      const totalTime = completedTasks.reduce((sum, task) => {
+        const created = new Date(task.creation_timestamp!);
+        const completed = new Date(task.completion_timestamp!);
+        return sum + (completed.getTime() - created.getTime());
+      }, 0);
+      
+      return Math.round(totalTime / completedTasks.length / (1000 * 60 * 60 * 24)); // Convert to days
+    })()
   };
 
   const sortedTasks = [...tasks].sort((a, b) => {
@@ -480,7 +474,7 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
         borderColor: 'var(--card-border)'
       }}
     >
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         {/* Total Tasks */}
         <div className="text-center">
           <div 
@@ -570,6 +564,21 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
             🚨 Overdue
           </div>
         </div>
+
+        {/* Average Resolution Time */}
+        <div className="text-center">
+          <div 
+            className="text-lg font-semibold text-blue-600"
+          >
+            {taskStats.avgResolutionTime}
+          </div>
+          <div 
+            className="text-xs"
+            style={{ color: 'var(--secondary-text)' }}
+          >
+            ⚡ Avg Days
+          </div>
+        </div>
       </div>
 
       {/* Additional info row */}
@@ -580,6 +589,9 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
         >
           <span>📅 {taskStats.withSLA} tasks with SLA dates</span>
           <span>🎯 {taskStats.byStatus['awaiting client']} awaiting client</span>
+          {taskStats.avgResolutionTime > 0 && (
+            <span>⚡ {taskStats.avgResolutionTime} days average completion time</span>
+          )}
         </div>
         <div 
           className="text-xs px-2 py-1 rounded"
@@ -787,6 +799,19 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
                           title="Click to edit"
                         >
                           {task.description}
+                          {/* Photo count indicator */}
+                          {task.attachments && task.attachments.filter(att => att.type === 'image').length > 0 && (
+                            <span 
+                              className="ml-2 px-2 py-1 text-xs rounded-full"
+                              style={{
+                                backgroundColor: 'var(--primary-button)',
+                                color: 'white'
+                              }}
+                              title={`${task.attachments.filter(att => att.type === 'image').length} photo(s) attached`}
+                            >
+                              📸 {task.attachments.filter(att => att.type === 'image').length}
+                            </span>
+                          )}
                         </div>
                       )}
                     </td>
@@ -898,6 +923,15 @@ function TaskListView({ tasks, clients, darkMode, viewMode, onViewModeChange, on
             >
               {task.description}
             </h3>
+            
+            {/* Photo Gallery */}
+            <div className="ml-6 mb-3">
+              <PhotoGallery 
+                task={task} 
+                readonly={true}
+                darkMode={darkMode}
+              />
+            </div>
             
             <div className="flex items-center justify-between mb-2 ml-6">
               <span className={`text-sm font-medium ${getPriorityColor(task.priority)}`}>

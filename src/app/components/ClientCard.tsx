@@ -7,10 +7,10 @@ import TaskItem from './client/TaskItem';
 import AddTaskForm from './client/AddTaskForm';
 import ClientTaskTabs, { ClientTabType } from './client/ClientTaskTabs';
 import { useClientCard } from '../hooks/client/useClientCard';
-import { api } from '@/services/api';
+// API import removed as unused
 import { useToast } from '../hooks/useToast';
 import { CopyIcon } from './Icons';
-import UserInfo from './UserInfo';
+// UserInfo import removed as unused
 
 interface ClientCardProps {
   client: Client;

@@ -4,7 +4,7 @@ import { MoreVerticalIcon } from '../Icons';
 import DateDisplay from '../DateDisplay';
 import { getSLAStatus, getSLAStatusColor, getSLAStatusBadge } from '@/utils/slaUtils';
 import CommentsSection from '../CommentsSection';
-import { useScroll } from '../../contexts/ScrollContext';
+import { useScroll } from '@/app/contexts/ScrollContext';
 import UserInfo from '../UserInfo';
 
 interface TaskItemProps {

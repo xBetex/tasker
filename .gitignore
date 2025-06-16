@@ -185,3 +185,6 @@ storybook-static
 # Temporary folders
 tmp/
 temp/
+
+# Upload directories
+/public/uploads/

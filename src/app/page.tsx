@@ -48,18 +48,12 @@ export default function Home() {
       const [clientId, taskIdStr] = pendingHighlight.split('-');
       const taskId = parseInt(taskIdStr);
       
-      console.log('Processing highlight:', { clientId, taskId, pendingHighlight });
-      console.log('Available clients:', dashboard.clients.map(c => ({ id: c.id, name: c.name, taskCount: c.tasks.length })));
-      
       // Find the client
       const client = dashboard.clients.find(c => c.id === clientId);
       if (client) {
-        console.log('Found client:', client.name, 'with tasks:', client.tasks.map(t => ({ id: t.id, description: t.description })));
-        
         // Check if the task exists in the client
         const task = client.tasks.find(t => t.id === taskId);
         if (task) {
-          console.log('Found task:', task.description);
           
           // Expand the client card
           dashboard.setExpandedCards(prev => ({
@@ -76,11 +70,9 @@ export default function Home() {
           
           dashboard.toast.success('Task Located', `Found task "${task.description}" for ${client.name}`);
         } else {
-          console.log('Task not found in client');
           dashboard.toast.error('Task Not Found', `Task #${taskId} not found in ${client.name}`);
         }
       } else {
-        console.log('Client not found, looking for ID:', clientId);
         dashboard.toast.error('Client Not Found', 'Could not locate the specified client');
       }
       
@@ -123,7 +115,7 @@ export default function Home() {
               try {
                 await api.getClient(clientData.id);
                 continue; // Skip existing clients
-              } catch (error) {
+              } catch (_error) {
                 // Client doesn't exist, continue with creation
               }
 
@@ -159,7 +151,6 @@ export default function Home() {
               successCount++;
 
             } catch (error: any) {
-              console.error(`Error importing client ${clientData.name}:`, error);
               errorCount++;
             }
           }

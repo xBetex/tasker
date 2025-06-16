@@ -224,7 +224,7 @@ export default function ClientSearchInput({
           darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
         } border`}>
           <div className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            No clients found for "{searchTerm}"
+            No clients found for &quot;{searchTerm}&quot;
           </div>
         </div>
       )}
