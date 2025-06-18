@@ -15,8 +15,13 @@ interface DashboardActionsProps {
   hasDateFilter: boolean;
   onImportJSON: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onExportJSON: () => void;
+  onExportActiveTasks: () => void;
+  onViewActiveExport: () => void;
+  onExportFilteredActiveTasks: () => void;
+  onViewFilteredActiveExport: () => void;
   isImporting: boolean;
   onAddClient: () => void;
+  hasActiveFilters?: boolean;
 }
 
 export default function DashboardActions({
@@ -32,8 +37,13 @@ export default function DashboardActions({
   hasDateFilter,
   onImportJSON,
   onExportJSON,
+  onExportActiveTasks,
+  onViewActiveExport,
+  onExportFilteredActiveTasks,
+  onViewFilteredActiveExport,
   isImporting,
-  onAddClient
+  onAddClient,
+  hasActiveFilters
 }: DashboardActionsProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -172,6 +182,58 @@ export default function DashboardActions({
           <span className="hidden sm:inline">Export JSON</span>
           <span className="sm:hidden">📤</span>
         </button>
+        <button
+          onClick={onViewActiveExport}
+          className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
+            darkMode 
+              ? 'bg-orange-700 hover:bg-orange-800' 
+              : 'bg-orange-600 hover:bg-orange-700'
+          } text-white`}
+          title="Preview active tasks export before copying"
+        >
+          <span className="hidden sm:inline">View Active Export</span>
+          <span className="sm:hidden">👁️</span>
+        </button>
+        <button
+          onClick={onExportActiveTasks}
+          className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
+            darkMode 
+              ? 'bg-orange-600 hover:bg-orange-700' 
+              : 'bg-orange-500 hover:bg-orange-600'
+          } text-white`}
+          title="Export only active tasks (non-completed) from currently displayed clients"
+        >
+          <span className="hidden sm:inline">Export Active Tasks</span>
+          <span className="sm:hidden">🚀</span>
+        </button>
+        {hasActiveFilters && (
+          <>
+            <button
+              onClick={onViewFilteredActiveExport}
+              className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
+                darkMode 
+                  ? 'bg-teal-700 hover:bg-teal-800' 
+                  : 'bg-teal-600 hover:bg-teal-700'
+              } text-white`}
+              title="Preview filtered active tasks export before copying"
+            >
+              <span className="hidden sm:inline">View Filtered Export</span>
+              <span className="sm:hidden">👁️</span>
+            </button>
+            <button
+              onClick={onExportFilteredActiveTasks}
+              className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
+                darkMode 
+                  ? 'bg-teal-600 hover:bg-teal-700' 
+                  : 'bg-teal-500 hover:bg-teal-600'
+              } text-white`}
+              title="Export only active tasks matching current filters"
+            >
+              <span className="hidden sm:inline">Export Filtered Active</span>
+              <span className="sm:hidden">🎯</span>
+            </button>
+          </>
+        )}
         <button
           onClick={onAddClient}
           className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${

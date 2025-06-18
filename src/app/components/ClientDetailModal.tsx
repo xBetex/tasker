@@ -54,6 +54,8 @@ export default function ClientDetailModal({
   const [exportProgress, setExportProgress] = useState(0);
   const [showExportPreview, setShowExportPreview] = useState(false);
   const [exportText, setExportText] = useState('');
+  const [showActiveExportPreview, setShowActiveExportPreview] = useState(false);
+  const [activeExportText, setActiveExportText] = useState('');
   const [newTask, setNewTask] = useState<Omit<Task, 'id'>>({
     description: '',
     date: getCurrentDateForInput(getTimezoneOffset()),
@@ -469,6 +471,124 @@ export default function ClientDetailModal({
     setShowExportPreview(true);
   };
 
+  const generateActiveExportText = () => {
+    const activeTasks = client.tasks.filter(task => task.status !== 'completed');
+    
+    if (activeTasks.length === 0) {
+      return 'No active tasks available to export';
+    }
+
+    let exportText = `ACTIVE TASKS EXPORT - ${client.name}\n`;
+    exportText += `Company - ${client.company}\n`;
+    exportText += `ID - ${client.id}\n`;
+    exportText += `Origin - ${client.origin}\n`;
+    exportText += `Export Date - ${new Date().toLocaleDateString()}\n`;
+    exportText += `Export Time - ${new Date().toLocaleTimeString()}\n`;
+    exportText += `Active Tasks Count - ${activeTasks.length} of ${client.tasks.length} total\n\n`;
+    exportText += `${'='.repeat(80)}\n\n`;
+
+    activeTasks.forEach((task, index) => {
+      exportText += `${index + 1}/${activeTasks.length} (ACTIVE)\n`;
+      exportText += `${task.description}\n`;
+      exportText += `📅 Date: ${task.date}`;
+      if (task.sla_date) {
+        exportText += ` • ⏰ SLA: ${task.sla_date}`;
+      }
+      exportText += `\n`;
+      exportText += `📊 Status: ${task.status} • 🎯 Priority: ${task.priority}\n`;
+      
+      exportText += `\nComments:\n`;
+      if (task.comments && task.comments.length > 0) {
+        task.comments.forEach(comment => {
+          exportText += `• ${comment.text}\n`;
+        });
+      } else {
+        exportText += `• No comments\n`;
+      }
+      
+      exportText += `\n${'-'.repeat(60)}\n\n`;
+    });
+
+    return exportText;
+  };
+
+  const handleViewActiveExport = () => {
+    const text = generateActiveExportText();
+    setActiveExportText(text);
+    setShowActiveExportPreview(true);
+  };
+
+  const handleExportActiveTasks = async () => {
+    const activeTasks = client.tasks.filter(task => task.status !== 'completed');
+    
+    if (activeTasks.length === 0) {
+      toast.error('No Active Tasks', 'No active tasks available to export for this client');
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      setExportProgress(0);
+      
+      // Generate export text for active tasks only
+      let exportText = `ACTIVE TASKS EXPORT - ${client.name}\n`;
+      exportText += `Company - ${client.company}\n`;
+      exportText += `ID - ${client.id}\n`;
+      exportText += `Origin - ${client.origin}\n`;
+      exportText += `Export Date - ${new Date().toLocaleDateString()}\n`;
+      exportText += `Export Time - ${new Date().toLocaleTimeString()}\n`;
+      exportText += `Active Tasks Count - ${activeTasks.length} of ${client.tasks.length} total\n\n`;
+      exportText += `${'='.repeat(80)}\n\n`;
+
+      activeTasks.forEach((task, index) => {
+        exportText += `${index + 1}/${activeTasks.length} (ACTIVE)\n`;
+        exportText += `${task.description}\n`;
+        exportText += `📅 Date: ${task.date}`;
+        if (task.sla_date) {
+          exportText += ` • ⏰ SLA: ${task.sla_date}`;
+        }
+        exportText += `\n`;
+        exportText += `📊 Status: ${task.status} • 🎯 Priority: ${task.priority}\n`;
+        
+        exportText += `\nComments:\n`;
+        if (task.comments && task.comments.length > 0) {
+          task.comments.forEach(comment => {
+            exportText += `• ${comment.text}\n`;
+          });
+        } else {
+          exportText += `• No comments\n`;
+        }
+        
+        exportText += `\n${'-'.repeat(60)}\n\n`;
+      });
+      
+      // Simulate progress with a small delay
+      for (let i = 0; i <= 100; i += 20) {
+        setExportProgress(i);
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(exportText);
+      
+      toast.success(
+        'Active Tasks Exported!', 
+        `Successfully exported ${activeTasks.length} active tasks to clipboard`
+      );
+      
+      // Close preview modal if it's open
+      if (showExportPreview) {
+        setShowExportPreview(false);
+      }
+      
+    } catch {
+      toast.error('Export Failed', 'Failed to export active tasks to clipboard');
+    } finally {
+      setIsExporting(false);
+      setExportProgress(0);
+    }
+  };
+
   const handleStatsCardClick = (statType: string) => {
     switch (statType) {
       case 'total':
@@ -805,6 +925,30 @@ export default function ClientDetailModal({
                 </button>
 
                 <button
+                  onClick={handleViewActiveExport}
+                  disabled={client.tasks.filter(t => t.status !== 'completed').length === 0}
+                  className="px-6 py-3 rounded-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: 'rgba(255, 165, 0, 0.2)',
+                    border: '1px solid rgba(255, 165, 0, 0.3)',
+                    color: 'white'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (client.tasks.filter(t => t.status !== 'completed').length > 0) {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 165, 0, 0.3)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (client.tasks.filter(t => t.status !== 'completed').length > 0) {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 165, 0, 0.2)';
+                    }
+                  }}
+                  title="View Active Tasks Export Preview"
+                >
+                  👁️ View Active Export
+                </button>
+
+                <button
                   onClick={handleExportAllTasks}
                   disabled={isExporting || client.tasks.length === 0}
                   className="px-6 py-3 rounded-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -826,6 +970,30 @@ export default function ClientDetailModal({
                   title="Export All Tasks to Clipboard"
                 >
                   {isExporting ? `📤 Exporting... ${exportProgress}%` : '📤 Export All'}
+                </button>
+
+                <button
+                  onClick={handleExportActiveTasks}
+                  disabled={isExporting || client.tasks.filter(t => t.status !== 'completed').length === 0}
+                  className="px-6 py-3 rounded-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: 'rgba(255, 165, 0, 0.2)',
+                    border: '1px solid rgba(255, 165, 0, 0.3)',
+                    color: 'white'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isExporting && client.tasks.filter(t => t.status !== 'completed').length > 0) {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 165, 0, 0.3)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isExporting && client.tasks.filter(t => t.status !== 'completed').length > 0) {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 165, 0, 0.2)';
+                    }
+                  }}
+                  title="Export Only Active Tasks (Non-Completed) to Clipboard"
+                >
+                  🚀 Export Active
                 </button>
                 
                 <button
@@ -1116,13 +1284,6 @@ export default function ClientDetailModal({
                           darkMode={darkMode}
                           forceExpanded={expandAllComments || (highlightTaskId === task.id)}
                           isLoading={isLoading}
-                          taskId={task.id}
-                          clientId={client.id}
-                          onNavigateToTask={(taskId, clientId) => {
-                            // Since we're already in the detail modal, just scroll to the task
-                            // or highlight it somehow
-                            toast.info('Already Viewing', 'You are already viewing this task in detail mode');
-                          }}
                         />
                       </div>
                     </div>
@@ -1240,36 +1401,37 @@ export default function ClientDetailModal({
           </div>
         </div>
 
-        {/* Export Preview Modal */}
+        {/* Export Preview Modal - Full Screen */}
         {showExportPreview && (
           <div className="fixed inset-0 z-60 overflow-hidden">
-            <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" onClick={() => setShowExportPreview(false)}></div>
-            <div className="fixed inset-4 z-70 flex items-center justify-center">
+            <div className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm" onClick={() => setShowExportPreview(false)}></div>
+            <div className="fixed inset-0 z-70 flex flex-col">
               <div 
-                className="w-full max-w-4xl max-h-full rounded-2xl shadow-2xl overflow-hidden"
+                className="w-full h-full rounded-none shadow-2xl overflow-hidden flex flex-col"
                 style={{
                   backgroundColor: 'var(--card-background)',
-                  border: '1px solid var(--card-border)'
+                  border: 'none'
                 }}
               >
                 {/* Header */}
-                <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--card-border)' }}>
+                <div className="px-6 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--card-border)' }}>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-semibold" style={{ color: 'var(--primary-text)' }}>
-                      Export Preview - {client.name}
+                    <h3 className="text-2xl font-bold" style={{ color: 'var(--primary-text)' }}>
+                      📤 Export Preview - {client.name}
                     </h3>
                     <div className="flex items-center space-x-3">
                       <button
                         onClick={handleExportAllTasks}
                         disabled={isExporting}
-                        className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                        className="px-6 py-3 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 font-medium"
                       >
-                        {isExporting ? 'Copying...' : 'Copy to Clipboard'}
+                        {isExporting ? 'Copying...' : '📋 Copy to Clipboard'}
                       </button>
                       <button
                         onClick={() => setShowExportPreview(false)}
-                        className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        className="p-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xl"
                         style={{ color: 'var(--secondary-text)' }}
+                        title="Close Preview"
                       >
                         ✕
                       </button>
@@ -1278,18 +1440,85 @@ export default function ClientDetailModal({
                 </div>
                 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto max-h-96">
+                <div className="flex-1 p-6 overflow-y-auto">
                   <pre 
-                    className="whitespace-pre-wrap font-mono text-sm leading-relaxed"
+                    className="whitespace-pre-wrap font-mono text-sm leading-relaxed h-full"
                     style={{ 
                       color: 'var(--primary-text)',
                       backgroundColor: darkMode ? '#1a1a1a' : '#f8f9fa',
-                      padding: '1rem',
-                      borderRadius: '0.5rem',
-                      border: '1px solid var(--card-border)'
+                      padding: '2rem',
+                      borderRadius: '1rem',
+                      border: '1px solid var(--card-border)',
+                      minHeight: '100%'
                     }}
                   >
                     {exportText}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Active Export Preview Modal - Full Screen */}
+        {showActiveExportPreview && (
+          <div className="fixed inset-0 z-60 overflow-hidden">
+            <div className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm" onClick={() => setShowActiveExportPreview(false)}></div>
+            <div className="fixed inset-0 z-70 flex flex-col">
+              <div 
+                className="w-full h-full rounded-none shadow-2xl overflow-hidden flex flex-col"
+                style={{
+                  backgroundColor: 'var(--card-background)',
+                  border: 'none'
+                }}
+              >
+                {/* Header */}
+                <div className="px-6 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--card-border)' }}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-2xl font-bold" style={{ color: 'var(--primary-text)' }}>
+                      🚀 Active Tasks Export Preview - {client.name}
+                    </h3>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(activeExportText);
+                            toast.success('Active Tasks Copied!', 'Active tasks export copied to clipboard');
+                            setShowActiveExportPreview(false);
+                          } catch (error) {
+                            toast.error('Copy Failed', 'Failed to copy active tasks to clipboard');
+                          }
+                        }}
+                        className="px-6 py-3 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors font-medium"
+                      >
+                        📋 Copy Active Tasks
+                      </button>
+                      <button
+                        onClick={() => setShowActiveExportPreview(false)}
+                        className="p-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xl"
+                        style={{ color: 'var(--secondary-text)' }}
+                        title="Close Preview"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Content */}
+                <div className="flex-1 p-6 overflow-y-auto">
+                  <pre 
+                    className="whitespace-pre-wrap font-mono text-sm leading-relaxed h-full"
+                    style={{ 
+                      color: 'var(--primary-text)',
+                      backgroundColor: darkMode ? '#1a1a1a' : '#f8f9fa',
+                      padding: '2rem',
+                      borderRadius: '1rem',
+                      border: '1px solid var(--card-border)',
+                      minHeight: '100%'
+                    }}
+                  >
+                    {activeExportText}
                   </pre>
                 </div>
               </div>

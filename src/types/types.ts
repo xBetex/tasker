@@ -13,6 +13,16 @@ export interface Comment {
   };
 }
 
+export interface Attachment {
+  id: string;
+  filename: string;
+  url: string;
+  type: 'image' | 'document' | 'other';
+  size: number;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
 export interface Task {
   id: number;
   date: string;
@@ -25,6 +35,7 @@ export interface Task {
   creation_timestamp?: string;
   completion_timestamp?: string;
   comments?: Comment[];
+  attachments?: Attachment[];
   createdBy?: {
     id: string;
     username: string;
